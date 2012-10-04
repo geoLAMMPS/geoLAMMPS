@@ -493,7 +493,7 @@ void Neighbor::init()
         lists[i]->listskip = lists[requests[i]->otherlist];
         lists[i]->copy_skip_info(requests[i]->iskip,requests[i]->ijskip);
 
-      } else if (requests[i]->half_from_full) 
+      } else if (requests[i]->half_from_full)
         lists[i]->listfull = lists[i-1];
 
       else if (requests[i]->granhistory) {
@@ -528,6 +528,8 @@ void Neighbor::init()
               requests[j]->skip == 0 && requests[j]->half) break;
           if (requests[i]->full && requests[j]->pair &&
               requests[j]->skip == 0 && requests[j]->full) break;
+          if (requests[i]->gran && requests[j]->pair &&
+              requests[j]->skip == 0 && requests[j]->gran) break;
           if (requests[i]->half && requests[j]->pair &&
               requests[j]->skip == 0 && requests[j]->respaouter) break;
         }
@@ -852,7 +854,7 @@ void Neighbor::choose_build(int index, NeighRequest *rq)
             else pb = &Neighbor::half_bin_no_newton_ghost;
           } else if (triclinic == 0) {
             pb = &Neighbor::half_bin_newton;
-          } else if (triclinic == 1) 
+          } else if (triclinic == 1)
             pb = &Neighbor::half_bin_newton_tri;
         } else if (rq->newton == 1) {
           if (triclinic == 0) pb = &Neighbor::half_bin_newton;
@@ -945,8 +947,7 @@ void Neighbor::choose_build(int index, NeighRequest *rq)
             else if (includegroup)
               error->all(FLERR,"Neighbor include group not allowed "
                          "with ghost neighbors");
-            // NOTE: missing OMP version of this one
-            else pb = &Neighbor::half_nsq_no_newton_ghost;
+            else pb = &Neighbor::half_nsq_no_newton_ghost_omp;
           } else if (newton_pair == 1) pb = &Neighbor::half_nsq_newton_omp;
         } else if (rq->newton == 1) {
           pb = &Neighbor::half_nsq_newton_omp;
@@ -955,8 +956,7 @@ void Neighbor::choose_build(int index, NeighRequest *rq)
           else if (includegroup)
             error->all(FLERR,"Neighbor include group not allowed "
                        "with ghost neighbors");
-          // NOTE: missing OMP version of this one
-          else pb = &Neighbor::half_nsq_no_newton_ghost;
+          else pb = &Neighbor::half_nsq_no_newton_ghost_omp;
         }
       } else if (style == BIN) {
         if (rq->newton == 0) {
@@ -965,11 +965,10 @@ void Neighbor::choose_build(int index, NeighRequest *rq)
             else if (includegroup)
               error->all(FLERR,"Neighbor include group not allowed "
                          "with ghost neighbors");
-            // NOTE: missing OMP version of this one
-            else pb = &Neighbor::half_bin_no_newton_ghost;
+            else pb = &Neighbor::half_bin_no_newton_ghost_omp;
           } else if (triclinic == 0) {
             pb = &Neighbor::half_bin_newton_omp;
-          } else if (triclinic == 1) 
+          } else if (triclinic == 1)
             pb = &Neighbor::half_bin_newton_tri_omp;
         } else if (rq->newton == 1) {
           if (triclinic == 0) pb = &Neighbor::half_bin_newton_omp;
@@ -979,8 +978,7 @@ void Neighbor::choose_build(int index, NeighRequest *rq)
           else if (includegroup)
             error->all(FLERR,"Neighbor include group not allowed "
                        "with ghost neighbors");
-          // NOTE: missing OMP version of this one
-          else pb = &Neighbor::half_bin_no_newton_ghost;
+          else pb = &Neighbor::half_bin_no_newton_ghost_omp;
         }
       } else if (style == MULTI) {
         if (rq->ghost == 1)
@@ -1261,14 +1259,16 @@ int Neighbor::check_distance()
 /* ----------------------------------------------------------------------
    build all perpetual neighbor lists every few timesteps
    pairwise & topology lists are created as needed
+   topology lists only built if topoflag = 1
 ------------------------------------------------------------------------- */
 
-void Neighbor::build()
+void Neighbor::build(int topoflag)
 {
   int i;
 
   ago = 0;
   ncalls++;
+  lastcall = update->ntimestep;
 
   // store current atom positions and box size if needed
 
@@ -1338,12 +1338,20 @@ void Neighbor::build()
   for (i = 0; i < nblist; i++)
     (this->*pair_build[blist[i]])(lists[blist[i]]);
 
-  if (atom->molecular) {
-    if (force->bond) (this->*bond_build)();
-    if (force->angle) (this->*angle_build)();
-    if (force->dihedral) (this->*dihedral_build)();
-    if (force->improper) (this->*improper_build)();
-  }
+  if (atom->molecular && topoflag) build_topology();
+}
+
+/* ----------------------------------------------------------------------
+   build all topology neighbor lists every few timesteps
+   normally built with pair lists, but USER-CUDA separates them
+------------------------------------------------------------------------- */
+
+void Neighbor::build_topology()
+{
+  if (force->bond) (this->*bond_build)();
+  if (force->angle) (this->*angle_build)();
+  if (force->dihedral) (this->*dihedral_build)();
+  if (force->improper) (this->*improper_build)();
 }
 
 /* ----------------------------------------------------------------------

@@ -31,6 +31,7 @@
 #include "region.h"
 #include "lattice.h"
 #include "comm.h"
+#include "universe.h"
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
@@ -65,6 +66,8 @@ Domain::Domain(LAMMPS *lmp) : Pointers(lmp)
   boundary[2][0] = boundary[2][1] = 0;
 
   triclinic = 0;
+  tiltsmall = 1;
+
   boxlo[0] = boxlo[1] = boxlo[2] = -0.5;
   boxhi[0] = boxhi[1] = boxhi[2] = 0.5;
   xy = xz = yz = 0.0;
@@ -135,17 +138,20 @@ void Domain::set_initial_box()
   if (boxlo[0] >= boxhi[0] || boxlo[1] >= boxhi[1] || boxlo[2] >= boxhi[2])
     error->one(FLERR,"Box bounds are invalid");
 
-  // error check on triclinic tilt factors
+  if (domain->dimension == 2 && (xz != 0.0 || yz != 0.0))
+    error->all(FLERR,"Cannot skew triclinic box in z for 2d simulation");
+
+  // error check or warning on triclinic tilt factors
 
   if (triclinic) {
-    if (domain->dimension == 2 && (xz != 0.0 || yz != 0.0))
-      error->all(FLERR,"Cannot skew triclinic box in z for 2d simulation");
-    if (fabs(xy/(boxhi[0]-boxlo[0])) > 0.5)
-      error->all(FLERR,"Triclinic box skew is too large");
-    if (fabs(xz/(boxhi[0]-boxlo[0])) > 0.5)
-      error->all(FLERR,"Triclinic box skew is too large");
-    if (fabs(yz/(boxhi[1]-boxlo[1])) > 0.5)
-      error->all(FLERR,"Triclinic box skew is too large");
+    if ((fabs(xy/(boxhi[0]-boxlo[0])) > 0.5 && xperiodic) || 
+        (fabs(xz/(boxhi[0]-boxlo[0])) > 0.5 && xperiodic) ||
+        (fabs(yz/(boxhi[1]-boxlo[1])) > 0.5 && yperiodic)) {
+      if (tiltsmall)
+        error->all(FLERR,"Triclinic box skew is too large");
+      else if (comm->me == 0)
+        error->warning(FLERR,"Triclinic box skew is large");
+    }
   }
 
   // set small based on box size and SMALL
@@ -526,16 +532,20 @@ void Domain::box_too_small_check()
 {
   int i,j,k;
 
-  // only need to check if system is molecluar and some dimension is periodic
+  // only need to check if system is molecular and some dimension is periodic
+  // if running verlet/split, don't check on KSpace partition since
+  //    it has no ghost atoms and thus bond partners won't exist
 
   if (!atom->molecular) return;
   if (!xperiodic && !yperiodic && (dimension == 2 || !zperiodic)) return;
+  if (strcmp(update->integrate_style,"verlet/split") == 0 &&
+      universe->iworld != 0) return;
 
   // maxbondall = longest current bond length
   // NOTE: if box is tiny (less than 2 * bond-length),
   //       the check itself may compute bad bond lengths
   //       not sure how to account for that extreme case
-  
+
   int *num_bond = atom->num_bond;
   int **bond_atom = atom->bond_atom;
   double **x = atom->x;
@@ -724,7 +734,7 @@ int Domain::closest_image(int i, int j)
   double delz = xi[2] - x[j][2];
   double rsqmin = delx*delx + dely*dely + delz*delz;
   double rsq;
-  
+
   while (sametag[j] >= 0) {
     j = sametag[j];
     delx = xi[0] - x[j][0];
@@ -1137,9 +1147,9 @@ void Domain::image_flip(int m, int n, int p)
     ybox -= p*zbox;
     xbox -= m*ybox + n*zbox;
 
-    image[i] = ((zbox + (tagint) IMGMAX & IMGMASK) << IMG2BITS) |
-      ((ybox + (tagint) IMGMAX & IMGMASK) << IMGBITS) | 
-      (xbox + IMGMAX & IMGMASK);
+    image[i] = ((tagint) (xbox + IMGMAX) & IMGMASK) | 
+      (((tagint) (ybox + IMGMAX) & IMGMASK) << IMGBITS) | 
+      (((tagint) (zbox + IMGMAX) & IMGMASK) << IMG2BITS);
   }
 }
 
@@ -1274,6 +1284,26 @@ void Domain::set_boundary(int narg, char **arg, int flag)
     if (boundary[0][0] >= 2 || boundary[0][1] >= 2 ||
         boundary[1][0] >= 2 || boundary[1][1] >= 2 ||
         boundary[2][0] >= 2 || boundary[2][1] >= 2) nonperiodic = 2;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   set domain attributes
+------------------------------------------------------------------------- */
+
+void Domain::set_box(int narg, char **arg)
+{
+  if (narg < 1) error->all(FLERR,"Illegal box command");
+
+  int iarg = 0;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg],"tilt") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal box command");
+      if (strcmp(arg[iarg+1],"small") == 0) tiltsmall = 1;
+      else if (strcmp(arg[iarg+1],"large") == 0) tiltsmall = 0;
+      else error->all(FLERR,"Illegal box command");
+      iarg += 2;
+    } else error->all(FLERR,"Illegal box command");
   }
 }
 

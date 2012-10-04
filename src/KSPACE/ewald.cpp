@@ -43,6 +43,7 @@ Ewald::Ewald(LAMMPS *lmp, int narg, char **arg) : KSpace(lmp, narg, arg)
 {
   if (narg != 1) error->all(FLERR,"Illegal kspace_style ewald command");
 
+  ewaldflag = 1;
   group_group_enable = 1;
   group_allocate_flag = 0;
 
@@ -94,7 +95,7 @@ void Ewald::init()
 
   if (slabflag == 0 && domain->nonperiodic > 0)
     error->all(FLERR,"Cannot use nonperiodic boundaries with Ewald");
-  if (slabflag == 1) {
+  if (slabflag) {
     if (domain->xperiodic != 1 || domain->yperiodic != 1 ||
         domain->boundary[2][0] != 1 || domain->boundary[2][1] != 1)
       error->all(FLERR,"Incorrect boundaries with slab Ewald");
@@ -104,8 +105,8 @@ void Ewald::init()
 
   scale = 1.0;
 
-  if (force->pair == NULL)
-    error->all(FLERR,"KSpace style is incompatible with Pair style");
+  pair_check();
+
   int itmp;
   double *p_cutoff = (double *) force->pair->extract("cut_coul",itmp);
   if (p_cutoff == NULL)
@@ -157,10 +158,11 @@ void Ewald::init()
   // zprd used rather than zprd_slab
 
   if (!gewaldflag) {
+    if (accuracy <= 0.0)
+      error->all(FLERR,"KSpace accuracy must be > 0");
     g_ewald = accuracy*sqrt(natoms*cutoff*xprd*yprd*zprd) / (2.0*q2);
-    if (g_ewald >= 1.0)
-      error->all(FLERR,"KSpace accuracy too large to estimate G vector");
-    g_ewald = sqrt(-log(g_ewald)) / cutoff;
+    if (g_ewald >= 1.0) g_ewald = (1.35 - 0.15*log(accuracy))/cutoff;
+    else g_ewald = sqrt(-log(g_ewald)) / cutoff;
   }
 
   // setup Ewald coefficients so can print stats
@@ -173,8 +175,10 @@ void Ewald::init()
   double lpry = rms(kymax,yprd,natoms,q2);
   double lprz = rms(kzmax,zprd_slab,natoms,q2);
   double lpr = sqrt(lprx*lprx + lpry*lpry + lprz*lprz) / sqrt(3.0);
-  double spr = 2.0*q2 * exp(-g_ewald*g_ewald*cutoff*cutoff) /
-    sqrt(natoms*cutoff*xprd*yprd*zprd_slab);
+  double q2_over_sqrt = q2 / sqrt(natoms*cutoff*xprd*yprd*zprd_slab);
+  double spr = 2.0 *q2_over_sqrt * exp(-g_ewald*g_ewald*cutoff*cutoff);
+  double tpr = estimate_table_accuracy(q2_over_sqrt,spr);
+  double estimated_accuracy = sqrt(lpr*lpr + spr*spr + tpr*tpr);
 
   // stats
 
@@ -182,18 +186,18 @@ void Ewald::init()
     if (screen) {
       fprintf(screen,"  G vector (1/distance) = %g\n",g_ewald);
       fprintf(screen,"  estimated absolute RMS force accuracy = %g\n",
-              MAX(lpr,spr));
+              estimated_accuracy);
       fprintf(screen,"  estimated relative force accuracy = %g\n",
-              MAX(lpr,spr)/two_charge_force);
+              estimated_accuracy/two_charge_force);
       fprintf(screen,"  KSpace vectors: actual max1d max3d = %d %d %d\n",
               kcount,kmax,kmax3d);
     }
     if (logfile) {
       fprintf(logfile,"  G vector (1/distnace) = %g\n",g_ewald);
       fprintf(logfile,"  estimated absolute RMS force accuracy = %g\n",
-              MAX(lpr,spr));
+              estimated_accuracy);
       fprintf(logfile,"  estimated relative force accuracy = %g\n",
-              MAX(lpr,spr)/two_charge_force);
+              estimated_accuracy/two_charge_force);
       fprintf(logfile,"  KSpace vectors: actual max1d max3d = %d %d %d\n",
               kcount,kmax,kmax3d);
     }
@@ -379,7 +383,7 @@ void Ewald::compute(int eflag, int vflag)
   for (i = 0; i < nlocal; i++) {
     f[i][0] += qscale * q[i]*ek[i][0];
     f[i][1] += qscale * q[i]*ek[i][1];
-    f[i][2] += qscale * q[i]*ek[i][2];
+    if (slabflag != 2) f[i][2] += qscale * q[i]*ek[i][2];
   }
 
   // global energy
@@ -423,7 +427,7 @@ void Ewald::compute(int eflag, int vflag)
 
   // 2d slab correction
 
-  if (slabflag) slabcorr();
+  if (slabflag == 1) slabcorr();
 }
 
 /* ---------------------------------------------------------------------- */

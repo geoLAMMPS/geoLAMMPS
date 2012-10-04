@@ -83,6 +83,9 @@ class Atom : protected Pointers {
   int **improper_type;
   int **improper_atom1,**improper_atom2,**improper_atom3,**improper_atom4;
 
+  unsigned int datamask;
+  unsigned int datamask_ext;
+
   // atom style and per-atom array existence flags
   // customize by adding new flag
 
@@ -259,11 +262,6 @@ read_restart, or create_box command.
 E: Atom_modify sort and first options cannot be used together
 
 Self-explanatory.
-
-E: Cannot create an atom map unless atoms have IDs
-
-The simulation requires a mapping from global atom IDs to local atoms,
-but the atoms that have been defined have no IDs.
 
 E: Incorrect atom format in data file
 

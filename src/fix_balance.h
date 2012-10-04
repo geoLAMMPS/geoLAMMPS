@@ -5,7 +5,7 @@
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level LAMMPS directory.
@@ -79,5 +79,13 @@ The string can only contain the characters "x", "y", or "z".
 E: Fix balance string is invalid for 2d simulation
 
 The string cannot contain the letter "z".
+
+E: Cannot open fix balance output file
+
+Self-explanatory.
+
+E: Cannot yet use fix balance with PPPM
+
+This is a current limitation of LAMMPS.
 
 */

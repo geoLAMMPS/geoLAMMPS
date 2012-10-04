@@ -22,7 +22,7 @@ colvar::colvar (std::string const &conf)
        cvi < cvm::colvars.end();
        cvi++) {
     if ((*cvi)->name == this->name)
-      cvm::fatal_error ("Error: this colvar has the same name, \""+this->name+
+      cvm::fatal_error ("Error: this colvar cannot have the same name, \""+this->name+
                         "\", as another colvar.\n");
   }
 
@@ -98,7 +98,8 @@ colvar::colvar (std::string const &conf)
                          "on an axis",       "distanceZ",      distance_z);
   initialize_components ("distance projection "
                          "on a plane",       "distanceXY",     distance_xy);
-  initialize_components ("minimum distance", "minDistance",    min_distance);
+  initialize_components ("average distance weighted by inverse power",
+                         "distanceInv", distance_inv);
 
   initialize_components ("coordination "
                          "number",           "coordNum",       coordnum);
@@ -128,6 +129,10 @@ colvar::colvar (std::string const &conf)
 
   initialize_components ("radius of "
                          "gyration",         "gyration",       gyration);
+  initialize_components ("moment of "
+                         "inertia",          "inertia",        inertia);
+  initialize_components ("moment of inertia around an axis",
+                                             "inertiaZ",       inertia_z);
   initialize_components ("eigenvector",      "eigenvector",    eigenvector);
 
   if (!cvcs.size())
@@ -249,6 +254,13 @@ colvar::colvar (std::string const &conf)
     }
   }
 
+  if (tasks[task_lower_boundary]) {
+    get_keyval (conf, "hardLowerBoundary", hard_lower_boundary, false);
+  }
+  if (tasks[task_upper_boundary]) {
+    get_keyval (conf, "hardUpperBoundary", hard_upper_boundary, false);
+  }
+
   // consistency checks for boundaries and walls
   if (tasks[task_lower_boundary] && tasks[task_upper_boundary]) {
     if (lower_boundary >= upper_boundary) {
@@ -306,13 +318,13 @@ colvar::colvar (std::string const &conf)
                             "by enabling a thermostat, or through \"extendedTemp\".\n");
       }
 
-      get_keyval (conf, "extendedFluctuation", tolerance, 0.2*width);
+      get_keyval (conf, "extendedFluctuation", tolerance, width);
       if (tolerance <= 0.0)
         cvm::fatal_error ("Error: \"extendedFluctuation\" must be positive.\n");
       ext_force_k = cvm::boltzmann() * temp / (tolerance * tolerance);
       cvm::log ("Computed extended system force constant: " + cvm::to_str(ext_force_k) + " kcal/mol/U^2");
 
-      get_keyval (conf, "extendedTimeConstant", period, 40.0 * cvm::dt());
+      get_keyval (conf, "extendedTimeConstant", period, 200.0);
       if (period <= 0.0)
         cvm::fatal_error ("Error: \"extendedTimeConstant\" must be positive.\n");
       ext_mass = (cvm::boltzmann() * temp * period * period)
@@ -327,7 +339,7 @@ colvar::colvar (std::string const &conf)
         }
       }
 
-      get_keyval (conf, "extendedLangevinDamping", ext_gamma, 0.0);
+      get_keyval (conf, "extendedLangevinDamping", ext_gamma, 1.0);
       if (ext_gamma < 0.0)
         cvm::fatal_error ("Error: \"extendedLangevinDamping\" may not be negative.\n");
       if (ext_gamma != 0.0) {

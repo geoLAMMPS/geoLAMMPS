@@ -5,7 +5,7 @@
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
    DE-AC04-94AL85000 with Sandia Corporation, the U.S. Government retains
-   certain rights in this software.  This software is distributed under 
+   certain rights in this software.  This software is distributed under
    the GNU General Public License.
 
    See the README file in the top-level LAMMPS directory.
@@ -62,13 +62,13 @@ PairReaxC::PairReaxC(LAMMPS *lmp) : Pair(lmp)
 
   system = (reax_system *)
     memory->smalloc(sizeof(reax_system),"reax:system");
-  control = (control_params *) 
+  control = (control_params *)
     memory->smalloc(sizeof(control_params),"reax:control");
   data = (simulation_data *)
     memory->smalloc(sizeof(simulation_data),"reax:data");
   workspace = (storage *)
     memory->smalloc(sizeof(storage),"reax:storage");
-  lists = (reax_list *) 
+  lists = (reax_list *)
     memory->smalloc(LIST_N * sizeof(reax_list),"reax:lists");
   out_control = (output_controls *)
     memory->smalloc(sizeof(output_controls),"reax:out_control");
@@ -128,7 +128,7 @@ PairReaxC::~PairReaxC()
     DeAllocate_System( system );
   }
   //fprintf( stderr, "4\n" );
-  
+
   memory->destroy( system );
   memory->destroy( control );
   memory->destroy( data );
@@ -192,7 +192,7 @@ void PairReaxC::settings(int narg, char **arg)
     control->hbond_cut = 7.50;
     control->thb_cut = 0.001;
     control->thb_cutsq = 0.00001;
-   
+
     out_control->write_steps = 0;
     out_control->traj_method = 0;
     strcpy( out_control->traj_title, "default_title" );
@@ -205,6 +205,9 @@ void PairReaxC::settings(int narg, char **arg)
 
   qeqflag = 1;
   control->lgflag = 0;
+  system->mincap = MIN_CAP;
+  system->safezone = SAFE_ZONE;
+  system->saferzone = SAFER_ZONE;
 
   // process optional keywords
 
@@ -222,6 +225,19 @@ void PairReaxC::settings(int narg, char **arg)
       if (strcmp(arg[iarg+1],"yes") == 0) control->lgflag = 1;
       else if (strcmp(arg[iarg+1],"no") == 0) control->lgflag = 0;
       else error->all(FLERR,"Illegal pair_style reax/c command");
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"safezone") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal pair_style reax/c command");
+      system->safezone = atof(arg[iarg+1]);
+      if (system->safezone < 0.0) 
+	error->all(FLERR,"Illegal pair_style reax/c safezone command");
+      system->saferzone = system->safezone + 0.2;
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"mincap") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal pair_style reax/c command");
+      system->mincap = atoi(arg[iarg+1]);
+      if (system->mincap < 0) 
+	error->all(FLERR,"Illegal pair_style reax/c mincap command");
       iarg += 2;
     } else error->all(FLERR,"Illegal pair_style reax/c command");
   }
@@ -248,7 +264,7 @@ void PairReaxC::coeff( int nargs, char **args )
   // read ffield file
 
   Read_Force_Field(args[2], &(system->reax_param), control);
- 
+
   // read args that map atom types to elements in potential file
   // map[i] = which element the Ith atom type is, -1 if NULL
 
@@ -278,7 +294,7 @@ void PairReaxC::coeff( int nargs, char **args )
       setflag[i][j] = 1;
       count++;
     }
-    
+
   if (count == 0) error->all(FLERR,"Incorrect args for pair coefficients");
 }
 
@@ -293,7 +309,7 @@ void PairReaxC::init_style( )
   int iqeq;
   for (iqeq = 0; iqeq < modify->nfix; iqeq++)
     if (strcmp(modify->fix[iqeq]->style,"qeq/reax") == 0) break;
-  if (iqeq == modify->nfix && qeqflag == 1) 
+  if (iqeq == modify->nfix && qeqflag == 1)
     error->all(FLERR,"Pair reax/c requires use of fix qeq/reax");
 
   system->n = atom->nlocal; // my atoms
@@ -302,8 +318,8 @@ void PairReaxC::init_style( )
   system->wsize = comm->nprocs;
 
   system->big_box.V = 0;
-  system->big_box.box_norms[0] = 0; 
-  system->big_box.box_norms[1] = 0; 
+  system->big_box.box_norms[0] = 0;
+  system->big_box.box_norms[1] = 0;
   system->big_box.box_norms[2] = 0;
 
   if (atom->tag_enable == 0)
@@ -339,6 +355,8 @@ void PairReaxC::init_style( )
 void PairReaxC::setup( )
 {
   int oldN;
+  int mincap = system->mincap;
+  double safezone = system->safezone;
 
   system->n = atom->nlocal; // my atoms
   system->N = atom->nlocal + atom->nghost; // mine + ghosts
@@ -348,7 +366,7 @@ void PairReaxC::setup( )
   if (setup_flag == 0) {
 
     setup_flag = 1;
-    
+
     int *num_bonds = fix_reax->num_bonds;
     int *num_hbonds = fix_reax->num_hbonds;
 
@@ -356,22 +374,22 @@ void PairReaxC::setup( )
 
     // determine the local and total capacity
 
-    system->local_cap = MAX( (int)(system->n * SAFE_ZONE), MIN_CAP );
-    system->total_cap = MAX( (int)(system->N * SAFE_ZONE), MIN_CAP );
+    system->local_cap = MAX( (int)(system->n * safezone), mincap );
+    system->total_cap = MAX( (int)(system->N * safezone), mincap );
 
     // initialize my data structures
 
     PreAllocate_Space( system, control, workspace, world );
     write_reax_atoms();
-    
+
     int num_nbrs = estimate_reax_lists();
-    if(!Make_List(system->total_cap, num_nbrs, TYP_FAR_NEIGHBOR, 
-		  lists+FAR_NBRS, world))
+    if(!Make_List(system->total_cap, num_nbrs, TYP_FAR_NEIGHBOR,
+                  lists+FAR_NBRS, world))
       error->all(FLERR,"Pair reax/c problem in far neighbor list");
-  
+
     write_reax_lists();
-    Initialize( system, control, data, workspace, &lists, out_control, 
-		mpi_data, world );
+    Initialize( system, control, data, workspace, &lists, out_control,
+                mpi_data, world );
     for( int k = 0; k < system->N; ++k ) {
       num_bonds[k] = system->my_atoms[k].num_bonds;
       num_hbonds[k] = system->my_atoms[k].num_hbonds;
@@ -387,7 +405,7 @@ void PairReaxC::setup( )
 
     for(int k = oldN; k < system->N; ++k)
       Set_End_Index( k, Start_Index( k, lists+BONDS ), lists+BONDS );
-    
+
     // check if I need to shrink/extend my data-structs
 
     ReAllocate( system, control, data, workspace, &lists, mpi_data );
@@ -422,9 +440,9 @@ void PairReaxC::compute(int eflag, int vflag)
 
 /*  if ((eflag_atom || vflag_atom) && firstwarn) {
     firstwarn = 0;
-    if (comm->me == 0) 
+    if (comm->me == 0)
       error->warning(FLERR,"Pair reax/c cannot yet compute "
-		     "per-atom energy or stress");
+                     "per-atom energy or stress");
   } */
 
   if (vflag_global) control->virial = 1;
@@ -435,15 +453,15 @@ void PairReaxC::compute(int eflag, int vflag)
   system->bigN = static_cast<int> (atom->natoms);  // all atoms in the system
 
   system->big_box.V = 0;
-  system->big_box.box_norms[0] = 0; 
-  system->big_box.box_norms[1] = 0; 
+  system->big_box.box_norms[0] = 0;
+  system->big_box.box_norms[1] = 0;
   system->big_box.box_norms[2] = 0;
   if( comm->me == 0 ) t_start = MPI_Wtime();
 
   // setup data structures
 
   setup();
-  
+
   Reset( system, control, data, workspace, &lists, world );
   workspace->realloc.num_far = write_reax_lists();
   // timing for filling in the reax lists
@@ -486,7 +504,7 @@ void PairReaxC::compute(int eflag, int vflag)
     // Store the different parts of the energy
     // in a list for output by compute pair command
 
-    pvector[0] = data->my_en.e_bond;   
+    pvector[0] = data->my_en.e_bond;
     pvector[1] = data->my_en.e_ov + data->my_en.e_un;
     pvector[2] = data->my_en.e_lp;
     pvector[3] = 0.0;
@@ -517,11 +535,11 @@ void PairReaxC::compute(int eflag, int vflag)
 
   Output_Results( system, control, data, &lists, out_control, mpi_data );
 
-  if(fixbond_flag) 
-	  fixbond( system, control, data, &lists, out_control, mpi_data );
+  if(fixbond_flag)
+          fixbond( system, control, data, &lists, out_control, mpi_data );
 
-  if(fixspecies_flag) 
-	  fixspecies( system, control, data, &lists, out_control, mpi_data );
+  if(fixspecies_flag)
+          fixspecies( system, control, data, &lists, out_control, mpi_data );
 
 }
 
@@ -531,7 +549,10 @@ void PairReaxC::write_reax_atoms()
 {
   int *num_bonds = fix_reax->num_bonds;
   int *num_hbonds = fix_reax->num_hbonds;
-  
+
+  if (system->N > system->total_cap)
+    error->all(FLERR,"Too many ghost atoms");
+
   for( int i = 0; i < system->N; ++i ){
     system->my_atoms[i].orig_id = atom->tag[i];
     system->my_atoms[i].type = map[atom->type[i]];
@@ -556,8 +577,8 @@ void PairReaxC::get_distance( rvec xj, rvec xi, double *d_sqr, rvec *dvec )
 
 /* ---------------------------------------------------------------------- */
 
-void PairReaxC::set_far_nbr( far_neighbor_data *fdest, 
-			      int j, double d, rvec dvec )
+void PairReaxC::set_far_nbr( far_neighbor_data *fdest,
+                              int j, double d, rvec dvec )
 {
   fdest->nbr = j;
   fdest->d = d;
@@ -577,6 +598,9 @@ int PairReaxC::estimate_reax_lists()
   double *dist, **x;
   reax_list *far_nbrs;
   far_neighbor_data *far_list;
+
+  int mincap = system->mincap;
+  double safezone = system->safezone;
 
   x = atom->x;
   nlocal = atom->nlocal;
@@ -607,16 +631,16 @@ int PairReaxC::estimate_reax_lists()
       j = jlist[itr_j];
       j &= NEIGHMASK;
       get_distance( x[j], x[i], &d_sqr, &dvec );
-      
+
       if( d_sqr <= SQR(control->nonb_cut) )
-	++num_nbrs;
+        ++num_nbrs;
     }
   }
 
   free( marked );
   free( dist );
 
-  return static_cast<int> (MAX( num_nbrs*SAFE_ZONE, MIN_CAP*MIN_NBRS ));
+  return static_cast<int> (MAX( num_nbrs*safezone, mincap*MIN_NBRS ));
 }
 
 /* ---------------------------------------------------------------------- */
@@ -643,7 +667,7 @@ int PairReaxC::write_reax_lists()
   far_nbrs = lists + FAR_NBRS;
   far_list = far_nbrs->select.far_nbr_list;
 
-  num_nbrs = 0;  
+  num_nbrs = 0;
   marked = (int*) calloc( system->N, sizeof(int) );
   dist = (double*) calloc( system->N, sizeof(double) );
 
@@ -664,8 +688,8 @@ int PairReaxC::write_reax_lists()
 
       if( d_sqr <= (control->nonb_cut*control->nonb_cut) ){
         dist[j] = sqrt( d_sqr );
-	set_far_nbr( &far_list[num_nbrs], j, dist[j], dvec );
-	++num_nbrs;
+        set_far_nbr( &far_list[num_nbrs], j, dist[j], dvec );
+        ++num_nbrs;
       }
     }
     Set_End_Index( i, num_nbrs, far_nbrs );
@@ -673,12 +697,12 @@ int PairReaxC::write_reax_lists()
 
   free( marked );
   free( dist );
-  
+
   return num_nbrs;
 }
-  
+
 /* ---------------------------------------------------------------------- */
-  
+
 void PairReaxC::read_reax_forces()
 {
   for( int i = 0; i < system->N; ++i ) {

@@ -46,9 +46,8 @@ colvarmodule::colvarmodule (char const  *config_filename,
 
   parse->get_keyval (conf, "analysis", b_analysis, false);
 
-  if (cvm::debug())
-    parse->get_keyval (conf, "debugGradientsStepSize", debug_gradients_step_size, 1.0e-03,
-                       colvarparse::parse_silent);
+  parse->get_keyval (conf, "debugGradientsStepSize", debug_gradients_step_size, 1.0e-03,
+                     colvarparse::parse_silent);
 
   parse->get_keyval (conf, "eigenvalueCrossingThreshold",
                      colvarmodule::rotation::crossing_threshold, 1.0e-04,
@@ -88,16 +87,18 @@ colvarmodule::colvarmodule (char const  *config_filename,
   cvm::log ("The trajectory file will be \""+
             cv_traj_name+"\".\n");
 
-  // open trajectory file
-  if (cv_traj_append) {
-    cvm::log ("Appending to colvar trajectory file \""+cv_traj_name+
-              "\".\n");
-    cv_traj_os.open (cv_traj_name.c_str(), std::ios::app);
-  } else {
-    proxy->backup_file (cv_traj_name.c_str());
-    cv_traj_os.open (cv_traj_name.c_str(), std::ios::out);
+  if (cv_traj_freq) {
+    // open trajectory file
+    if (cv_traj_append) {
+      cvm::log ("Appending to colvar trajectory file \""+cv_traj_name+
+                "\".\n");
+      cv_traj_os.open (cv_traj_name.c_str(), std::ios::app);
+    } else {
+      proxy->backup_file (cv_traj_name.c_str());
+      cv_traj_os.open (cv_traj_name.c_str(), std::ios::out);
+    }
+    cv_traj_os.setf (std::ios::scientific, std::ios::floatfield);
   }
-  cv_traj_os.setf (std::ios::scientific, std::ios::floatfield);
 
   // parse the options for collective variables
   init_colvars (conf);

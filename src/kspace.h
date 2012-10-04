@@ -23,14 +23,28 @@ class KSpace : protected Pointers {
   friend class FixOMP;
  public:
   double energy;                  // accumulated energy
+  double energy_1,energy_6;
   double virial[6];               // accumlated virial
   double *eatom,**vatom;          // accumulated per-atom energy/virial
   double e2group;                 // accumulated group-group energy
   double f2group[3];              // accumulated group-group force
 
-  double g_ewald;
+  int ewaldflag;                 // 1 if a Ewald solver
+  int pppmflag;                  // 1 if a PPPM solver
+  int msmflag;                   // 1 if a MSM solver
+  int dispersionflag;            // 1 if a LJ/dispersion solver
+  int tip4pflag;                 // 1 if a TIP4P solver
+  int proxyflag;                 // 1 if a proxy solver
+
+  double g_ewald,g_ewald_6;
   int nx_pppm,ny_pppm,nz_pppm;
+  int nx_pppm_6,ny_pppm_6,nz_pppm_6;
+  int nx_msm_max,ny_msm_max,nz_msm_max;
+
   int group_group_enable;         // 1 if style supports group/group calculation
+
+  unsigned int datamask;
+  unsigned int datamask_ext;
 
   int compute_flag;               // 0 if skip compute()
 
@@ -46,16 +60,24 @@ class KSpace : protected Pointers {
   virtual void setup() = 0;
   virtual void compute(int, int) = 0;
   virtual void compute_group_group(int, int, int) {};
-  virtual void timing(int, double &, double &) {}
+  virtual int timing(int, double &, double &) {return 0;}
+  virtual int timing_1d(int, double &) {return 0;}
+  virtual int timing_3d(int, double &) {return 0;}
   virtual double memory_usage() {return 0.0;}
 
+  double gamma(const double &);
+  double dgamma(const double &);
+
  protected:
-  int gridflag,gewaldflag,differentiation_flag;
-  int order;
+  int gridflag,gridflag_6;
+  int gewaldflag,gewaldflag_6;
+  int order,order_6,split_order;
+  int differentiation_flag;
   int slabflag;
   int suffix_flag;                  // suffix compatibility flag
   double scale;
   double slab_volfactor;
+  double **gcons,**dgcons;          // accumulated per-atom energy/virial
 
   double accuracy;                  // accuracy of KSpace solver (force units)
   double accuracy_absolute;         // user-specifed accuracy in force units
@@ -69,7 +91,9 @@ class KSpace : protected Pointers {
   int vflag_either,vflag_global,vflag_atom;
   int maxeatom,maxvatom;
 
+  void pair_check();
   void ev_setup(int, int);
+  double estimate_table_accuracy(double, double);
 };
 
 }
@@ -92,5 +116,10 @@ W: Kspace_modify slab param < 2.0 may cause unphysical behavior
 
 The kspace_modify slab parameter should be larger to insure periodic
 grids padded with empty space do not overlap.
+
+W: For better accuracy use 'pair_modify table 0'
+
+The user-specified force accuracy cannot be achieved unless the table
+feature is disabled by using 'pair_modify table 0'.
 
 */

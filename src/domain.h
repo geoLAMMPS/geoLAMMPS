@@ -36,6 +36,7 @@ class Domain : protected Pointers {
                                          // 3 = shrink-wrap non-per w/ min
 
   int triclinic;                         // 0 = orthog box, 1 = triclinic
+  int tiltsmall;                         // 1 if limit tilt, else 0
 
                                          // orthogonal box
   double xprd,yprd,zprd;                 // global box dimensions
@@ -111,13 +112,14 @@ class Domain : protected Pointers {
   void delete_region(int, char **);
   int find_region(char *);
   void set_boundary(int, char **, int);
+  void set_box(int, char **);
   void print_box(const char *);
   void boundary_string(char *);
 
   virtual void lamda2x(int);
   virtual void x2lamda(int);
-  void lamda2x(double *, double *);
-  void x2lamda(double *, double *);
+  virtual void lamda2x(double *, double *);
+  virtual void x2lamda(double *, double *);
   void x2lamda(double *, double *, double *, double *);
   void bbox(double *, double *, double *, double *);
   void box_corners();
@@ -133,7 +135,7 @@ class Domain : protected Pointers {
     return 0;
   }
 
- private:
+ protected:
   double small[3];                  // fractions of box lengths
 };
 
@@ -161,6 +163,21 @@ length in that dimension.  E.g. the xy tilt must be between -half and
 E: Illegal simulation box
 
 The lower bound of the simulation box is greater than the upper bound.
+
+E: Bond atom missing in box size check
+
+The 2nd atoms needed to compute a particular bond is missing on this
+processor.  Typically this is because the pairwise cutoff is set too
+short or the bond has blown apart and an atom is too far away.
+
+E: Bond/angle/dihedral extent > half of periodic box length
+
+This is a restriction because LAMMPS can be confused about which image
+of an atom in the bonded interaction is the correct one to use.
+"Extent" in this context means the maximum end-to-end length of the
+bond/angle/dihedral.  LAMMPS computes this by taking the maximum bond
+length, multiplying by the number of bonds in the interaction (e.g. 3
+for a dihedral) and adding a small amount of stretch.
 
 E: Illegal ... command
 

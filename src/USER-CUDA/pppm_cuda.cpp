@@ -57,6 +57,7 @@
 #include "remap_wrap.h"
 #include "memory.h"
 #include "error.h"
+#include "update.h"
 #include <ctime> //crmadd
 #include "cuda_wrapper_cu.h"
 #include "pppm_cuda_cu.h"
@@ -97,7 +98,8 @@ void printArray(double*** data,int nx, int ny, int nz)
 }
 /* ---------------------------------------------------------------------- */
 
-PPPMCuda::PPPMCuda(LAMMPS *lmp, int narg, char **arg) : PPPM(lmp, (narg==2?1:narg), arg)
+PPPMCuda::PPPMCuda(LAMMPS *lmp, int narg, char **arg) : 
+  PPPMOld(lmp, (narg==2?1:narg), arg)
 {
   cuda = lmp->cuda;
    if(cuda == NULL)
@@ -1380,48 +1382,20 @@ void PPPMCuda::fieldforce()
   return;
 }
 
-
-
-
 /* ----------------------------------------------------------------------
    perform and time the 4 FFTs required for N timesteps
 ------------------------------------------------------------------------- */
 
-void PPPMCuda::timing(int n, double &time3d, double &time1d)
+int PPPMCuda::timing_1d(int n, double &time1d)
 {
+  time1d = cuda->shared_data.cuda_timings.pppm_poisson/update->nsteps/4*n;
+  return 4;
+}
 
-  double time1,time2;
-
-  for (int i = 0; i < 2*nfft_both; i++) work1[i] = 0.0;
-
-  MPI_Barrier(world);
-  time1 = MPI_Wtime();
-
-  for (int i = 0; i < n; i++) {
-    fft1c->compute(work1,work1,1);
-    fft2c->compute(work1,work1,-1);
-    fft2c->compute(work1,work1,-1);
-    fft2c->compute(work1,work1,-1);
-  }
-
-  MPI_Barrier(world);
-  time2 = MPI_Wtime();
-  time3d = time2 - time1;
-  time1d = 0;
-  MPI_Barrier(world);
-  /*time1 = MPI_Wtime();
-
-  for (int i = 0; i < n; i++) {
-    fft1c->timing1d(work1,nfft_both,1);
-    fft2c->timing1d(work1,nfft_both,-1);
-    fft2c->timing1d(work1,nfft_both,-1);
-    fft2c->timing1d(work1,nfft_both,-1);
-  }
-
-  MPI_Barrier(world);
-  time2 = MPI_Wtime();
-  time1d = time2 - time1;*/
-
+int PPPMCuda::timing_3d(int n, double &time3d)
+{
+  time3d = cuda->shared_data.cuda_timings.pppm_poisson/update->nsteps*n;
+  return 4;
 }
 
 void PPPMCuda::slabcorr(int eflag)

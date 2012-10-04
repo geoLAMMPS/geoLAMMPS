@@ -75,6 +75,7 @@ FixNH::FixNH(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
   eta_mass_flag = 1;
   omega_mass_flag = 0;
   etap_mass_flag = 0;
+  flipflag = 1;
 
   // turn on tilt factor scaling, whenever applicable
 
@@ -197,34 +198,34 @@ FixNH::FixNH(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
 
     } else if (strcmp(arg[iarg],"yz") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal fix nvt/npt/nph command");
-      scaleyz = 0;
       p_start[3] = atof(arg[iarg+1]);
       p_stop[3] = atof(arg[iarg+2]);
       p_period[3] = atof(arg[iarg+3]);
       p_flag[3] = 1;
       deviatoric_flag = 1;
+      scaleyz = 0;
       iarg += 4;
       if (dimension == 2)
         error->all(FLERR,"Invalid fix nvt/npt/nph command for a 2d simulation");
     } else if (strcmp(arg[iarg],"xz") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal fix nvt/npt/nph command");
-      scalexz = 0;
       p_start[4] = atof(arg[iarg+1]);
       p_stop[4] = atof(arg[iarg+2]);
       p_period[4] = atof(arg[iarg+3]);
       p_flag[4] = 1;
       deviatoric_flag = 1;
+      scalexz = 0;
       iarg += 4;
       if (dimension == 2)
         error->all(FLERR,"Invalid fix nvt/npt/nph command for a 2d simulation");
     } else if (strcmp(arg[iarg],"xy") == 0) {
-      scalexy = 0;
       if (iarg+4 > narg) error->all(FLERR,"Illegal fix nvt/npt/nph command");
       p_start[5] = atof(arg[iarg+1]);
       p_stop[5] = atof(arg[iarg+2]);
       p_period[5] = atof(arg[iarg+3]);
       p_flag[5] = 1;
       deviatoric_flag = 1;
+      scalexy = 0;
       iarg += 4;
 
     } else if (strcmp(arg[iarg],"couple") == 0) {
@@ -248,9 +249,9 @@ FixNH::FixNH(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
       else {
         allremap = 0;
         delete [] id_dilate;
-        int n = strlen(arg[iarg+2]) + 1;
+        int n = strlen(arg[iarg+1]) + 1;
         id_dilate = new char[n];
-        strcpy(id_dilate,arg[iarg+2]);
+        strcpy(id_dilate,arg[iarg+1]);
         int idilate = group->find(id_dilate);
         if (idilate == -1)
           error->all(FLERR,"Fix nvt/npt/nph dilate group ID does not exist");
@@ -308,6 +309,12 @@ FixNH::FixNH(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
       else if (strcmp(arg[iarg+1],"no") == 0) scaleyz = 0;
       else error->all(FLERR,"Illegal fix nvt/npt/nph command");
       iarg += 2;
+    } else if (strcmp(arg[iarg],"flip") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal fix nvt/npt/nph command");
+      if (strcmp(arg[iarg+1],"yes") == 0) flipflag = 1;
+      else if (strcmp(arg[iarg+1],"no") == 0) flipflag = 0;
+      else error->all(FLERR,"Illegal fix nvt/npt/nph command");
+      iarg += 2;
     } else if (strcmp(arg[iarg],"fixedpoint") == 0) {
       if (iarg+4 > narg) error->all(FLERR,"Illegal fix nvt/npt/nph command");
       fixedpoint[0] = atof(arg[iarg+1]);
@@ -360,13 +367,13 @@ FixNH::FixNH(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
 
   if (scaleyz == 1 && domain->zperiodic == 0)
     error->all(FLERR,"Cannot use fix nvt/npt/nph "
-               "with yz dynamics when z is non-periodic dimension");
+               "with yz scaling when z is non-periodic dimension");
   if (scalexz == 1 && domain->zperiodic == 0)
     error->all(FLERR,"Cannot use fix nvt/npt/nph "
-               "with xz dynamics when z is non-periodic dimension");
+               "with xz scaling when z is non-periodic dimension");
   if (scalexy == 1 && domain->yperiodic == 0)
     error->all(FLERR,"Cannot use fix nvt/npt/nph "
-               "with xy dynamics when y is non-periodic dimension");
+               "with xy scaling when y is non-periodic dimension");
 
   if (p_flag[3] && scaleyz == 1)
     error->all(FLERR,"Cannot use fix nvt/npt/nph with "
@@ -435,10 +442,11 @@ FixNH::FixNH(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
   else if (pcouple == XYZ || (dimension == 2 && pcouple == XY)) pstyle = ISO;
   else pstyle = ANISO;
 
-  // reneighboring only forced if flips will occur due to shape changes
+  // reneighboring only forced if flips can occur due to shape changes
 
-  if (p_flag[3] || p_flag[4] || p_flag[5]) force_reneighbor = 1;
-  if (scaleyz || scalexz || scalexy) force_reneighbor = 1;
+  if (flipflag && (p_flag[3] || p_flag[4] || p_flag[5])) force_reneighbor = 1;
+  if (flipflag && (domain->yz != 0.0 || domain->xz != 0.0 || domain->xy != 0.0))
+    force_reneighbor = 1;
 
   // convert input periods to frequencies
 
@@ -2178,7 +2186,7 @@ void FixNH::nh_omega_dot()
 }
 
 /* ----------------------------------------------------------------------
-  if any tilt ratios exceed 0.5, set flip = 1 and compute new tilt values
+  if any tilt ratios exceed limits, set flip = 1 and compute new tilt values
   do not flip in x or y if non-periodic (can tilt but not flip)
     this is b/c the box length would be changed (dramatically) by flip
   if yz tilt exceeded, adjust C vector by one B vector
@@ -2198,7 +2206,7 @@ void FixNH::pre_exchange()
   double xprd = domain->xprd;
   double yprd = domain->yprd;
 
-  // flip is triggered when tilt exceeds 0.5 by an amount DELTAFLIP
+  // flip is only triggered when tilt exceeds 0.5 by DELTAFLIP
   // this avoids immediate re-flipping due to tilt oscillations
 
   double xtiltmax = (0.5+DELTAFLIP)*xprd;

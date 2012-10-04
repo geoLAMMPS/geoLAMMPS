@@ -50,6 +50,7 @@ using namespace MathConst;
 PairLJCutCoulLong::PairLJCutCoulLong(LAMMPS *lmp) : Pair(lmp)
 {
   respa_enable = 1;
+  ewaldflag = pppmflag = 1;
   ftable = NULL;
   qdist = 0.0;
 }
@@ -701,7 +702,7 @@ void PairLJCutCoulLong::init_style()
   // insure use of KSpace long-range solver, set g_ewald
 
   if (force->kspace == NULL)
-    error->all(FLERR,"Pair style is incompatible with KSpace style");
+    error->all(FLERR,"Pair style requires a KSpace style");
   g_ewald = force->kspace->g_ewald;
 
   // setup force tables
@@ -1131,5 +1132,7 @@ void *PairLJCutCoulLong::extract(const char *str, int &dim)
 {
   dim = 0;
   if (strcmp(str,"cut_coul") == 0) return (void *) &cut_coul;
+  dim = 2;
+  if (strcmp(str,"epsilon") == 0) return (void *) epsilon;
   return NULL;
 }

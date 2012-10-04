@@ -29,7 +29,6 @@
 #include "fix.h"
 #include "fix_pour.h"
 #include "fix_shear_history.h"
-#include "fix_rigid.h"
 #include "comm.h"
 #include "neighbor.h"
 #include "neigh_list.h"
@@ -99,10 +98,12 @@ void PairGranHookeHistory::compute(int eflag, int vflag)
   int shearupdate = 1;
   if (update->setupflag) shearupdate = 0;
 
-  // update body ptr and values for ghost atoms if using FixRigid masses
+  // update rigid body ptrs and values for ghost atoms if using FixRigid masses
 
   if (fix_rigid && neighbor->ago == 0) {
-    body = fix_rigid->body;
+    int tmp;
+    body = (int *) fix_rigid->extract("body",tmp);
+    mass_rigid = (double *) fix_rigid->extract("masstotal",tmp);
     comm->forward_comm_pair(this);
   }
 
@@ -201,8 +202,8 @@ void PairGranHookeHistory::compute(int eflag, int vflag)
           mj = mass[type[j]];
         }
         if (fix_rigid) {
-          if (body[i] >= 0) mi = fix_rigid->masstotal[body[i]];
-          if (body[j] >= 0) mj = fix_rigid->masstotal[body[j]];
+          if (body[i] >= 0) mi = mass_rigid[body[i]];
+          if (body[j] >= 0) mj = mass_rigid[body[j]];
         }
 
         meff = mi*mj / (mi+mj);
@@ -388,7 +389,7 @@ void PairGranHookeHistory::init_style()
   if (comm->ghost_velocity == 0)
     error->all(FLERR,"Pair granular requires ghost atoms store velocity");
 
-  // need a half neigh list and optionally a granular history neigh list
+  // need a granular neigh list and optionally a granular history neigh list
 
   int irequest = neighbor->request(this);
   neighbor->requests[irequest]->half = 0;
@@ -444,8 +445,8 @@ void PairGranHookeHistory::init_style()
 
   fix_rigid = NULL;
   for (i = 0; i < modify->nfix; i++)
-    if (strstr(modify->fix[i]->style,"rigid")) break;
-  if (i < modify->nfix) fix_rigid = (FixRigid *) modify->fix[i];
+    if (modify->fix[i]->rigid_flag) break;
+  if (i < modify->nfix) fix_rigid = modify->fix[i];
 
   // set maxrad_dynamic and maxrad_frozen for each type
   // include future Fix pour particles as dynamic
@@ -587,7 +588,7 @@ double PairGranHookeHistory::single(int i, int j, int itype, int jtype,
   double mi,mj,meff,damp,ccel,polyhertz;
   double vtr1,vtr2,vtr3,vrel,shrmag,rsht;
   double fs1,fs2,fs3,fs,fn;
-  
+
   double *radius = atom->radius;
   radi = radius[i];
   radj = radius[j];
@@ -654,11 +655,13 @@ double PairGranHookeHistory::single(int i, int j, int itype, int jtype,
   if (fix_rigid) {
     // NOTE: need to make sure ghost atoms have updated body?
     // depends on where single() is called from
-    body = fix_rigid->body;
-    if (body[i] >= 0) mi = fix_rigid->masstotal[body[i]];
-    if (body[j] >= 0) mj = fix_rigid->masstotal[body[j]];
+    int tmp;
+    body = (int *) fix_rigid->extract("body",tmp);
+    mass_rigid = (double *) fix_rigid->extract("masstotal",tmp);
+    if (body[i] >= 0) mi = mass_rigid[body[i]];
+    if (body[j] >= 0) mj = mass_rigid[body[j]];
   }
-  
+
   meff = mi*mj / (mi+mj);
   if (mask[i] & freeze_group_bit) meff = mj;
   if (mask[j] & freeze_group_bit) meff = mi;
@@ -734,7 +737,7 @@ double PairGranHookeHistory::single(int i, int j, int itype, int jtype,
 
 /* ---------------------------------------------------------------------- */
 
-int PairGranHookeHistory::pack_comm(int n, int *list, 
+int PairGranHookeHistory::pack_comm(int n, int *list,
                                     double *buf, int pbc_flag, int *pbc)
 {
   int i,j,m;

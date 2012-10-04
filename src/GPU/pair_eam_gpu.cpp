@@ -41,11 +41,11 @@ int eam_gpu_init(const int ntypes, double host_cutforcesq,
                  int **host_type2rhor, int **host_type2z2r,
                  int *host_type2frho, double ***host_rhor_spline,
                  double ***host_z2r_spline, double ***host_frho_spline,
-                 double rdr, double rdrho, int nrhor, int nrho, int nz2r,
-                 int nfrho, int nr, const int nlocal, const int nall,
-                 const int max_nbors, const int maxspecial,
-                 const double cell_size, int &gpu_mode, FILE *screen,
-                 int &fp_size);
+                 double rdr, double rdrho, double rhomax, 
+                 int nrhor, int nrho, int nz2r, int nfrho, int nr, 
+                 const int nlocal, const int nall, const int max_nbors, 
+                 const int maxspecial, const double cell_size, int &gpu_mode, 
+                 FILE *screen, int &fp_size);
 void eam_gpu_clear();
 int** eam_gpu_compute_n(const int ago, const int inum_full, const int nall,
                         double **host_x, int *host_type, double *sublo,
@@ -180,7 +180,7 @@ void PairEAMGPU::init_style()
   int fp_size;
   int success = eam_gpu_init(atom->ntypes+1, cutforcesq, type2rhor, type2z2r,
                              type2frho, rhor_spline, z2r_spline, frho_spline,
-                             rdr, rdrho, nrhor, nrho, nz2r, nfrho, nr,
+                             rdr, rdrho, rhomax, nrhor, nrho, nz2r, nfrho, nr,
                              atom->nlocal, atom->nlocal+atom->nghost, 300,
                              maxspecial, cell_size, gpu_mode, screen, fp_size);
   GPU_EXTRA::check_flag(success,error,world);
@@ -195,6 +195,49 @@ void PairEAMGPU::init_style()
     fp_single = false;
   else
     fp_single = true;
+}
+
+/* ---------------------------------------------------------------------- */
+
+double PairEAMGPU::single(int i, int j, int itype, int jtype,
+                       double rsq, double factor_coul, double factor_lj,
+                       double &fforce)
+{
+  int m;
+  double r,p,rhoip,rhojp,z2,z2p,recip,phi,phip,psip;
+  double *coeff;
+
+  r = sqrt(rsq);
+  p = r*rdr + 1.0;
+  m = static_cast<int> (p);
+  m = MIN(m,nr-1);
+  p -= m;
+  p = MIN(p,1.0);
+
+  coeff = rhor_spline[type2rhor[itype][jtype]][m];
+  rhoip = (coeff[0]*p + coeff[1])*p + coeff[2];
+  coeff = rhor_spline[type2rhor[jtype][itype]][m];
+  rhojp = (coeff[0]*p + coeff[1])*p + coeff[2];
+  coeff = z2r_spline[type2z2r[itype][jtype]][m];
+  z2p = (coeff[0]*p + coeff[1])*p + coeff[2];
+  z2 = ((coeff[3]*p + coeff[4])*p + coeff[5])*p + coeff[6];
+
+  double fp_i,fp_j;
+  if (fp_single == false) {
+    fp_i = ((double*)fp_pinned)[i];
+    fp_j = ((double*)fp_pinned)[j];
+  } else {
+    fp_i = ((float*)fp_pinned)[i];
+    fp_j = ((float*)fp_pinned)[j];
+  }
+
+  recip = 1.0/r;
+  phi = z2*recip;
+  phip = z2p*recip - phi*recip;
+  psip = fp_i*rhojp + fp_j*rhoip + phip;
+  fforce = -psip*recip;
+
+  return phi;
 }
 
 /* ---------------------------------------------------------------------- */

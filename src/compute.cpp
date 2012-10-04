@@ -21,6 +21,7 @@
 #include "domain.h"
 #include "comm.h"
 #include "group.h"
+#include "atom_masks.h"
 #include "memory.h"
 #include "error.h"
 
@@ -84,6 +85,9 @@ Compute::Compute(LAMMPS *lmp, int narg, char **arg) : Pointers(lmp)
   // setup map for molecule IDs
 
   molmap = NULL;
+
+  datamask = ALL_MASK;
+  datamask_ext = ALL_MASK;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -279,7 +283,8 @@ int Compute::molecules_in_group(int &idlo, int &idhi)
 
   MPI_Allreduce(&flag,&flagall,1,MPI_INT,MPI_SUM,world);
   if (flagall && comm->me == 0)
-    error->warning(FLERR,"One or more compute molecules has atoms not in group");
+    error->warning(FLERR,
+                   "One or more compute molecules has atoms not in group");
 
   // if molmap simply stores 1 to Nmolecules, then free it
 

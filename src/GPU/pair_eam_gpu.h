@@ -32,6 +32,7 @@ class PairEAMGPU : public PairEAM {
   virtual ~PairEAMGPU();
   void compute(int, int);
   void init_style();
+  double single(int, int, int, int, double, double, double, double &);
   double memory_usage();
 
   int pack_comm(int, int *, double *, int, int *);

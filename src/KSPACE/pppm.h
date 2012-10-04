@@ -42,7 +42,8 @@ class PPPM : public KSpace {
   virtual void init();
   virtual void setup();
   virtual void compute(int, int);
-  virtual void timing(int, double &, double &);
+  virtual int timing_1d(int, double &);
+  virtual int timing_3d(int, double &);
   virtual double memory_usage();
 
   virtual void compute_group_group(int, int, int);
@@ -51,7 +52,7 @@ class PPPM : public KSpace {
   int me,nprocs;
   int nfactors;
   int *factors;
-  double qsum,qsqsum;
+  double qsum,qsqsum,q2;
   double cutoff;
   double volume;
   double delxinv,delyinv,delzinv,delvolinv;
@@ -79,7 +80,10 @@ class PPPM : public KSpace {
   FFT_SCALAR *buf1,*buf2,*buf3,*buf4;
 
   double *gf_b;
-  FFT_SCALAR **rho1d,**rho_coeff;
+  FFT_SCALAR **rho1d,**rho_coeff,**drho1d,**drho_coeff;
+  double *sf_precoeff1, *sf_precoeff2, *sf_precoeff3, *sf_precoeff4, *sf_precoeff5, *sf_precoeff6;
+  double sf_coeff[6];          // coefficients for calculating ad self-forces
+  double **acons;
 
   // group-group interactions
 
@@ -100,28 +104,54 @@ class PPPM : public KSpace {
   int typeH,typeO;             // atom types of TIP4P water H and O atoms
   double qdist;                // distance from O site to negative charge
   double alpha;                // geometric factor
+  
+  void set_fft_parameters();
+  void adjust_gewald();
+  double newton_raphson_f();
+  double derivf();
+  double final_accuracy();
 
-  void set_grid();
   virtual void allocate();
   virtual void allocate_peratom();
   virtual void deallocate();
   virtual void deallocate_peratom();
   int factorable(int);
-  double rms(double, double, bigint, double, double **);
-  double diffpr(double, double, double, double, double **);
+  double compute_df_kspace();
+  double estimate_ik_error(double, double, bigint);
+  double compute_qopt();
   void compute_gf_denom();
-
+  void compute_gf_ik();
+  void compute_gf_ad();
+  void compute_sf_precoeff();
+  
   virtual void particle_map();
   virtual void make_rho();
   virtual void brick2fft();
+  
+  void set_grid();
+  
   virtual void fillbrick();
+  void fillbrick_ik();
+  void fillbrick_ad();
+  
   virtual void fillbrick_peratom();
+  void fillbrick_peratom_ik();
+  void fillbrick_peratom_ad();
+  
   virtual void poisson();
-  virtual void poisson_peratom();
+  void poisson_ik();
+  void poisson_ad();
+  
   virtual void fieldforce();
+  void fieldforce_ik();
+  void fieldforce_ad();
+  
+  virtual void poisson_peratom();
   virtual void fieldforce_peratom();
   void procs2grid2d(int,int,int,int *, int*);
   void compute_rho1d(const FFT_SCALAR &, const FFT_SCALAR &,
+                     const FFT_SCALAR &);
+  void compute_drho1d(const FFT_SCALAR &, const FFT_SCALAR &,
                      const FFT_SCALAR &);
   void compute_rho_coeff();
   void slabcorr();
@@ -196,9 +226,9 @@ E: Incorrect boundaries with slab PPPM
 Must have periodic x,y dimensions and non-periodic z dimension to use
 2d slab option with PPPM.
 
-E: PPPM order cannot be greater than %d
+E: PPPM order cannot be < 2 or > than %d
 
-Self-explanatory.
+This is a limitation of the PPPM implementation in LAMMPS.
 
 E: KSpace style is incompatible with Pair style
 
@@ -245,6 +275,10 @@ to run, but can reduce the order no further.  Try increasing the
 accuracy of PPPM by reducing the tolerance size, thus inducing a
 larger PPPM grid.
 
+E: KSpace accuracy must be > 0
+
+The kspace accuracy designated in the input must be greater than zero.
+
 E: Cannot compute PPPM G
 
 LAMMPS failed to compute a valid approximation for the PPPM g_ewald
@@ -265,5 +299,9 @@ every 1 check yes".  Second, it may mean that an atom has moved far
 outside a processor's sub-domain or even the entire simulation box.
 This indicates bad physics, e.g. due to highly overlapping atoms, too
 large a timestep, etc.
+
+E: Cannot (yet) use K-space slab correction with compute group/group
+
+This option is not yet supported.
 
 */

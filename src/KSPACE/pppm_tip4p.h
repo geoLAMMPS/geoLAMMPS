@@ -34,6 +34,9 @@ class PPPMTIP4P : public PPPM {
   virtual void particle_map();
   virtual void make_rho();
   virtual void fieldforce();
+  void fieldforce_ik();
+  void fieldforce_ad();
+  virtual void fieldforce_peratom();
 
  private:
   void find_M(int, int &, int &, double *);

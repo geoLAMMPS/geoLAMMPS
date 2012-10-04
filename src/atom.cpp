@@ -32,6 +32,7 @@
 #include "domain.h"
 #include "group.h"
 #include "accelerator_cuda.h"
+#include "atom_masks.h"
 #include "memory.h"
 #include "error.h"
 
@@ -136,7 +137,7 @@ Atom::Atom(LAMMPS *lmp) : Pointers(lmp)
   map_style = 0;
   map_tag_max = 0;
   map_nhash = 0;
-  
+
   smax = 0;
   sametag = NULL;
   map_array = NULL;
@@ -148,6 +149,9 @@ Atom::Atom(LAMMPS *lmp) : Pointers(lmp)
   atom_style = NULL;
   avec = NULL;
   create_avec("atomic",0,NULL,lmp->suffix);
+
+  datamask = ALL_MASK;
+  datamask_ext = ALL_MASK;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -599,13 +603,12 @@ void Atom::data_atoms(int n, char *buf)
     }
 
     if (imageflag)
-      imagedata = 
-        (((tagint) atoi(values[iptr+2]) + IMGMAX & IMGMASK) << IMG2BITS) |
-        (((tagint) atoi(values[iptr+1]) + IMGMASK & IMGMASK) << IMGBITS) |
-        (atoi(values[iptr]) + IMGMASK & IMGMASK);
-    else imagedata = ((tagint) IMGMAX << IMG2BITS) | 
+      imagedata = ((tagint) (atoi(values[iptr]) + IMGMAX) & IMGMASK) |
+        (((tagint) (atoi(values[iptr+1]) + IMGMAX) & IMGMASK) << IMGBITS) |
+        (((tagint) (atoi(values[iptr+2]) + IMGMAX) & IMGMASK) << IMG2BITS);
+    else imagedata = ((tagint) IMGMAX << IMG2BITS) |
            ((tagint) IMGMAX << IMGBITS) | IMGMAX;
-
+    
     xdata[0] = atof(values[xptr]);
     xdata[1] = atof(values[xptr+1]);
     xdata[2] = atof(values[xptr+2]);
@@ -1384,14 +1387,25 @@ void Atom::update_callback(int ifix)
 
 void *Atom::extract(char *name)
 {
+  if (strcmp(name,"mass") == 0) return (void *) mass;
+
   if (strcmp(name,"id") == 0) return (void *) tag;
   if (strcmp(name,"type") == 0) return (void *) type;
   if (strcmp(name,"mask") == 0) return (void *) mask;
+  if (strcmp(name,"image") == 0) return (void *) image;
   if (strcmp(name,"x") == 0) return (void *) x;
   if (strcmp(name,"v") == 0) return (void *) v;
   if (strcmp(name,"f") == 0) return (void *) f;
-  if (strcmp(name,"mass") == 0) return (void *) mass;
+  if (strcmp(name,"molecule") == 0) return (void *) molecule;
+  if (strcmp(name,"q") == 0) return (void *) q;
+  if (strcmp(name,"mu") == 0) return (void *) mu;
+  if (strcmp(name,"omega") == 0) return (void *) omega;
+  if (strcmp(name,"amgmom") == 0) return (void *) angmom;
+  if (strcmp(name,"torque") == 0) return (void *) torque;
+  if (strcmp(name,"radius") == 0) return (void *) radius;
   if (strcmp(name,"rmass") == 0) return (void *) rmass;
+  if (strcmp(name,"vfrac") == 0) return (void *) vfrac;
+  if (strcmp(name,"s0") == 0) return (void *) s0;
 
   return NULL;
 }

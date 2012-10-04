@@ -271,8 +271,8 @@ void CreateAtoms::add_single()
   // remap atom if requested
 
   if (remapflag) {
-    tagint imagetmp = ((tagint) IMGMAX << IMG2BITS) | 
-      ((tagint) IMGMASK << IMGBITS) | IMGMAX;
+    tagint imagetmp = ((tagint) IMGMAX << IMG2BITS) |
+      ((tagint) IMGMAX << IMGBITS) | IMGMAX;
     domain->remap(xone,imagetmp);
   }
 

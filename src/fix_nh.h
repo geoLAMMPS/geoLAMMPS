@@ -112,8 +112,9 @@ class FixNH : public Fix {
   int scaleyz;                     // 1 if yz scaled with lz
   int scalexz;                     // 1 if xz scaled with lz
   int scalexy;                     // 1 if xy scaled with ly
+  int flipflag;                    // 1 if box flips are invoked as needed
 
-  double fixedpoint[3];            // Location of dilation fixed-point
+  double fixedpoint[3];            // location of dilation fixed-point
 
   void couple();
   void remap();
@@ -154,6 +155,10 @@ E: Invalid fix nvt/npt/nph command for a 2d simulation
 
 Cannot control z dimension in a 2d model.
 
+E: Fix nvt/npt/nph dilate group ID does not exist
+
+Self-explanatory.
+
 E: Invalid fix nvt/npt/nph command pressure settings
 
 If multiple dimensions are coupled, those dimensions must be
@@ -170,15 +175,15 @@ When specifying an off-diagonal pressure component, the 2nd of the two
 dimensions must be periodic.  E.g. if the xy component is specified,
 then the y dimension must be periodic.
 
-E: Cannot use fix nvt/npt/nph with yz dynamics when z is non-periodic dimension
+E: Cannot use fix nvt/npt/nph with yz scaling when z is non-periodic dimension
 
 The 2nd dimension in the barostatted tilt factor must be periodic.
 
-E: Cannot use fix nvt/npt/nph with xz dynamics when z is non-periodic dimension
+E: Cannot use fix nvt/npt/nph with xz scaling when z is non-periodic dimension
 
 The 2nd dimension in the barostatted tilt factor must be periodic.
 
-E: Cannot use fix nvt/npt/nph with xy dynamics when y is non-periodic dimension
+E: Cannot use fix nvt/npt/nph with xy scaling when y is non-periodic dimension
 
 The 2nd dimension in the barostatted tilt factor must be periodic.
 

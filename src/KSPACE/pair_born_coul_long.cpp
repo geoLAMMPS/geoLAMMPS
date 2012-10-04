@@ -43,7 +43,10 @@ using namespace MathConst;
 
 /* ---------------------------------------------------------------------- */
 
-PairBornCoulLong::PairBornCoulLong(LAMMPS *lmp) : Pair(lmp) {}
+PairBornCoulLong::PairBornCoulLong(LAMMPS *lmp) : Pair(lmp)
+{
+  ewaldflag = pppmflag = 1;
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -284,7 +287,7 @@ double PairBornCoulLong::init_one(int i, int j)
   born3[i][j] = 8.0*d[i][j];
 
   if (offset_flag) {
-    double rexp = exp(-cut_lj[i][j]*rhoinv[i][j]);
+    double rexp = exp((sigma[i][j]-cut_lj[i][j])*rhoinv[i][j]);
     offset[i][j] = a[i][j]*rexp - c[i][j]/pow(cut_lj[i][j],6.0) +
       d[i][j]/pow(cut_lj[i][j],8.0);
   } else offset[i][j] = 0.0;
@@ -349,7 +352,7 @@ void PairBornCoulLong::init_style()
   // insure use of KSpace long-range solver, set g_ewald
 
   if (force->kspace == NULL)
-    error->all(FLERR,"Pair style is incompatible with KSpace style");
+    error->all(FLERR,"Pair style requires a KSpace style");
   g_ewald = force->kspace->g_ewald;
 
   neighbor->request(this);

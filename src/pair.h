@@ -50,6 +50,13 @@ class Pair : protected Pointers {
   int ghostneigh;                // 1 if pair style needs neighbors of ghosts
   double **cutghost;             // cutoff for each ghost pair
 
+  int ewaldflag;                 // 1 if compatible with Ewald solver
+  int pppmflag;                  // 1 if compatible with PPPM solver
+  int msmflag;                   // 1 if compatible with MSM solver
+  int dispersionflag;            // 1 if compatible with LJ/dispersion solver
+  int tip4pflag;                 // 1 if compatible with TIP4P solver
+  int proxyflag;                 // 1 if compatible with proxy solver
+
   int tail_flag;                 // pair_modify flag for LJ tail correction
   double etail,ptail;            // energy/pressure tail corrections
   double etail_ij,ptail_ij;
@@ -57,6 +64,8 @@ class Pair : protected Pointers {
   int evflag;                    // energy,virial settings
   int eflag_either,eflag_global,eflag_atom;
   int vflag_either,vflag_global,vflag_atom;
+
+  int ncoultablebits;            // size of Coulomb table, accessed by KSpace
 
   int nextra;                    // # of extra quantities pair style calculates
   double *pvector;               // vector of extra pair quantities
@@ -71,6 +80,9 @@ class Pair : protected Pointers {
   class NeighList *listinner;    // rRESPA lists used by some pairs
   class NeighList *listmiddle;
   class NeighList *listouter;
+
+  unsigned int datamask;
+  unsigned int datamask_ext;
 
   int compute_flag;              // 0 if skip compute()
 
@@ -138,6 +150,9 @@ class Pair : protected Pointers {
   virtual void min_xf_get(int) {}
   virtual void min_x_set(int) {}
 
+  virtual unsigned int data_mask() {return datamask;}
+  virtual unsigned int data_mask_ext() {return datamask_ext;}
+
  protected:
   enum{GEOMETRIC,ARITHMETIC,SIXTHPOWER};   // mixing options
 
@@ -146,7 +161,6 @@ class Pair : protected Pointers {
 
                                        // pair_modify settings
   int offset_flag,mix_flag;            // flags for offset and mixing
-  int ncoultablebits;                  // size of Coulomb table
   double tabinner;                     // inner cutoff for Coulomb table
 
   // custom data type for accessing Coulomb tables
@@ -166,6 +180,7 @@ class Pair : protected Pointers {
   void ev_tally4(int, int, int, int, double,
                  double *, double *, double *, double *, double *, double *);
   void ev_tally_list(int, int *, double, double *);
+  void ev_tally_tip4p(int, int *, double *, double, double);
   void v_tally2(int, int, double, double *);
   void v_tally_tensor(int, int, int, int,
                       double, double, double, double, double, double);

@@ -105,13 +105,12 @@ void FixEvent::restore_event()
     x[i][1] = xevent[i][1];
     x[i][2] = xevent[i][2];
 
-    // Since xevent is unwrapped coordinate, need to
+    // since xevent is unwrapped coordinate, need to
     // adjust image flags when remapping
 
-    image[i] = ((tagint) IMGMAX << IMG2BITS) | 
-      ((tagint) IMGMASK << IMGBITS) | IMGMASK;
+    image[i] = ((tagint) IMGMAX << IMG2BITS) |
+      ((tagint) IMGMAX << IMGBITS) | IMGMASK;
     domain->remap(x[i],image[i]);
-    // domain->remap(x[i]);
   }
 
 }
