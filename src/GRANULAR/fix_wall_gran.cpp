@@ -67,7 +67,7 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   if (dampflag == 0) gammat = 0.0;
 
   if (kn < 0.0 || kt < 0.0 || gamman < 0.0 || gammat < 0.0 ||
-      xmu < 0.0 || xmu > 1.0 || dampflag < 0 || dampflag > 1)
+      xmu < 0.0 || dampflag < 0 || dampflag > 1)
     error->all(FLERR,"Illegal fix wall/gran command");
 
   // convert Kn and Kt from pressure units to force/distance^2 if Hertzian
@@ -359,8 +359,8 @@ void FixWallGran::hooke(double rsq, double dx, double dy, double dz,
                         double radius, double mass)
 {
   double r,vr1,vr2,vr3,vnnr,vn1,vn2,vn3,vt1,vt2,vt3;
-  double wr1,wr2,wr3,meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
-  double fn,fs,ft,fs1,fs2,fs3,fx,fy,fz,tor1,tor2,tor3,rinv,rsqinv;
+  double meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
+  double fn,fs,ft,fs1,fs2,fs3,fx,fy,fz,rinv,rsqinv;
 
   r = sqrt(rsq);
   rinv = 1.0/r;
@@ -385,11 +385,8 @@ void FixWallGran::hooke(double rsq, double dx, double dy, double dz,
   vt2 = vr2 - vn2;
   vt3 = vr3 - vn3;
 
-  // relative rotational velocity
-
-  wr1 = radius*omega[0] * rinv;
-  wr2 = radius*omega[1] * rinv;
-  wr3 = radius*omega[2] * rinv;
+  // relative rotational velocity - removed
+  //wr1 = radius*omega[0] * rinv; //radius should be substituted by r, so wr1==omega[0] etc
 
   // normal forces = Hookian contact + normal velocity damping
 
@@ -399,9 +396,9 @@ void FixWallGran::hooke(double rsq, double dx, double dy, double dz,
 
   // relative velocities
 
-  vtr1 = vt1 - (dz*wr2-dy*wr3);
-  vtr2 = vt2 - (dx*wr3-dz*wr1);
-  vtr3 = vt3 - (dy*wr1-dx*wr2);
+  vtr1 = vt1 - dz*omega[1]+dy*omega[2];
+  vtr2 = vt2 - dx*omega[2]+dz*omega[0];
+  vtr3 = vt3 - dy*omega[0]+dx*omega[1];
   vrel = vtr1*vtr1 + vtr2*vtr2 + vtr3*vtr3;
   vrel = sqrt(vrel);
 
@@ -428,12 +425,10 @@ void FixWallGran::hooke(double rsq, double dx, double dy, double dz,
   f[1] += fy;
   f[2] += fz;
 
-  tor1 = rinv * (dy*fs3 - dz*fs2);
-  tor2 = rinv * (dz*fs1 - dx*fs3);
-  tor3 = rinv * (dx*fs2 - dy*fs1);
-  torque[0] -= radius*tor1;
-  torque[1] -= radius*tor2;
-  torque[2] -= radius*tor3;
+  torque[0] -= dy*fs3 - dz*fs2;
+  torque[1] -= dz*fs1 - dx*fs3;
+  torque[2] -= dx*fs2 - dy*fs1;
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -444,8 +439,8 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
                                 double radius, double mass, double *shear)
 {
   double r,vr1,vr2,vr3,vnnr,vn1,vn2,vn3,vt1,vt2,vt3;
-  double wr1,wr2,wr3,meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
-  double fn,fs,fs1,fs2,fs3,fx,fy,fz,tor1,tor2,tor3;
+  double meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
+  double fn,fs,fs1,fs2,fs3,fx,fy,fz;
   double shrmag,rsht,rinv,rsqinv;
 
   r = sqrt(rsq);
@@ -471,11 +466,7 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
   vt2 = vr2 - vn2;
   vt3 = vr3 - vn3;
 
-  // relative rotational velocity
-
-  wr1 = radius*omega[0] * rinv;
-  wr2 = radius*omega[1] * rinv;
-  wr3 = radius*omega[2] * rinv;
+  // relative rotational velocity - removed see above
 
   // normal forces = Hookian contact + normal velocity damping
 
@@ -485,9 +476,9 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
 
   // relative velocities
 
-  vtr1 = vt1 - (dz*wr2-dy*wr3);
-  vtr2 = vt2 - (dx*wr3-dz*wr1);
-  vtr3 = vt3 - (dy*wr1-dx*wr2);
+  vtr1 = vt1 - dz*omega[1]+dy*omega[2];
+  vtr2 = vt2 - dx*omega[2]+dz*omega[0];
+  vtr3 = vt3 - dy*omega[0]+dx*omega[1];
   vrel = vtr1*vtr1 + vtr2*vtr2 + vtr3*vtr3;
   vrel = sqrt(vrel);
 
@@ -545,12 +536,9 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
   f[1] += fy;
   f[2] += fz;
 
-  tor1 = rinv * (dy*fs3 - dz*fs2);
-  tor2 = rinv * (dz*fs1 - dx*fs3);
-  tor3 = rinv * (dx*fs2 - dy*fs1);
-  torque[0] -= radius*tor1;
-  torque[1] -= radius*tor2;
-  torque[2] -= radius*tor3;
+  torque[0] -= dy*fs3 - dz*fs2;
+  torque[1] -= dz*fs1 - dx*fs3;
+  torque[2] -= dx*fs2 - dy*fs1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -561,8 +549,8 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
                                 double radius, double mass, double *shear)
 {
   double r,vr1,vr2,vr3,vnnr,vn1,vn2,vn3,vt1,vt2,vt3;
-  double wr1,wr2,wr3,meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
-  double fn,fs,fs1,fs2,fs3,fx,fy,fz,tor1,tor2,tor3;
+  double meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
+  double fn,fs,fs1,fs2,fs3,fx,fy,fz;
   double shrmag,rsht,polyhertz,rinv,rsqinv;
 
   r = sqrt(rsq);
@@ -588,11 +576,7 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
   vt2 = vr2 - vn2;
   vt3 = vr3 - vn3;
 
-  // relative rotational velocity
-
-  wr1 = radius*omega[0] * rinv;
-  wr2 = radius*omega[1] * rinv;
-  wr3 = radius*omega[2] * rinv;
+  // relative rotational velocity - removed
 
   // normal forces = Hertzian contact + normal velocity damping
 
@@ -604,9 +588,9 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
 
   // relative velocities
 
-  vtr1 = vt1 - (dz*wr2-dy*wr3);
-  vtr2 = vt2 - (dx*wr3-dz*wr1);
-  vtr3 = vt3 - (dy*wr1-dx*wr2);
+  vtr1 = vt1 - dz*omega[1]+dy*omega[2];
+  vtr2 = vt2 - dx*omega[2]+dz*omega[0];
+  vtr3 = vt3 - dy*omega[0]+dx*omega[1];
   vrel = vtr1*vtr1 + vtr2*vtr2 + vtr3*vtr3;
   vrel = sqrt(vrel);
 
@@ -664,12 +648,9 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
   f[1] += fy;
   f[2] += fz;
 
-  tor1 = rinv * (dy*fs3 - dz*fs2);
-  tor2 = rinv * (dz*fs1 - dx*fs3);
-  tor3 = rinv * (dx*fs2 - dy*fs1);
-  torque[0] -= radius*tor1;
-  torque[1] -= radius*tor2;
-  torque[2] -= radius*tor3;
+  torque[0] -= dy*fs3 - dz*fs2;
+  torque[1] -= dz*fs1 - dx*fs3;
+  torque[2] -= dx*fs2 - dy*fs1;
 }
 
 /* ----------------------------------------------------------------------
