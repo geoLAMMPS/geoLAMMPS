@@ -48,7 +48,7 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
   double vtr1,vtr2,vtr3,vrel;
   double mi,mj,meff,damp,ccel,tor1,tor2,tor3;
   double fn,fs,fs1,fs2,fs3;
-  double shrmag,rsht,polyhertz;
+  double shsqmag,shsqnew,shratio,rsht,polyhertz;
   int *ilist,*jlist,*numneigh,**firstneigh;
   int *touch,**firsttouch;
   double *shear,*allshear,**firstshear;
@@ -200,8 +200,7 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
           shear[1] += vtr2*dt;
           shear[2] += vtr3*dt;
         }
-        shrmag = sqrt(shear[0]*shear[0] + shear[1]*shear[1] +
-                      shear[2]*shear[2]);
+        shsqmag = shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2];
 
         // rotate shear displacements
 
@@ -211,6 +210,13 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
           shear[0] -= rsht*delx;
           shear[1] -= rsht*dely;
           shear[2] -= rsht*delz;
+          shsqnew = shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2];
+          if (shsqnew!=0.0) {
+              shratio=sqrt(shsqmag/shsqnew);
+              shear[0] *= shratio; // conserve shear length
+              shear[1] *= shratio;
+              shear[2] *= shratio;
+          }
         }
 
         // tangential forces = shear + tangential velocity damping
@@ -225,7 +231,7 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
         fn = xmu * fabs(ccel*r);
 
         if (fs > fn) {
-          if (shrmag != 0.0) {
+          if (fs != 0.0) {
             shear[0] = (fn/fs) * (shear[0] + meff*gammat*vtr1/kt) -
               meff*gammat*vtr1/kt;
             shear[1] = (fn/fs) * (shear[1] + meff*gammat*vtr2/kt) -
@@ -311,7 +317,7 @@ double PairGranHertzHistory::single(int i, int j, int itype, int jtype,
   double r,rinv,rsqinv,delx,dely,delz;
   double vr1,vr2,vr3,vnnr,vn1,vn2,vn3,vt1,vt2,vt3,wr1,wr2,wr3;
   double mi,mj,meff,damp,ccel,polyhertz;
-  double vtr1,vtr2,vtr3,vrel,shrmag,rsht;
+  double vtr1,vtr2,vtr3,vrel;
   double fs1,fs2,fs3,fs,fn;
   double deltan,cri,crj;
 
@@ -429,13 +435,8 @@ double PairGranHertzHistory::single(int i, int j, int itype, int jtype,
   }
 
   double *shear = &allshear[3*neighprev];
-  shrmag = sqrt(shear[0]*shear[0] + shear[1]*shear[1] +
-                shear[2]*shear[2]);
 
-  // rotate shear displacements
-
-  rsht = shear[0]*delx + shear[1]*dely + shear[2]*delz;
-  rsht *= rsqinv;
+  // rotate shear displacements - not needed- shear already updated by compute!
 
   // tangential forces = shear + tangential velocity damping
 
@@ -449,7 +450,7 @@ double PairGranHertzHistory::single(int i, int j, int itype, int jtype,
   fn = xmu * fabs(ccel*r);
 
   if (fs > fn) {
-    if (shrmag != 0.0) {
+    if (fs != 0.0) {
       fs1 *= fn/fs;
       fs2 *= fn/fs;
       fs3 *= fn/fs;
