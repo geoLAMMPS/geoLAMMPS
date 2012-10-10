@@ -63,7 +63,7 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   else gammat = atof(arg[6]);
 
   xmu = atof(arg[7]);
-  int dampflag = atoi(arg[8]);
+  dampflag = atoi(arg[8]);
   if (dampflag == 0) gammat = 0.0;
 
   if (kn < 0.0 || kt < 0.0 || gamman < 0.0 || gammat < 0.0 ||
@@ -774,4 +774,48 @@ int FixWallGran::size_restart(int nlocal)
 void FixWallGran::reset_dt()
 {
   dt = update->dt;
+}
+
+/* ---------------------------------------------------------------------- 
+Allows the user to do a fix_modify at the input script and change the
+parameters of the fix. Only allows a few things to be modified.
+Returns the number of arguments read.
+------------------------------------------------------------------------- */
+
+int FixWallGran::modify_param(int narg, char **arg)
+{
+    if (narg < 2) error->all(FLERR,"Illegal fix_modify command");
+    int argsread=0;
+
+    if (strcmp(arg[argsread],"gamman") == 0) {// do while loop instead?
+      fprintf(screen, "changed wall gamman from %f to ",gamman);
+      gamman=atof(arg[argsread+1]);
+      argsread+=2;
+      fprintf(screen, "%f\n",gamman);
+    }
+    else if (strcmp(arg[argsread],"gammat") == 0) {
+      fprintf(screen, "changed wall gammat from %f to ",gammat);
+      gammat=atof(arg[argsread+1]);
+      argsread+=2;
+      fprintf(screen, "%f\n",gammat);
+    }
+    else if (strcmp(arg[argsread],"mu") == 0) {
+      fprintf(screen, "changed wall friction coefficient from %f to ",xmu);
+      xmu=atof(arg[argsread+1]);
+      argsread+=2;
+      fprintf(screen, "%f\n",xmu);
+    }
+    else if (strcmp(arg[argsread],"dampflag") == 0) {
+      dampflag=atoi(arg[argsread+1]);
+      argsread+=2;
+      fprintf(screen, "changed wall dampflag to %d \n",dampflag);
+    }
+    else {
+       fprintf(screen,"Argument %s not yet supported\n",arg[argsread]);
+       error->all(FLERR,"Illegal fix modify wall/gran command");
+    }
+    if (argsread==narg) {
+       if (gamman <0.0 || gammat <0.0 || xmu <0.0 ) error->all(FLERR,"Check the values for the modified granular wall parameters");
+    }
+    return argsread;
 }

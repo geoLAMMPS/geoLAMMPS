@@ -27,7 +27,7 @@
 
 <LI>gamma_t = damping coefficient for collisions in tangential direction (1/time units or 1/time-distance units - see discussion below) 
 
-<LI>xmu = static yield criterion (unitless fraction between 0.0 and 1.0) 
+<LI>xmu = static yield criterion (unitless fraction over 0.0) 
 
 <LI>dampflag = 0 or 1 if tangential damping force is excluded or included 
 
@@ -152,8 +152,7 @@ info on how to re-specify a fix in an input script that reads a
 restart file, so that the operation of the fix continues in an
 uninterrupted fashion.
 </P>
-<P>None of the <A HREF = "fix_modify.html">fix_modify</A> options are relevant to this
-fix.  No global or per-atom quantities are stored by this fix for
+<P><A HREF = "fix_modify.html">fix_modify</A> can be used to change the frictional coefficient (xmu), the damping coefficients (gamma_n and gamma_t) and the dampflag.  No global or per-atom quantities are stored by this fix for
 access by various <A HREF = "Section_howto.html#howto_15">output commands</A>.  No
 parameter of this fix can be used with the <I>start/stop</I> keywords of
 the <A HREF = "run.html">run</A> command.  This fix is not invoked during <A HREF = "minimize.html">energy

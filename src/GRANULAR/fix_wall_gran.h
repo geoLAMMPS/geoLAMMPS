@@ -45,9 +45,10 @@ class FixWallGran : public Fix {
   int size_restart(int);
   int maxsize_restart();
   void reset_dt();
+  int modify_param(int, char **);
 
  protected:
-  int wallstyle,pairstyle,wiggle,wshear,axis;
+  int wallstyle,pairstyle,wiggle,wshear,axis,dampflag;
   double kn,kt,gamman,gammat,xmu;
   double lo,hi,cylradius;
   double amplitude,period,omega,vshear;
