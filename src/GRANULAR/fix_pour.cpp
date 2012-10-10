@@ -34,6 +34,7 @@
 using namespace LAMMPS_NS;
 using namespace FixConst;
 using namespace MathConst;
+enum{UNIFORM,GAUSS};
 
 #define EPSILON 0.001
 
@@ -60,7 +61,10 @@ FixPour::FixPour(LAMMPS *lmp, int narg, char **arg) :
   // option defaults
 
   int iregion = -1;
+  rad_distr = 0;
   radius_lo = radius_hi = 0.5;
+  meanrad = 0.5;
+  stdevrad = 0.0;
   density_lo = density_hi = 1.0;
   volfrac = 0.25;
   maxattempt = 50;
@@ -78,9 +82,19 @@ FixPour::FixPour(LAMMPS *lmp, int narg, char **arg) :
       iarg += 2;
     } else if (strcmp(arg[iarg],"diam") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal fix pour command");
-      radius_lo = 0.5 * atof(arg[iarg+1]);
-      radius_hi = 0.5 * atof(arg[iarg+2]);
-      iarg += 3;
+      if (strcmp(arg[iarg+3],"gaussian") == 0) {
+        meanrad = 0.5 * atof(arg[iarg+1]);
+        stdevrad = 0.5 * atof(arg[iarg+2]);
+        radius_hi = meanrad; //so that volume_one is calculated OK..
+        rad_distr = GAUSS;
+        iarg += 4; //one extra argument
+      } else {
+        radius_lo = 0.5 * atof(arg[iarg+1]);
+        radius_hi = 0.5 * atof(arg[iarg+2]);
+        rad_distr = UNIFORM;
+        iarg += 3;
+        if (strcmp(arg[iarg+3],"uniform") == 0) iarg += 1; // optional uniform argument
+      }
     } else if (strcmp(arg[iarg],"dens") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal fix pour command");
       density_lo = atof(arg[iarg+1]);
@@ -389,7 +403,8 @@ void FixPour::pre_exchange()
   while (nnear < ntotal) {
     rn = random->uniform();
     h = hi_current - rn*rn * (hi_current-lo_current);
-    radtmp = radius_lo + random->uniform() * (radius_hi-radius_lo);
+    if (rad_distr == GAUSS)  radtmp = random->gaussian() * stdevrad + meanrad;
+    else radtmp = radius_lo + random->uniform() * (radius_hi-radius_lo);
     success = 0;
     while (attempt < max) {
       attempt++;
