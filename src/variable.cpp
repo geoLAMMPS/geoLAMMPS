@@ -3058,7 +3058,7 @@ int Variable::special_function(char *word, char *contents, Tree **tree,
    id = positive global ID of atom, converted to local index
    push result onto tree or arg stack
    customize by adding an atom vector:
-     mass,type,x,y,z,vx,vy,vz,fx,fy,fz,omegax,omegay,omegaz
+     mass,type,radius,x,y,z,vx,vy,vz,fx,fy,fz,omegax,omegay,omegaz
 ------------------------------------------------------------------------- */
 
 void Variable::peratom2global(int flag, char *word,
@@ -3080,6 +3080,7 @@ void Variable::peratom2global(int flag, char *word,
         else mine = atom->mass[atom->type[index]];
       }
       else if (strcmp(word,"type") == 0) mine = atom->type[index];
+      else if (strcmp(word,"radius") == 0) mine = atom->radius[index];
       else if (strcmp(word,"x") == 0) mine = atom->x[index][0];
       else if (strcmp(word,"y") == 0) mine = atom->x[index][1];
       else if (strcmp(word,"z") == 0) mine = atom->x[index][2];
@@ -3116,12 +3117,13 @@ void Variable::peratom2global(int flag, char *word,
    check if word matches an atom vector
    return 1 if yes, else 0
    customize by adding an atom vector:
-     mass,type,x,y,z,vx,vy,vz,fx,fy,fz,omegax,omegay,omegaz
+     mass,radius,type,x,y,z,vx,vy,vz,fx,fy,fz,omegax,omegay,omegaz
 ------------------------------------------------------------------------- */
 
 int Variable::is_atom_vector(char *word)
 {
   if (strcmp(word,"mass") == 0) return 1;
+  if (strcmp(word,"radius") == 0) return 1;
   if (strcmp(word,"type") == 0) return 1;
   if (strcmp(word,"x") == 0) return 1;
   if (strcmp(word,"y") == 0) return 1;
@@ -3143,7 +3145,7 @@ int Variable::is_atom_vector(char *word)
    push result onto tree
    word = atom vector
    customize by adding an atom vector:
-     mass,type,x,y,z,vx,vy,vz,fx,fy,fz,omegax,omegay,omegaz
+     mass,radius,type,x,y,z,vx,vy,vz,fx,fy,fz,omegax,omegay,omegaz
 ------------------------------------------------------------------------- */
 
 void Variable::atom_vector(char *word, Tree **tree,
@@ -3170,6 +3172,10 @@ void Variable::atom_vector(char *word, Tree **tree,
     newtree->type = INTARRAY;
     newtree->nstride = 1;
     newtree->iarray = atom->type;
+  }
+  else if (strcmp(word,"radius") == 0) {
+    newtree->nstride = 1; // should nstride be set?
+    newtree->array = atom->radius;
   }
   else if (strcmp(word,"x") == 0) newtree->array = &atom->x[0][0];
   else if (strcmp(word,"y") == 0) newtree->array = &atom->x[0][1];
