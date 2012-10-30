@@ -48,9 +48,11 @@ class FixWallGran : public Fix {
   int modify_param(int, char **);
 
  protected:
-  int wallstyle,pairstyle,wiggle,wshear,axis,dampflag;
+  int wallstyle,pairstyle,wiggle,wshear,axis,dampflag,wtranslate;
   double kn,kt,gamman,gammat,xmu;
   double lo,hi,cylradius;
+  double loINI,hiINI; // for wiggle only
+  double velwall[3];
   double amplitude,period,omega,vshear;
   double dt;
   int nlevels_respa;
@@ -68,6 +70,7 @@ class FixWallGran : public Fix {
   void hertz_history(double, double, double, double, double *,
                      double *, double *, double *, double *, double, double,
                      double *);
+  void move_wall();
 };
 
 }

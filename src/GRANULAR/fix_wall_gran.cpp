@@ -116,6 +116,8 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
 
   wiggle = 0;
   wshear = 0;
+  wtranslate = 0;
+  velwall[0] = velwall[1] = velwall[2] = 0.0;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"wiggle") == 0) {
@@ -127,6 +129,8 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
       amplitude = atof(arg[iarg+2]);
       period = atof(arg[iarg+3]);
       wiggle = 1;
+      loINI = lo;
+      hiINI = hi;
       iarg += 4;
     } else if (strcmp(arg[iarg],"shear") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal fix wall/gran command");
@@ -137,6 +141,12 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
       vshear = atof(arg[iarg+2]);
       wshear = 1;
       iarg += 3;
+    } else if (strcmp(arg[iarg],"translate") == 0) {
+      wtranslate = 1;
+      velwall[0] = atof(arg[iarg+1]);
+      velwall[1] = atof(arg[iarg+2]);
+      velwall[2] = atof(arg[iarg+3]);
+      iarg += 4;
     } else error->all(FLERR,"Illegal fix wall/gran command");
   }
 
@@ -159,6 +169,12 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     error->all(FLERR,"Invalid shear direction for fix wall/gran");
   if (wshear && wallstyle == ZPLANE && axis == 2)
     error->all(FLERR,"Invalid shear direction for fix wall/gran");
+  if (wtranslate && (lo != -BIG && hi != BIG))
+    error->all(FLERR,"Cannot specify both top and bottom walls and translate for fix wall/gran");
+  if (wtranslate && wallstyle == ZCYLINDER)
+    error->all(FLERR,"Cannot use translate with cylinder fix wall/gran");
+  if (wtranslate && (wiggle || wshear))
+    error->all(FLERR,"Cannot translate and wiggle or shear fix wall/gran");
 
   // setup oscillations
 
@@ -246,22 +262,20 @@ void FixWallGran::setup(int vflag)
 
 void FixWallGran::post_force(int vflag)
 {
-  double vwall[3],dx,dy,dz,del1,del2,delxy,delr,rsq;
+  double dx,dy,dz,del1,del2,delxy,delr,rsq;
 
-  // set position of wall to initial settings and velocity to 0.0
   // if wiggle or shear, set wall position and velocity accordingly
+  // if wtranslate lo and hi track the wall position and velwall is set in the constructor
 
-  double wlo = lo;
-  double whi = hi;
-  vwall[0] = vwall[1] = vwall[2] = 0.0;
   if (wiggle) {
     double arg = omega * (update->ntimestep - time_origin) * dt;
     if (wallstyle == axis) {
-      wlo = lo + amplitude - amplitude*cos(arg);
-      whi = hi + amplitude - amplitude*cos(arg);
+      lo = loINI + amplitude - amplitude*cos(arg);
+      hi = hiINI + amplitude - amplitude*cos(arg);
     }
-    vwall[axis] = amplitude*omega*sin(arg);
-  } else if (wshear) vwall[axis] = vshear;
+    velwall[axis] = amplitude*omega*sin(arg);
+  } else if (wtranslate) move_wall(); // move_wall will update hi & lo - where will the calculation of velocity happen?
+  else if (wshear) velwall[axis] = vshear;
 
   // loop over all my atoms
   // rsq = distance from wall
@@ -292,18 +306,18 @@ void FixWallGran::post_force(int vflag)
       dx = dy = dz = 0.0;
 
       if (wallstyle == XPLANE) {
-        del1 = x[i][0] - wlo;
-        del2 = whi - x[i][0];
+        del1 = x[i][0] - lo;
+        del2 = hi - x[i][0];
         if (del1 < del2) dx = del1;
         else dx = -del2;
       } else if (wallstyle == YPLANE) {
-        del1 = x[i][1] - wlo;
-        del2 = whi - x[i][1];
+        del1 = x[i][1] - lo;
+        del2 = hi - x[i][1];
         if (del1 < del2) dy = del1;
         else dy = -del2;
       } else if (wallstyle == ZPLANE) {
-        del1 = x[i][2] - wlo;
-        del2 = whi - x[i][2];
+        del1 = x[i][2] - lo;
+        del2 = hi - x[i][2];
         if (del1 < del2) dz = del1;
         else dz = -del2;
       } else if (wallstyle == ZCYLINDER) {
@@ -314,9 +328,9 @@ void FixWallGran::post_force(int vflag)
           dx = -delr/delxy * x[i][0];
           dy = -delr/delxy * x[i][1];
           if (wshear && axis != 2) {
-            vwall[0] = vshear * x[i][1]/delxy;
-            vwall[1] = -vshear * x[i][0]/delxy;
-            vwall[2] = 0.0;
+            velwall[0] = vshear * x[i][1]/delxy;
+            velwall[1] = -vshear * x[i][0]/delxy;
+            velwall[2] = 0.0;
           }
         }
       }
@@ -331,13 +345,13 @@ void FixWallGran::post_force(int vflag)
         }
       } else {
         if (pairstyle == HOOKE)
-          hooke(rsq,dx,dy,dz,vwall,v[i],f[i],omega[i],torque[i],
+          hooke(rsq,dx,dy,dz,velwall,v[i],f[i],omega[i],torque[i],
                 radius[i],rmass[i]);
         else if (pairstyle == HOOKE_HISTORY)
-          hooke_history(rsq,dx,dy,dz,vwall,v[i],f[i],omega[i],torque[i],
+          hooke_history(rsq,dx,dy,dz,velwall,v[i],f[i],omega[i],torque[i],
                         radius[i],rmass[i],shear[i]);
         else if (pairstyle == HERTZ_HISTORY)
-          hertz_history(rsq,dx,dy,dz,vwall,v[i],f[i],omega[i],torque[i],
+          hertz_history(rsq,dx,dy,dz,velwall,v[i],f[i],omega[i],torque[i],
                         radius[i],rmass[i],shear[i]);
       }
     }
@@ -810,12 +824,46 @@ int FixWallGran::modify_param(int narg, char **arg)
       argsread+=2;
       fprintf(screen, "changed wall dampflag to %d \n",dampflag);
     }
+    else if (strcmp(arg[argsread],"translate") == 0) {
+      if (strcmp(arg[argsread+1],"off") == 0) {
+         wtranslate=0;
+         velwall[0]=velwall[1]=velwall[2]=0.0;
+         argsread+=2;
+         fprintf(screen, "stopped wall translation\n");
+      } else {
+         wtranslate = 1;
+         velwall[0] = atof(arg[argsread+1]);
+         velwall[1] = atof(arg[argsread+2]);
+         velwall[2] = atof(arg[argsread+3]);
+         argsread+= 4;
+         fprintf(screen, "changed wall velocity to [ %e %e %e ]\n",velwall[0],velwall[1],velwall[2]);
+      }
+    }
     else {
        fprintf(screen,"Argument %s not yet supported\n",arg[argsread]);
        error->all(FLERR,"Illegal fix modify wall/gran command");
     }
     if (argsread==narg) {
        if (gamman <0.0 || gammat <0.0 || xmu <0.0 ) error->all(FLERR,"Check the values for the modified granular wall parameters");
+       if (wtranslate && (lo != -BIG && hi != BIG))
+    error->all(FLERR,"Cannot specify both top and bottom walls and translate for fix wall/gran - check your fix_modify"); // this check will fail if the walls have moved..
+       if (wtranslate && wallstyle == ZCYLINDER)
+    error->all(FLERR,"Cannot use translate with cylinder fix wall/gran - check your fix_modify");
+       if (wtranslate && (wiggle || wshear))
+    error->all(FLERR,"Cannot translate and wiggle or shear fix wall/gran- check your fix_modify");
     }
     return argsread;
+}
+
+/* ---------------------------------------------------------------------- 
+A function that implements wall movement. At the moment it is simple,
+but when wall velocity will become fully variable it will do more proper 
+integration
+------------------------------------------------------------------------- */
+
+void FixWallGran::move_wall() {
+
+ lo+=velwall[wallstyle]*dt;
+ hi+=velwall[wallstyle]*dt;
+
 }
