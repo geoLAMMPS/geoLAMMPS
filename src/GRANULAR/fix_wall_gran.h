@@ -46,9 +46,11 @@ class FixWallGran : public Fix {
   int maxsize_restart();
   void reset_dt();
   int modify_param(int, char **);
+  double compute_vector(int);
 
  protected:
-  int wallstyle,pairstyle,wiggle,wshear,axis,dampflag,wtranslate;
+  int wallstyle,pairstyle,wiggle,wshear,axis,dampflag;
+  int wtranslate,wscontrol; //flags for wall movement and wall stress control respectively
   double kn,kt,gamman,gammat,xmu;
   double lo,hi,cylradius;
   double loINI,hiINI; // for wiggle only
@@ -71,6 +73,7 @@ class FixWallGran : public Fix {
                      double *, double *, double *, double *, double, double,
                      double *);
   void move_wall();
+  void velscontrol();
 };
 
 }

@@ -52,6 +52,9 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   restart_peratom = 1;
   create_attribute = 1;
 
+  vector_flag = 1;
+  size_vector = 2;//change to 8 when forces will start being stored
+
   // wall/particle coefficients
 
   kn = atof(arg[3]);
@@ -117,6 +120,7 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   wiggle = 0;
   wshear = 0;
   wtranslate = 0;
+  wscontrol = 0;
   velwall[0] = velwall[1] = velwall[2] = 0.0;
 
   while (iarg < narg) {
@@ -147,6 +151,11 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
       velwall[1] = atof(arg[iarg+2]);
       velwall[2] = atof(arg[iarg+3]);
       iarg += 4;
+   /* } else if (strcmp(arg[iarg],"stresscontrol") == 0) {
+      wscontrol = 1;
+      wtranslate = 1;
+... inputs : variable target force, gain*/
+
     } else error->all(FLERR,"Illegal fix wall/gran command");
   }
 
@@ -266,7 +275,7 @@ void FixWallGran::post_force(int vflag)
 
   // if wiggle or shear, set wall position and velocity accordingly
   // if wtranslate lo and hi track the wall position and velwall is set in the constructor
-
+  //if (wscontrol) velscontrol(); - put it back in!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*****************
   if (wiggle) {
     double arg = omega * (update->ntimestep - time_origin) * dt;
     if (wallstyle == axis) {
@@ -274,7 +283,7 @@ void FixWallGran::post_force(int vflag)
       hi = hiINI + amplitude - amplitude*cos(arg);
     }
     velwall[axis] = amplitude*omega*sin(arg);
-  } else if (wtranslate) move_wall(); // move_wall will update hi & lo - where will the calculation of velocity happen?
+  } else if (wtranslate || wscontrol) move_wall(); // move_wall will update hi & lo - where will the calculation of velocity happen?
   else if (wshear) velwall[axis] = vshear;
 
   // loop over all my atoms
@@ -867,3 +876,24 @@ void FixWallGran::move_wall() {
  hi+=velwall[wallstyle]*dt;
 
 }
+
+/* ---------------------------------------------------------------------- 
+A function that calculates the outputs of the fix
+fid[0]:low wall position
+fid[1]:high wall position
+fid[2-8]:forces on wall - to be implemented later..
+------------------------------------------------------------------------- */
+
+double FixWallGran::compute_vector(int n)
+{
+
+  if (n == 0) return lo;
+  return hi;
+  // only sum across procs one time
+  /*if (eflag == 0) {
+    MPI_Allreduce(ewall,ewall_all,4,MPI_DOUBLE,MPI_SUM,world);
+    eflag = 1;
+  }
+  return ewall_all[n+1];*/
+}
+
