@@ -27,14 +27,16 @@ args = list of arguments for a particular style :l
   {zcylinder} args = radius
     radius = cylinder radius (distance units) :pre
 zero or more keyword/value pairs may be appended to args :l
-keyword = {wiggle} or {shear} :l
+keyword = {wiggle} or {shear} or {translate}:l
   {wiggle} values = dim amplitude period
     dim = {x} or {y} or {z}
     amplitude = size of oscillation (distance units)
     period = time of oscillation (time units)
   {shear} values = dim vshear
     dim = {x} or {y} or {z}
-    vshear = magnitude of shear velocity (velocity units) :pre
+    vshear = magnitude of shear velocity (velocity units)
+  {translate} values = vwallx vwally vwallz
+    vwallx, vwally, vwallz = the velocity of the wall in the x, y and z directions (distance/time units) :pre
 :ule
 
 [Examples:]
@@ -92,8 +94,9 @@ specify a pair of walls in a dimension.  Wall positions are given by
 single wall is desired.  For a {zcylinder} wallstyle, the cylinder's
 axis is at x = y = 0.0, and the radius of the cylinder is specified.
 
-Optionally, the wall can be moving, if the {wiggle} or {shear}
-keywords are appended.  Both keywords cannot be used together.
+Optionally, the wall can be moving, if the {wiggle}, {shear} or
+{translate} keywords are appended.  Only one of the above keywords can
+be used at a time.
 
 For the {wiggle} keyword, the wall oscillates sinusoidally, similar to
 the oscillations of particles which can be specified by the
@@ -125,6 +128,9 @@ the clockwise direction for {vshear} > 0 or counter-clockwise for
 {vshear} < 0.  In this case, {vshear} is the tangential velocity of
 the wall at whatever {radius} has been defined.
 
+For the {translate} keyword, the wall moves continuously with the
+specified velocity {vwallx vwally vwallz}.
+
 [Restart, fix_modify, output, run start/stop, minimize info:]
 
 This fix writes the shear friction state of atoms interacting with the
@@ -133,11 +139,15 @@ continue correctly if granular potentials with shear "history" effects
 are being used.  See the "read_restart"_read_restart.html command for
 info on how to re-specify a fix in an input script that reads a
 restart file, so that the operation of the fix continues in an
-uninterrupted fashion.
+uninterrupted fashion.  
+[Important Note:] The position of the walls is not written to the restart files so the
+user should specify the new wall position in a restart file.
 
-"fix_modify"_fix_modify.html can be used to change the frictional coefficient (xmu), the damping coefficients (gamma_n and gamma_t) and the dampflag.  No global or per-atom quantities are stored by this fix for
-access by various "output commands"_Section_howto.html#howto_15.  No
-parameter of this fix can be used with the {start/stop} keywords of
+"fix_modify"_fix_modify.html can be used to change the frictional coefficient (xmu), the damping coefficients (gamma_n and gamma_t) and the dampflag.  With the {translate} keyword in conjunction with {off} wall velocities can be set to zero and movement switched off.  The {translate} keyword can also be used to reset the wall velocities to different values.  
+
+This fix returns the wall positions and forces applied by the walls to the atoms in the sample.  These can be accessed by various "output commands"_Section_howto.html#howto_15.  The number of values returned for each granular wall fix command is 5, the first one is the current position of the lower plane (lo), the second the current position of the upper plane (hi), and the third, fourth and fifth the values of the {total} force applied by {both} walls to the atoms in the Cartesian x, y and z directions respectively.
+
+No parameter of this fix can be used with the {start/stop} keywords of
 the "run"_run.html command.  This fix is not invoked during "energy
 minimization"_minimize.html.
 
