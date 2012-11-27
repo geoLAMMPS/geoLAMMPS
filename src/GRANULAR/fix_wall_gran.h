@@ -54,7 +54,7 @@ class FixWallGran : public Fix {
   double kn,kt,gamman,gammat,xmu;
   double lo,hi,cylradius;
   double loINI,hiINI; // for wiggle only
-  double velwall[3];
+  double velwall[3],fwall[3],fwall_all[3];
   double amplitude,period,omega,vshear;
   double dt;
   int nlevels_respa;

@@ -53,7 +53,8 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   create_attribute = 1;
 
   vector_flag = 1;
-  size_vector = 2;//change to 8 when forces will start being stored
+  size_vector = 5;
+  global_freq = 1;
 
   // wall/particle coefficients
 
@@ -154,6 +155,7 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
    /* } else if (strcmp(arg[iarg],"stresscontrol") == 0) {
       wscontrol = 1;
       wtranslate = 1;
+if (lo != -BIG || hi != BIG) error->all(FLERR,"Illegal fix wall/gran command - cannot have both lo and hi walls with stresscontrol"); - put warning message for fix output too!
 ... inputs : variable target force, gain*/
 
     } else error->all(FLERR,"Illegal fix wall/gran command");
@@ -272,6 +274,7 @@ void FixWallGran::setup(int vflag)
 void FixWallGran::post_force(int vflag)
 {
   double dx,dy,dz,del1,del2,delxy,delr,rsq;
+  fwall[0] = fwall[1] = fwall[2] = fwall_all[0] = fwall_all[1] = fwall_all[2] = 0.0;
 
   // if wiggle or shear, set wall position and velocity accordingly
   // if wtranslate lo and hi track the wall position and velwall is set in the constructor
@@ -452,6 +455,10 @@ void FixWallGran::hooke(double rsq, double dx, double dy, double dz,
   torque[1] -= dz*fs1 - dx*fs3;
   torque[2] -= dx*fs2 - dy*fs1;
 
+  fwall[0] += fx;
+  fwall[1] += fy;
+  fwall[2] += fz;
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -562,6 +569,10 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
   torque[0] -= dy*fs3 - dz*fs2;
   torque[1] -= dz*fs1 - dx*fs3;
   torque[2] -= dx*fs2 - dy*fs1;
+
+  fwall[0] += fx;
+  fwall[1] += fy;
+  fwall[2] += fz;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -674,6 +685,10 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
   torque[0] -= dy*fs3 - dz*fs2;
   torque[1] -= dz*fs1 - dx*fs3;
   torque[2] -= dx*fs2 - dy*fs1;
+
+  fwall[0] += fx;
+  fwall[1] += fy;
+  fwall[2] += fz;
 }
 
 /* ----------------------------------------------------------------------
@@ -888,12 +903,11 @@ double FixWallGran::compute_vector(int n)
 {
 
   if (n == 0) return lo;
-  return hi;
+  if (n == 1) return hi;
   // only sum across procs one time
-  /*if (eflag == 0) {
-    MPI_Allreduce(ewall,ewall_all,4,MPI_DOUBLE,MPI_SUM,world);
-    eflag = 1;
-  }
-  return ewall_all[n+1];*/
+  //if (eflag == 0) {??
+  MPI_Allreduce(fwall,fwall_all,3,MPI_DOUBLE,MPI_SUM,world);
+  if (n>4) error->all(FLERR,"Illegal fix_wall_gran output");
+  return fwall_all[n-2];
 }
 
