@@ -57,6 +57,7 @@ class FixWallGran : public Fix {
   double velwall[3],fwall[3],fwall_all[3];
   double amplitude,period,omega,vshear;
   double dt;
+  double targetf,gain;
   int nlevels_respa;
   int time_origin;
 

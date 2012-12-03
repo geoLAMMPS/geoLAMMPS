@@ -152,15 +152,17 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
       velwall[1] = atof(arg[iarg+2]);
       velwall[2] = atof(arg[iarg+3]);
       iarg += 4;
-   /* } else if (strcmp(arg[iarg],"stresscontrol") == 0) {
+    } else if (strcmp(arg[iarg],"stresscontrol") == 0) {
       wscontrol = 1;
       wtranslate = 1;
-if (lo != -BIG || hi != BIG) error->all(FLERR,"Illegal fix wall/gran command - cannot have both lo and hi walls with stresscontrol"); - put warning message for fix output too!
-... inputs : variable target force, gain*/
-
+      targetf = atof(arg[iarg+1]);
+      gain = atof(arg[iarg+2]);
+      if (strcmp(arg[iarg+2],"auto") == 0) error->all(FLERR,"Illegal fix wall/gran command - more coding needed");
+      iarg += 3;
     } else error->all(FLERR,"Illegal fix wall/gran command");
   }
 
+  if (wscontrol = 1 && (lo != -BIG || hi != BIG)) error->all(FLERR,"Cannot have both lo and hi walls with stresscontrol"); // put warning message for fix output too?
   if (wallstyle == XPLANE && domain->xperiodic)
     error->all(FLERR,"Cannot use wall in periodic dimension");
   if (wallstyle == YPLANE && domain->yperiodic)
@@ -278,7 +280,6 @@ void FixWallGran::post_force(int vflag)
 
   // if wiggle or shear, set wall position and velocity accordingly
   // if wtranslate lo and hi track the wall position and velwall is set in the constructor
-  //if (wscontrol) velscontrol(); - put it back in!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*****************
   if (wiggle) {
     double arg = omega * (update->ntimestep - time_origin) * dt;
     if (wallstyle == axis) {
@@ -286,8 +287,10 @@ void FixWallGran::post_force(int vflag)
       hi = hiINI + amplitude - amplitude*cos(arg);
     }
     velwall[axis] = amplitude*omega*sin(arg);
-  } else if (wtranslate || wscontrol) move_wall(); // move_wall will update hi & lo - where will the calculation of velocity happen?
-  else if (wshear) velwall[axis] = vshear;
+  } else if (wtranslate || wscontrol) {
+      if (wscontrol) velscontrol(); // velocty calculation for stress control
+      move_wall(); // move_wall will update hi & lo
+  } else if (wshear) velwall[axis] = vshear;
 
   // loop over all my atoms
   // rsq = distance from wall
@@ -880,9 +883,7 @@ int FixWallGran::modify_param(int narg, char **arg)
 }
 
 /* ---------------------------------------------------------------------- 
-A function that implements wall movement. At the moment it is simple,
-but when wall velocity will become fully variable it will do more proper 
-integration
+A function that implements wall movement
 ------------------------------------------------------------------------- */
 
 void FixWallGran::move_wall() {
@@ -893,10 +894,22 @@ void FixWallGran::move_wall() {
 }
 
 /* ---------------------------------------------------------------------- 
+A function that calculates the wall velocity based on a target force and a 
+specific controller
+------------------------------------------------------------------------- */
+
+void FixWallGran::velscontrol() {
+
+ MPI_Allreduce(fwall,fwall_all,3,MPI_DOUBLE,MPI_SUM,world);
+ velwall[wallstyle] = gain * (targetf - fwall_all[wallstyle]);
+
+}
+
+/* ---------------------------------------------------------------------- 
 A function that calculates the outputs of the fix
 fid[0]:low wall position
 fid[1]:high wall position
-fid[2-8]:forces on wall - to be implemented later..
+fid[2-5]:forces on wall
 ------------------------------------------------------------------------- */
 
 double FixWallGran::compute_vector(int n)
