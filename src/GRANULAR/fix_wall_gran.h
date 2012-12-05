@@ -58,6 +58,9 @@ class FixWallGran : public Fix {
   double amplitude,period,omega,vshear;
   double dt;
   double targetf,gain;
+  char *fstr;
+  int fvar;
+  int ftvarying; // 1 if ftarget set through a variable
   int nlevels_respa;
   int time_origin;
 

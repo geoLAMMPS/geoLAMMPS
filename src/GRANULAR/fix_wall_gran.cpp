@@ -28,6 +28,8 @@
 #include "respa.h"
 #include "math_const.h"
 #include "memory.h"
+#include "input.h"
+#include "variable.h"
 #include "error.h"
 
 using namespace LAMMPS_NS;
@@ -122,6 +124,8 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   wshear = 0;
   wtranslate = 0;
   wscontrol = 0;
+  ftvarying = 0;
+  fstr = NULL;
   velwall[0] = velwall[1] = velwall[2] = 0.0;
 
   while (iarg < narg) {
@@ -155,7 +159,12 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"stresscontrol") == 0) {
       wscontrol = 1;
       wtranslate = 1;
-      targetf = atof(arg[iarg+1]);
+      if (strstr(arg[iarg+1],"v_") == arg[iarg+1]) {
+        ftvarying = 1;
+        int nn = strlen(&arg[iarg+1][2]) + 1;
+        fstr = new char[nn];
+        strcpy(fstr,&arg[iarg+1][2]);
+      } else targetf = atof(arg[iarg+1]);
       gain = atof(arg[iarg+2]);
       if (strcmp(arg[iarg+2],"auto") == 0) error->all(FLERR,"Illegal fix wall/gran command - more coding needed");
       iarg += 3;
@@ -222,6 +231,7 @@ FixWallGran::~FixWallGran()
   // delete locally stored arrays
 
   memory->destroy(shear);
+  delete [] fstr;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -239,6 +249,15 @@ int FixWallGran::setmask()
 void FixWallGran::init()
 {
   dt = update->dt;
+
+  // check variables for Ftarget
+
+  if (fstr) {
+    fvar = input->variable->find(fstr);
+    if (fvar < 0)
+      error->all(FLERR,"Variable name for fix wall/gran does not exist");
+    if (!input->variable->equalstyle(fvar)) error->all(FLERR,"Variable for fix wall/gran is invalid style");
+  }
 
   if (strstr(update->integrate_style,"respa"))
     nlevels_respa = ((Respa *) update->integrate)->nlevels;
@@ -901,6 +920,11 @@ specific controller
 void FixWallGran::velscontrol() {
 
  MPI_Allreduce(fwall,fwall_all,3,MPI_DOUBLE,MPI_SUM,world);
+ if (ftvarying == 1) {
+   //modify->clearstep_compute();needed???
+   targetf = input->variable->compute_equal(fvar);
+   //modify->addstep_compute(update->ntimestep + 1);needed???
+ }
  velwall[wallstyle] = gain * (targetf - fwall_all[wallstyle]);
 
 }
@@ -917,8 +941,7 @@ double FixWallGran::compute_vector(int n)
 
   if (n == 0) return lo;
   if (n == 1) return hi;
-  // only sum across procs one time
-  //if (eflag == 0) {??
+  // only sum across procs one time?? //if (eflag == 0) {??
   MPI_Allreduce(fwall,fwall_all,3,MPI_DOUBLE,MPI_SUM,world);
   if (n>4) error->all(FLERR,"Illegal fix_wall_gran output");
   return fwall_all[n-2];
