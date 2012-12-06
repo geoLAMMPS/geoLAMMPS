@@ -44,6 +44,8 @@ class FixPour : public Fix {
  private:
   int ninsert,ntype,seed;
   double radius_lo,radius_hi;
+  int rad_distr; //controls type of distribtion selected for radii
+  double meanrad,stdevrad; // for Gaussian radius distribution
   double density_lo,density_hi;
   double volfrac;
   int maxattempt;

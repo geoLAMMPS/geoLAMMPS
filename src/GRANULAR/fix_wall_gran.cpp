@@ -28,6 +28,8 @@
 #include "respa.h"
 #include "math_const.h"
 #include "memory.h"
+#include "input.h"
+#include "variable.h"
 #include "error.h"
 
 using namespace LAMMPS_NS;
@@ -52,6 +54,10 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   restart_peratom = 1;
   create_attribute = 1;
 
+  vector_flag = 1;
+  size_vector = 5;
+  global_freq = 1;
+
   // wall/particle coefficients
 
   kn = atof(arg[3]);
@@ -63,11 +69,11 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   else gammat = atof(arg[6]);
 
   xmu = atof(arg[7]);
-  int dampflag = atoi(arg[8]);
+  dampflag = atoi(arg[8]);
   if (dampflag == 0) gammat = 0.0;
 
   if (kn < 0.0 || kt < 0.0 || gamman < 0.0 || gammat < 0.0 ||
-      xmu < 0.0 || xmu > 1.0 || dampflag < 0 || dampflag > 1)
+      xmu < 0.0 || dampflag < 0 || dampflag > 1)
     error->all(FLERR,"Illegal fix wall/gran command");
 
   // convert Kn and Kt from pressure units to force/distance^2 if Hertzian
@@ -116,6 +122,11 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
 
   wiggle = 0;
   wshear = 0;
+  wtranslate = 0;
+  wscontrol = 0;
+  ftvarying = 0;
+  fstr = NULL;
+  velwall[0] = velwall[1] = velwall[2] = 0.0;
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"wiggle") == 0) {
@@ -127,6 +138,8 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
       amplitude = atof(arg[iarg+2]);
       period = atof(arg[iarg+3]);
       wiggle = 1;
+      loINI = lo;
+      hiINI = hi;
       iarg += 4;
     } else if (strcmp(arg[iarg],"shear") == 0) {
       if (iarg+3 > narg) error->all(FLERR,"Illegal fix wall/gran command");
@@ -137,9 +150,28 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
       vshear = atof(arg[iarg+2]);
       wshear = 1;
       iarg += 3;
+    } else if (strcmp(arg[iarg],"translate") == 0) {
+      wtranslate = 1;
+      velwall[0] = atof(arg[iarg+1]);
+      velwall[1] = atof(arg[iarg+2]);
+      velwall[2] = atof(arg[iarg+3]);
+      iarg += 4;
+    } else if (strcmp(arg[iarg],"stresscontrol") == 0) {
+      wscontrol = 1;
+      wtranslate = 1;
+      if (strstr(arg[iarg+1],"v_") == arg[iarg+1]) {
+        ftvarying = 1;
+        int nn = strlen(&arg[iarg+1][2]) + 1;
+        fstr = new char[nn];
+        strcpy(fstr,&arg[iarg+1][2]);
+      } else targetf = atof(arg[iarg+1]);
+      gain = atof(arg[iarg+2]);
+      if (strcmp(arg[iarg+2],"auto") == 0) error->all(FLERR,"Illegal fix wall/gran command - more coding needed");
+      iarg += 3;
     } else error->all(FLERR,"Illegal fix wall/gran command");
   }
 
+  if (wscontrol = 1 && (lo != -BIG || hi != BIG)) error->all(FLERR,"Cannot have both lo and hi walls with stresscontrol"); // put warning message for fix output too?
   if (wallstyle == XPLANE && domain->xperiodic)
     error->all(FLERR,"Cannot use wall in periodic dimension");
   if (wallstyle == YPLANE && domain->yperiodic)
@@ -159,6 +191,12 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     error->all(FLERR,"Invalid shear direction for fix wall/gran");
   if (wshear && wallstyle == ZPLANE && axis == 2)
     error->all(FLERR,"Invalid shear direction for fix wall/gran");
+  if (wtranslate && (lo != -BIG && hi != BIG))
+    error->all(FLERR,"Cannot specify both top and bottom walls and translate for fix wall/gran");
+  if (wtranslate && wallstyle == ZCYLINDER)
+    error->all(FLERR,"Cannot use translate with cylinder fix wall/gran");
+  if (wtranslate && (wiggle || wshear))
+    error->all(FLERR,"Cannot translate and wiggle or shear fix wall/gran");
 
   // setup oscillations
 
@@ -193,6 +231,7 @@ FixWallGran::~FixWallGran()
   // delete locally stored arrays
 
   memory->destroy(shear);
+  delete [] fstr;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -210,6 +249,15 @@ int FixWallGran::setmask()
 void FixWallGran::init()
 {
   dt = update->dt;
+
+  // check variables for Ftarget
+
+  if (fstr) {
+    fvar = input->variable->find(fstr);
+    if (fvar < 0)
+      error->all(FLERR,"Variable name for fix wall/gran does not exist");
+    if (!input->variable->equalstyle(fvar)) error->all(FLERR,"Variable for fix wall/gran is invalid style");
+  }
 
   if (strstr(update->integrate_style,"respa"))
     nlevels_respa = ((Respa *) update->integrate)->nlevels;
@@ -246,22 +294,22 @@ void FixWallGran::setup(int vflag)
 
 void FixWallGran::post_force(int vflag)
 {
-  double vwall[3],dx,dy,dz,del1,del2,delxy,delr,rsq;
+  double dx,dy,dz,del1,del2,delxy,delr,rsq;
+  fwall[0] = fwall[1] = fwall[2] = fwall_all[0] = fwall_all[1] = fwall_all[2] = 0.0;
 
-  // set position of wall to initial settings and velocity to 0.0
   // if wiggle or shear, set wall position and velocity accordingly
-
-  double wlo = lo;
-  double whi = hi;
-  vwall[0] = vwall[1] = vwall[2] = 0.0;
+  // if wtranslate lo and hi track the wall position and velwall is set in the constructor
   if (wiggle) {
     double arg = omega * (update->ntimestep - time_origin) * dt;
     if (wallstyle == axis) {
-      wlo = lo + amplitude - amplitude*cos(arg);
-      whi = hi + amplitude - amplitude*cos(arg);
+      lo = loINI + amplitude - amplitude*cos(arg);
+      hi = hiINI + amplitude - amplitude*cos(arg);
     }
-    vwall[axis] = amplitude*omega*sin(arg);
-  } else if (wshear) vwall[axis] = vshear;
+    velwall[axis] = amplitude*omega*sin(arg);
+  } else if (wtranslate || wscontrol) {
+      if (wscontrol) velscontrol(); // velocty calculation for stress control
+      move_wall(); // move_wall will update hi & lo
+  } else if (wshear) velwall[axis] = vshear;
 
   // loop over all my atoms
   // rsq = distance from wall
@@ -292,18 +340,18 @@ void FixWallGran::post_force(int vflag)
       dx = dy = dz = 0.0;
 
       if (wallstyle == XPLANE) {
-        del1 = x[i][0] - wlo;
-        del2 = whi - x[i][0];
+        del1 = x[i][0] - lo;
+        del2 = hi - x[i][0];
         if (del1 < del2) dx = del1;
         else dx = -del2;
       } else if (wallstyle == YPLANE) {
-        del1 = x[i][1] - wlo;
-        del2 = whi - x[i][1];
+        del1 = x[i][1] - lo;
+        del2 = hi - x[i][1];
         if (del1 < del2) dy = del1;
         else dy = -del2;
       } else if (wallstyle == ZPLANE) {
-        del1 = x[i][2] - wlo;
-        del2 = whi - x[i][2];
+        del1 = x[i][2] - lo;
+        del2 = hi - x[i][2];
         if (del1 < del2) dz = del1;
         else dz = -del2;
       } else if (wallstyle == ZCYLINDER) {
@@ -314,9 +362,9 @@ void FixWallGran::post_force(int vflag)
           dx = -delr/delxy * x[i][0];
           dy = -delr/delxy * x[i][1];
           if (wshear && axis != 2) {
-            vwall[0] = vshear * x[i][1]/delxy;
-            vwall[1] = -vshear * x[i][0]/delxy;
-            vwall[2] = 0.0;
+            velwall[0] = vshear * x[i][1]/delxy;
+            velwall[1] = -vshear * x[i][0]/delxy;
+            velwall[2] = 0.0;
           }
         }
       }
@@ -331,13 +379,13 @@ void FixWallGran::post_force(int vflag)
         }
       } else {
         if (pairstyle == HOOKE)
-          hooke(rsq,dx,dy,dz,vwall,v[i],f[i],omega[i],torque[i],
+          hooke(rsq,dx,dy,dz,velwall,v[i],f[i],omega[i],torque[i],
                 radius[i],rmass[i]);
         else if (pairstyle == HOOKE_HISTORY)
-          hooke_history(rsq,dx,dy,dz,vwall,v[i],f[i],omega[i],torque[i],
+          hooke_history(rsq,dx,dy,dz,velwall,v[i],f[i],omega[i],torque[i],
                         radius[i],rmass[i],shear[i]);
         else if (pairstyle == HERTZ_HISTORY)
-          hertz_history(rsq,dx,dy,dz,vwall,v[i],f[i],omega[i],torque[i],
+          hertz_history(rsq,dx,dy,dz,velwall,v[i],f[i],omega[i],torque[i],
                         radius[i],rmass[i],shear[i]);
       }
     }
@@ -359,8 +407,8 @@ void FixWallGran::hooke(double rsq, double dx, double dy, double dz,
                         double radius, double mass)
 {
   double r,vr1,vr2,vr3,vnnr,vn1,vn2,vn3,vt1,vt2,vt3;
-  double wr1,wr2,wr3,meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
-  double fn,fs,ft,fs1,fs2,fs3,fx,fy,fz,tor1,tor2,tor3,rinv,rsqinv;
+  double meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
+  double fn,fs,ft,fs1,fs2,fs3,fx,fy,fz,rinv,rsqinv;
 
   r = sqrt(rsq);
   rinv = 1.0/r;
@@ -385,11 +433,8 @@ void FixWallGran::hooke(double rsq, double dx, double dy, double dz,
   vt2 = vr2 - vn2;
   vt3 = vr3 - vn3;
 
-  // relative rotational velocity
-
-  wr1 = radius*omega[0] * rinv;
-  wr2 = radius*omega[1] * rinv;
-  wr3 = radius*omega[2] * rinv;
+  // relative rotational velocity - removed
+  //wr1 = radius*omega[0] * rinv; //radius should be substituted by r, so wr1==omega[0] etc
 
   // normal forces = Hookian contact + normal velocity damping
 
@@ -399,9 +444,9 @@ void FixWallGran::hooke(double rsq, double dx, double dy, double dz,
 
   // relative velocities
 
-  vtr1 = vt1 - (dz*wr2-dy*wr3);
-  vtr2 = vt2 - (dx*wr3-dz*wr1);
-  vtr3 = vt3 - (dy*wr1-dx*wr2);
+  vtr1 = vt1 - dz*omega[1]+dy*omega[2];
+  vtr2 = vt2 - dx*omega[2]+dz*omega[0];
+  vtr3 = vt3 - dy*omega[0]+dx*omega[1];
   vrel = vtr1*vtr1 + vtr2*vtr2 + vtr3*vtr3;
   vrel = sqrt(vrel);
 
@@ -428,12 +473,14 @@ void FixWallGran::hooke(double rsq, double dx, double dy, double dz,
   f[1] += fy;
   f[2] += fz;
 
-  tor1 = rinv * (dy*fs3 - dz*fs2);
-  tor2 = rinv * (dz*fs1 - dx*fs3);
-  tor3 = rinv * (dx*fs2 - dy*fs1);
-  torque[0] -= radius*tor1;
-  torque[1] -= radius*tor2;
-  torque[2] -= radius*tor3;
+  torque[0] -= dy*fs3 - dz*fs2;
+  torque[1] -= dz*fs1 - dx*fs3;
+  torque[2] -= dx*fs2 - dy*fs1;
+
+  fwall[0] += fx;
+  fwall[1] += fy;
+  fwall[2] += fz;
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -444,8 +491,8 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
                                 double radius, double mass, double *shear)
 {
   double r,vr1,vr2,vr3,vnnr,vn1,vn2,vn3,vt1,vt2,vt3;
-  double wr1,wr2,wr3,meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
-  double fn,fs,fs1,fs2,fs3,fx,fy,fz,tor1,tor2,tor3;
+  double meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
+  double fn,fs,fs1,fs2,fs3,fx,fy,fz;
   double shrmag,rsht,rinv,rsqinv;
 
   r = sqrt(rsq);
@@ -471,11 +518,7 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
   vt2 = vr2 - vn2;
   vt3 = vr3 - vn3;
 
-  // relative rotational velocity
-
-  wr1 = radius*omega[0] * rinv;
-  wr2 = radius*omega[1] * rinv;
-  wr3 = radius*omega[2] * rinv;
+  // relative rotational velocity - removed see above
 
   // normal forces = Hookian contact + normal velocity damping
 
@@ -485,9 +528,9 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
 
   // relative velocities
 
-  vtr1 = vt1 - (dz*wr2-dy*wr3);
-  vtr2 = vt2 - (dx*wr3-dz*wr1);
-  vtr3 = vt3 - (dy*wr1-dx*wr2);
+  vtr1 = vt1 - dz*omega[1]+dy*omega[2];
+  vtr2 = vt2 - dx*omega[2]+dz*omega[0];
+  vtr3 = vt3 - dy*omega[0]+dx*omega[1];
   vrel = vtr1*vtr1 + vtr2*vtr2 + vtr3*vtr3;
   vrel = sqrt(vrel);
 
@@ -545,12 +588,13 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
   f[1] += fy;
   f[2] += fz;
 
-  tor1 = rinv * (dy*fs3 - dz*fs2);
-  tor2 = rinv * (dz*fs1 - dx*fs3);
-  tor3 = rinv * (dx*fs2 - dy*fs1);
-  torque[0] -= radius*tor1;
-  torque[1] -= radius*tor2;
-  torque[2] -= radius*tor3;
+  torque[0] -= dy*fs3 - dz*fs2;
+  torque[1] -= dz*fs1 - dx*fs3;
+  torque[2] -= dx*fs2 - dy*fs1;
+
+  fwall[0] += fx;
+  fwall[1] += fy;
+  fwall[2] += fz;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -561,8 +605,8 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
                                 double radius, double mass, double *shear)
 {
   double r,vr1,vr2,vr3,vnnr,vn1,vn2,vn3,vt1,vt2,vt3;
-  double wr1,wr2,wr3,meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
-  double fn,fs,fs1,fs2,fs3,fx,fy,fz,tor1,tor2,tor3;
+  double meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
+  double fn,fs,fs1,fs2,fs3,fx,fy,fz;
   double shrmag,rsht,polyhertz,rinv,rsqinv;
 
   r = sqrt(rsq);
@@ -588,11 +632,7 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
   vt2 = vr2 - vn2;
   vt3 = vr3 - vn3;
 
-  // relative rotational velocity
-
-  wr1 = radius*omega[0] * rinv;
-  wr2 = radius*omega[1] * rinv;
-  wr3 = radius*omega[2] * rinv;
+  // relative rotational velocity - removed
 
   // normal forces = Hertzian contact + normal velocity damping
 
@@ -604,9 +644,9 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
 
   // relative velocities
 
-  vtr1 = vt1 - (dz*wr2-dy*wr3);
-  vtr2 = vt2 - (dx*wr3-dz*wr1);
-  vtr3 = vt3 - (dy*wr1-dx*wr2);
+  vtr1 = vt1 - dz*omega[1]+dy*omega[2];
+  vtr2 = vt2 - dx*omega[2]+dz*omega[0];
+  vtr3 = vt3 - dy*omega[0]+dx*omega[1];
   vrel = vtr1*vtr1 + vtr2*vtr2 + vtr3*vtr3;
   vrel = sqrt(vrel);
 
@@ -664,12 +704,13 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
   f[1] += fy;
   f[2] += fz;
 
-  tor1 = rinv * (dy*fs3 - dz*fs2);
-  tor2 = rinv * (dz*fs1 - dx*fs3);
-  tor3 = rinv * (dx*fs2 - dy*fs1);
-  torque[0] -= radius*tor1;
-  torque[1] -= radius*tor2;
-  torque[2] -= radius*tor3;
+  torque[0] -= dy*fs3 - dz*fs2;
+  torque[1] -= dz*fs1 - dx*fs3;
+  torque[2] -= dx*fs2 - dy*fs1;
+
+  fwall[0] += fx;
+  fwall[1] += fy;
+  fwall[2] += fz;
 }
 
 /* ----------------------------------------------------------------------
@@ -794,3 +835,115 @@ void FixWallGran::reset_dt()
 {
   dt = update->dt;
 }
+
+/* ---------------------------------------------------------------------- 
+Allows the user to do a fix_modify at the input script and change the
+parameters of the fix. Only allows a few things to be modified.
+Returns the number of arguments read.
+------------------------------------------------------------------------- */
+
+int FixWallGran::modify_param(int narg, char **arg)
+{
+    if (narg < 2) error->all(FLERR,"Illegal fix_modify command");
+    int argsread=0;
+
+    if (strcmp(arg[argsread],"gamman") == 0) {// do while loop instead?
+      fprintf(screen, "changed wall gamman from %f to ",gamman);
+      gamman=atof(arg[argsread+1]);
+      argsread+=2;
+      fprintf(screen, "%f\n",gamman);
+    }
+    else if (strcmp(arg[argsread],"gammat") == 0) {
+      fprintf(screen, "changed wall gammat from %f to ",gammat);
+      gammat=atof(arg[argsread+1]);
+      argsread+=2;
+      fprintf(screen, "%f\n",gammat);
+    }
+    else if (strcmp(arg[argsread],"mu") == 0) {
+      fprintf(screen, "changed wall friction coefficient from %f to ",xmu);
+      xmu=atof(arg[argsread+1]);
+      argsread+=2;
+      fprintf(screen, "%f\n",xmu);
+    }
+    else if (strcmp(arg[argsread],"dampflag") == 0) {
+      dampflag=atoi(arg[argsread+1]);
+      argsread+=2;
+      fprintf(screen, "changed wall dampflag to %d \n",dampflag);
+    }
+    else if (strcmp(arg[argsread],"translate") == 0) {
+      if (strcmp(arg[argsread+1],"off") == 0) {
+         wtranslate=0;
+         velwall[0]=velwall[1]=velwall[2]=0.0;
+         argsread+=2;
+         fprintf(screen, "stopped wall translation\n");
+      } else {
+         wtranslate = 1;
+         velwall[0] = atof(arg[argsread+1]);
+         velwall[1] = atof(arg[argsread+2]);
+         velwall[2] = atof(arg[argsread+3]);
+         argsread+= 4;
+         fprintf(screen, "changed wall velocity to [ %e %e %e ]\n",velwall[0],velwall[1],velwall[2]);
+      }
+    }
+    else {
+       fprintf(screen,"Argument %s not yet supported\n",arg[argsread]);
+       error->all(FLERR,"Illegal fix modify wall/gran command");
+    }
+    if (argsread==narg) {
+       if (gamman <0.0 || gammat <0.0 || xmu <0.0 ) error->all(FLERR,"Check the values for the modified granular wall parameters");
+       if (wtranslate && (lo != -BIG && hi != BIG))
+    error->all(FLERR,"Cannot specify both top and bottom walls and translate for fix wall/gran - check your fix_modify"); // this check will fail if the walls have moved..
+       if (wtranslate && wallstyle == ZCYLINDER)
+    error->all(FLERR,"Cannot use translate with cylinder fix wall/gran - check your fix_modify");
+       if (wtranslate && (wiggle || wshear))
+    error->all(FLERR,"Cannot translate and wiggle or shear fix wall/gran- check your fix_modify");
+    }
+    return argsread;
+}
+
+/* ---------------------------------------------------------------------- 
+A function that implements wall movement
+------------------------------------------------------------------------- */
+
+void FixWallGran::move_wall() {
+
+ lo+=velwall[wallstyle]*dt;
+ hi+=velwall[wallstyle]*dt;
+
+}
+
+/* ---------------------------------------------------------------------- 
+A function that calculates the wall velocity based on a target force and a 
+specific controller
+------------------------------------------------------------------------- */
+
+void FixWallGran::velscontrol() {
+
+ MPI_Allreduce(fwall,fwall_all,3,MPI_DOUBLE,MPI_SUM,world);
+ if (ftvarying == 1) {
+   //modify->clearstep_compute();needed???
+   targetf = input->variable->compute_equal(fvar);
+   //modify->addstep_compute(update->ntimestep + 1);needed???
+ }
+ velwall[wallstyle] = gain * (targetf - fwall_all[wallstyle]);
+
+}
+
+/* ---------------------------------------------------------------------- 
+A function that calculates the outputs of the fix
+fid[0]:low wall position
+fid[1]:high wall position
+fid[2-5]:forces on wall
+------------------------------------------------------------------------- */
+
+double FixWallGran::compute_vector(int n)
+{
+
+  if (n == 0) return lo;
+  if (n == 1) return hi;
+  // only sum across procs one time?? //if (eflag == 0) {??
+  MPI_Allreduce(fwall,fwall_all,3,MPI_DOUBLE,MPI_SUM,world);
+  if (n>4) error->all(FLERR,"Illegal fix_wall_gran output");
+  return fwall_all[n-2];
+}
+

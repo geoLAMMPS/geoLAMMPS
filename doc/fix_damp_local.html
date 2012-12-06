@@ -1,0 +1,69 @@
+<HTML>
+<CENTER><A HREF = "http://lammps.sandia.gov">LAMMPS WWW Site</A> - <A HREF = "Manual.html">LAMMPS Documentation</A> - <A HREF = "Section_commands.html#comm">LAMMPS Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix damp/local command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID group-ID damp/local alpha 
+</PRE>
+<UL><LI>ID, group-ID are documented in <A HREF = "fix.html">fix</A> command 
+
+<LI>damp/local = style name of this fix command 
+
+<LI>alpha = local damping coefficient 
+
+<P><B>Examples:</B>
+</P>
+<PRE>fix 1 AtomsToDamp damp/local 0.7 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Add a damping force to atoms in the group. This damping force is not 
+related to any physically justified damping model, but constitutes a
+rather efficient way of bringing the system down to equilibrium.
+</P>
+<P>The damping force F is given by F_i = - alpha * sign(velocity_i) * Fresultant_i
+</P>
+<P>A damping moment M is also added. This is given by M_i = - alpha * sign(omega_i) * Mresultant_i 
+</P>
+<P><B>NOTE: there are 3 of these equations, one for each vector component of force/moment and velocity</B>
+</P>
+<P>The alpha coefficient can only range between 0 and 1 and represents
+the proportion of the resultant force/moment (i.e. acceleration) of an atom
+that will be removed if Fresultant and velocity are collinear.
+</P>
+<HR>
+
+<P><B>Restart, fix_modify, output, run start/stop, minimize info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.  <A HREF = "fix_modify.html">fix_modify</A> can be used
+to change the alpha parameter.  No global or per-atom quantities
+are stored by this fix for access by various <A HREF = "Section_howto.html#howto_15">output
+commands</A>.  No parameter of this fix can
+be used with the <I>start/stop</I> keywords of the <A HREF = "run.html">run</A> command.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Related commands:</B>
+</P>
+<P>The <A HREF = "fix_viscous.html">fix viscous</A> damping command might be a useful alternative
+</P>
+<P><B>Default:</B> none
+</P>
+<HR>
+
+<P><B>D.O. Potyondy & P.A. Cundall</B> (2004), A bonded-particle model for rock. International Journal of Rock Mechanics and Mining Sciences, Vol. 41(8), pp. 1329-1364
+</P>
+<P><B>PFC3D Manual</B> (2003), Itasca Inc.
+</P>
+</HTML>

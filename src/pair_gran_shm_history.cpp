@@ -19,7 +19,7 @@
 #include "stdlib.h"
 #include "stdio.h"
 #include "string.h"
-#include "pair_gran_hertz_history.h"
+#include "pair_gran_shm_history.h"
 #include "atom.h"
 #include "update.h"
 #include "force.h"
@@ -28,17 +28,18 @@
 #include "neigh_list.h"
 #include "comm.h"
 #include "error.h"
+#include "domain.h"
 
 using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-PairGranHertzHistory::PairGranHertzHistory(LAMMPS *lmp) :
+PairGranShmHistory::PairGranShmHistory(LAMMPS *lmp) :
   PairGranHookeHistory(lmp) {}
 
 /* ---------------------------------------------------------------------- */
 
-void PairGranHertzHistory::compute(int eflag, int vflag)
+void PairGranShmHistory::compute(int eflag, int vflag)
 {
   int i,j,ii,jj,inum,jnum,itype,jtype;
   double xtmp,ytmp,ztmp,delx,dely,delz,fx,fy,fz;
@@ -46,9 +47,10 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
   double vr1,vr2,vr3,vnnr,vn1,vn2,vn3,vt1,vt2,vt3;
   double wr1,wr2,wr3;
   double vtr1,vtr2,vtr3,vrel;
-  double mi,mj,meff,damp,ccel,tor1,tor2,tor3;
-  double fn,fs,fs1,fs2,fs3;
+  double ccel,tor1,tor2,tor3;
+  double fslim,fs,fs1,fs2,fs3;
   double shsqmag,shsqnew,shratio,rsht,polyhertz;
+  double wspinx,wspiny,wspinz,shint0,shint1,shint2,omdel;
   int *ilist,*jlist,*numneigh,**firstneigh;
   int *touch,**firsttouch;
   double *shear,*allshear,**firstshear;
@@ -118,7 +120,7 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
         // unset non-touching neighbors
 
         touch[jj] = 0;
-        shear = &allshear[3*jj];
+        shear = &allshear[3*jj]; // shear[] refers to a shear force here, not shear displacement
         shear[0] = 0.0;
         shear[1] = 0.0;
         shear[2] = 0.0;
@@ -156,33 +158,6 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
 	wr2 = (cri*omega[i][1] + crj*omega[j][1]) * rinv;
 	wr3 = (cri*omega[i][2] + crj*omega[j][2]) * rinv;
 
-        // meff = effective mass of pair of particles
-        // if I or J part of rigid body, use body mass
-        // if I or J is frozen, meff is other particle
-
-        if (rmass) {
-          mi = rmass[i];
-          mj = rmass[j];
-        } else {
-          mi = mass[type[i]];
-          mj = mass[type[j]];
-        }
-        if (fix_rigid) {
-          if (body[i] >= 0) mi = mass_rigid[body[i]];
-          if (body[j] >= 0) mj = mass_rigid[body[j]];
-        }
-
-        meff = mi*mj / (mi+mj);
-        if (mask[i] & freeze_group_bit) meff = mj;
-        if (mask[j] & freeze_group_bit) meff = mi;
-
-        // normal force = Hertzian contact + normal velocity damping
-
-        damp = meff*gamman*vnnr*rsqinv;
-        ccel = kn*(radsum-r)*rinv - damp;
-        polyhertz = sqrt((radsum-r)*radi*radj / radsum);
-        ccel *= polyhertz;
-
         // relative velocities
 
         vtr1 = vt1 - (delz*wr2-dely*wr3);
@@ -194,15 +169,11 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
         // shear history effects
 
         touch[jj] = 1;
-        shear = &allshear[3*jj];
-        if (shearupdate) {
-          shear[0] += vtr1*dt;
-          shear[1] += vtr2*dt;
-          shear[2] += vtr3*dt;
-        }
+        shear = &allshear[3*jj]; // shear[] refers to a shear force here, not shear displacement
+
         shsqmag = shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2];
 
-        // rotate shear displacements
+        // rotate shear forces onto new contact plane conserving length
 
         rsht = shear[0]*delx + shear[1]*dely + shear[2]*delz;
         rsht *= rsqinv;
@@ -213,49 +184,69 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
           shsqnew = shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2];
           if (shsqnew!=0.0) {
               shratio=sqrt(shsqmag/shsqnew);
-              shear[0] *= shratio; // conserve shear length
+              shear[0] *= shratio; // conserve shear force length
               shear[1] *= shratio;
               shear[2] *= shratio;
           }
         }
 
-        // tangential forces = shear + tangential velocity damping
+        // then perform rotation for rigid-body SPIN
+        omdel=(omega[i][0]+omega[j][0])*delx+(omega[i][1]+omega[j][1])*dely+(omega[i][2]+omega[j][2])*delz;
+        wspinx=0.5*rsqinv*delx*omdel;
+        wspiny=0.5*rsqinv*dely*omdel;
+        wspinz=0.5*rsqinv*delz*omdel;
+        shint0 = shear[0];
+        shint1 = shear[1];
+        shint2 = shear[2];
 
-        fs1 = -polyhertz * (kt*shear[0] + meff*gammat*vtr1);
-        fs2 = -polyhertz * (kt*shear[1] + meff*gammat*vtr2);
-        fs3 = -polyhertz * (kt*shear[2] + meff*gammat*vtr3);
-
-        // rescale frictional displacements and forces if needed
-
-        fs = sqrt(fs1*fs1 + fs2*fs2 + fs3*fs3);
-        fn = xmu * fabs(ccel*r);
-
-        if (fs > fn) {
-          if (fs != 0.0) {
-            shear[0] = (fn/fs) * (shear[0] + meff*gammat*vtr1/kt) -
-              meff*gammat*vtr1/kt;
-            shear[1] = (fn/fs) * (shear[1] + meff*gammat*vtr2/kt) -
-              meff*gammat*vtr2/kt;
-            shear[2] = (fn/fs) * (shear[2] + meff*gammat*vtr3/kt) -
-              meff*gammat*vtr3/kt;
-            fs1 *= fn/fs;
-            fs2 *= fn/fs;
-            fs3 *= fn/fs;
-          } else fs1 = fs2 = fs3 = 0.0;
+        if (shearupdate) {
+            shear[0]=shint0+shint1*(-wspinz*dt)+shint2*wspiny*dt;
+            shear[1]=shint0*wspinz*dt+shint1+shint2*(-wspinx*dt);
+            shear[2]=shint0*(-wspiny*dt)+shint1*wspinx*dt+shint2;
         }
+
+        // normal force = Hertzian contact
+
+        ccel = kn*(radsum-r)*rinv;
+        polyhertz = sqrt((radsum-r)*radi*radj / radsum);
+        ccel *= polyhertz;
+
+        // tangential forces done incrementally
+
+        if (shearupdate) { // is sign convention OK?
+          shear[0] -= polyhertz*kt*vtr1*dt;//shear displacement =vtr*dt
+          shear[1] -= polyhertz*kt*vtr2*dt;
+          shear[2] -= polyhertz*kt*vtr3*dt;
+        }
+
+        // rescale frictional forces if needed
+
+        fs = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
+        fslim = xmu * fabs(ccel*r); //replaced fn with fslim
+
+        if (fs > fslim) {
+          if (fs != 0.0) {
+           if (shearupdate) {
+             shear[0] *= fslim/fs;
+             shear[1] *= fslim/fs;
+             shear[2] *= fslim/fs;
+           }
+          } else shear[0] = shear[1] = shear[2] = 0.0;
+        }
+
 
         // forces & torques
 
-        fx = delx*ccel + fs1;
-        fy = dely*ccel + fs2;
-        fz = delz*ccel + fs3;
+        fx = delx*ccel + shear[0];
+        fy = dely*ccel + shear[1];
+        fz = delz*ccel + shear[2];
         f[i][0] += fx;
         f[i][1] += fy;
         f[i][2] += fz;
 
-        tor1 = rinv * (dely*fs3 - delz*fs2);
-        tor2 = rinv * (delz*fs1 - delx*fs3);
-        tor3 = rinv * (delx*fs2 - dely*fs1);
+        tor1 = rinv * (dely*shear[2] - delz*shear[1]);
+        tor2 = rinv * (delz*shear[0] - delx*shear[2]);
+        tor3 = rinv * (delx*shear[1] - dely*shear[0]);
 	torque[i][0] -= cri*tor1;
 	torque[i][1] -= cri*tor2;
 	torque[i][2] -= cri*tor3;
@@ -276,43 +267,42 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
   }
 }
 
+
+
 /* ----------------------------------------------------------------------
    global settings
 ------------------------------------------------------------------------- */
 
-void PairGranHertzHistory::settings(int narg, char **arg)
+void PairGranShmHistory::settings(int narg, char **arg)
 {
-  if (narg != 6) error->all(FLERR,"Illegal pair_style command");
 
-  kn = force->numeric(arg[0]);
-  if (strcmp(arg[1],"NULL") == 0) kt = kn * 2.0/7.0;
-  else kt = force->numeric(arg[1]);
+  if (narg != 3) error->all(FLERR,"Illegal pair_style command");
+  if (domain->dimension == 2) error->all(FLERR,"PairGranShmHistory formulae only valid for 3D simulations");
 
-  gamman = force->numeric(arg[2]);
-  if (strcmp(arg[3],"NULL") == 0) gammat = 0.5 * gamman;
-  else gammat = force->numeric(arg[3]);
+  Geq = force->numeric(arg[0]);//0.5 * (Gi+Gj)
+  Poiseq = force->numeric(arg[1]);//0.5 * (Poisi+Poisj)
+  xmu = force->numeric(arg[2]);
 
-  xmu = force->numeric(arg[4]);
-  dampflag = force->inumeric(arg[5]);
-  if (dampflag == 0) gammat = 0.0;
+  if (Geq < 0.0 || Poiseq < 0.0 || xmu < 0.0 || Poiseq > 0.5) error->all(FLERR,"Illegal Shm pair parameter values");
 
-  if (kn < 0.0 || kt < 0.0 || gamman < 0.0 || gammat < 0.0 ||
-      xmu < 0.0 || dampflag < 0 || dampflag > 1)
-    error->all(FLERR,"Illegal pair_style command");
+  kn = 4.0*Geq / (3.0*(1.0-Poiseq)); // calculate these here to save effort in the compute
+  kt = 4.0*Geq / (2.0-Poiseq);
 
   // convert Kn and Kt from pressure units to force/distance^2
 
   kn /= force->nktv2p;
   kt /= force->nktv2p;
+
 }
 
 /* ---------------------------------------------------------------------- */
 
-double PairGranHertzHistory::single(int i, int j, int itype, int jtype,
+double PairGranShmHistory::single(int i, int j, int itype, int jtype,
                                     double rsq,
                                     double factor_coul, double factor_lj,
                                     double &fforce)
 {
+  error->all(FLERR,"More coding needed in PairGranShmHistory::single");
   double radi,radj,radsum;
   double r,rinv,rsqinv,delx,dely,delz;
   double vr1,vr2,vr3,vnnr,vn1,vn2,vn3,vt1,vt2,vt3,wr1,wr2,wr3;

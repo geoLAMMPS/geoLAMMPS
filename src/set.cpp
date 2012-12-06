@@ -37,7 +37,7 @@ using namespace LAMMPS_NS;
 using namespace MathConst;
 
 enum{ATOM_SELECT,MOL_SELECT,TYPE_SELECT,GROUP_SELECT,REGION_SELECT};
-enum{TYPE,TYPE_FRACTION,MOLECULE,X,Y,Z,CHARGE,MASS,SHAPE,LENGTH,TRI,
+enum{TYPE,TYPE_FRACTION,MOLECULE,X,Y,Z,VX,VY,VZ,OMEGAX,OMEGAY,OMEGAZ,CHARGE,MASS,SHAPE,LENGTH,TRI,
      DIPOLE,DIPOLE_RANDOM,QUAT,QUAT_RANDOM,THETA,ANGMOM,
      DIAMETER,DENSITY,VOLUME,IMAGE,BOND,ANGLE,DIHEDRAL,IMPROPER,
      MESO_E,MESO_CV,MESO_RHO};
@@ -121,6 +121,36 @@ void Set::command(int narg, char **arg)
       if (iarg+2 > narg) error->all(FLERR,"Illegal set command");
       dvalue = atof(arg[iarg+1]);
       set(Z);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"vx") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal set command");
+      dvalue = atof(arg[iarg+1]);
+      set(VX);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"vy") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal set command");
+      dvalue = atof(arg[iarg+1]);
+      set(VY);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"vz") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal set command");
+      dvalue = atof(arg[iarg+1]);
+      set(VZ);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"omegax") == 0) { 
+      if (iarg+2 > narg) error->all(FLERR,"Illegal set command");
+      dvalue = atof(arg[iarg+1]);
+      set(OMEGAX);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"omegay") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal set command");
+      dvalue = atof(arg[iarg+1]);
+      set(OMEGAY);
+      iarg += 2;
+    } else if (strcmp(arg[iarg],"omegaz") == 0) {
+      if (iarg+2 > narg) error->all(FLERR,"Illegal set command");
+      dvalue = atof(arg[iarg+1]);
+      set(OMEGAZ);
       iarg += 2;
     } else if (strcmp(arg[iarg],"charge") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal set command");
@@ -434,6 +464,12 @@ void Set::set(int keyword)
     else if (keyword == X) atom->x[i][0] = dvalue;
     else if (keyword == Y) atom->x[i][1] = dvalue;
     else if (keyword == Z) atom->x[i][2] = dvalue;
+    else if (keyword == VX) atom->v[i][0] = dvalue;
+    else if (keyword == VY) atom->v[i][1] = dvalue;
+    else if (keyword == VZ) atom->v[i][2] = dvalue;
+    else if (keyword == OMEGAX) atom->omega[i][0] = dvalue;  
+    else if (keyword == OMEGAY) atom->omega[i][1] = dvalue;
+    else if (keyword == OMEGAZ) atom->omega[i][2] = dvalue;
     else if (keyword == CHARGE) atom->q[i] = dvalue;
     else if (keyword == MASS) atom->rmass[i] = dvalue;
     else if (keyword == DIAMETER) atom->radius[i] = 0.5 * dvalue;

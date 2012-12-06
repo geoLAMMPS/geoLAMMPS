@@ -74,6 +74,7 @@ void PairGranHooke::compute(int eflag, int vflag)
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
   int newton_pair = force->newton_pair;
+  double deltan,cri,crj;
 
   inum = list->inum;
   ilist = list->ilist;
@@ -106,6 +107,9 @@ void PairGranHooke::compute(int eflag, int vflag)
         r = sqrt(rsq);
         rinv = 1.0/r;
         rsqinv = 1.0/rsq;
+        deltan = radsum-r;
+        cri = radi-0.5*deltan;
+        crj = radj-0.5*deltan;
 
         // relative translational velocity
 
@@ -128,9 +132,9 @@ void PairGranHooke::compute(int eflag, int vflag)
 
         // relative rotational velocity
 
-        wr1 = (radi*omega[i][0] + radj*omega[j][0]) * rinv;
-        wr2 = (radi*omega[i][1] + radj*omega[j][1]) * rinv;
-        wr3 = (radi*omega[i][2] + radj*omega[j][2]) * rinv;
+	wr1 = (cri*omega[i][0] + crj*omega[j][0]) * rinv;
+	wr2 = (cri*omega[i][1] + crj*omega[j][1]) * rinv;
+	wr3 = (cri*omega[i][2] + crj*omega[j][2]) * rinv;
 
         // meff = effective mass of pair of particles
         // if I or J part of rigid body, use body mass
@@ -190,21 +194,21 @@ void PairGranHooke::compute(int eflag, int vflag)
         tor1 = rinv * (dely*fs3 - delz*fs2);
         tor2 = rinv * (delz*fs1 - delx*fs3);
         tor3 = rinv * (delx*fs2 - dely*fs1);
-        torque[i][0] -= radi*tor1;
-        torque[i][1] -= radi*tor2;
-        torque[i][2] -= radi*tor3;
+	torque[i][0] -= cri*tor1;
+	torque[i][1] -= cri*tor2;
+	torque[i][2] -= cri*tor3;
 
         if (newton_pair || j < nlocal) {
           f[j][0] -= fx;
           f[j][1] -= fy;
           f[j][2] -= fz;
-          torque[j][0] -= radj*tor1;
-          torque[j][1] -= radj*tor2;
-          torque[j][2] -= radj*tor3;
+	  torque[j][0] -= crj*tor1;
+	  torque[j][1] -= crj*tor2;
+	  torque[j][2] -= crj*tor3;
         }
 
-        if (evflag) ev_tally_xyz(i,j,nlocal,newton_pair,
-                                 0.0,0.0,fx,fy,fz,delx,dely,delz);
+        if (evflag) ev_tally_gran(i,j,nlocal,fx,fy,fz,x[i][0],x[i][1],x[i][2],
+                                 radius[i],x[j][0],x[j][1],x[j][2],radius[j]);
       }
     }
   }
@@ -224,6 +228,7 @@ double PairGranHooke::single(int i, int j, int itype, int jtype, double rsq,
   double vtr1,vtr2,vtr3,vrel;
   double mi,mj,meff,damp,ccel;
   double fn,fs,ft,fs1,fs2,fs3;
+  double deltan,cri,crj;
 
   double *radius = atom->radius;
   radi = radius[i];
@@ -241,6 +246,9 @@ double PairGranHooke::single(int i, int j, int itype, int jtype, double rsq,
   r = sqrt(rsq);
   rinv = 1.0/r;
   rsqinv = 1.0/rsq;
+  deltan = radsum-r;
+  cri = radi-0.5*deltan;
+  crj = radj-0.5*deltan; 
 
   // relative translational velocity
 
@@ -270,9 +278,9 @@ double PairGranHooke::single(int i, int j, int itype, int jtype, double rsq,
   // relative rotational velocity
 
   double **omega = atom->omega;
-  wr1 = (radi*omega[i][0] + radj*omega[j][0]) * rinv;
-  wr2 = (radi*omega[i][1] + radj*omega[j][1]) * rinv;
-  wr3 = (radi*omega[i][2] + radj*omega[j][2]) * rinv;
+  wr1 = (cri*omega[i][0] + crj*omega[j][0]) * rinv;
+  wr2 = (cri*omega[i][1] + crj*omega[j][1]) * rinv;
+  wr3 = (cri*omega[i][2] + crj*omega[j][2]) * rinv;
 
   // meff = effective mass of pair of particles
   // if I or J part of rigid body, use body mass

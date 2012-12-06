@@ -21,8 +21,11 @@ one or more keyword/value pairs may be appended to args :l
 keyword = {region} or {diam} or {dens} or {vol} or {rate} or {vel} :l
   {region} value = region-ID
     region-ID = ID of region to use as insertion volume
-  {diam} values = lo hi
-    lo,hi = range of diameters for inserted particles (distance units)
+  {diam} values = Diameter1 Diameter2 Distribution_Type
+    Distribution_Type can be either uniform of gaussian. For backwards compatibility the word uniform can be omitted
+    Diameter1,Diameter2 (distance units) 
+        if uniform Diameter1 is lower and Diameter2 is higher limit
+        if gaussian Diameter1 is mean diameter and Diameter2 is standard deviation
   {dens} values = lo hi
     lo,hi = range of densities for inserted particles
   {vol} values = fraction Nattempt

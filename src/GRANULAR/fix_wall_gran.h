@@ -45,13 +45,22 @@ class FixWallGran : public Fix {
   int size_restart(int);
   int maxsize_restart();
   void reset_dt();
+  int modify_param(int, char **);
+  double compute_vector(int);
 
  protected:
-  int wallstyle,pairstyle,wiggle,wshear,axis;
+  int wallstyle,pairstyle,wiggle,wshear,axis,dampflag;
+  int wtranslate,wscontrol; //flags for wall movement and wall stress control respectively
   double kn,kt,gamman,gammat,xmu;
   double lo,hi,cylradius;
+  double loINI,hiINI; // for wiggle only
+  double velwall[3],fwall[3],fwall_all[3];
   double amplitude,period,omega,vshear;
   double dt;
+  double targetf,gain;
+  char *fstr;
+  int fvar;
+  int ftvarying; // 1 if ftarget set through a variable
   int nlevels_respa;
   int time_origin;
 
@@ -67,6 +76,8 @@ class FixWallGran : public Fix {
   void hertz_history(double, double, double, double, double *,
                      double *, double *, double *, double *, double, double,
                      double *);
+  void move_wall();
+  void velscontrol();
 };
 
 }

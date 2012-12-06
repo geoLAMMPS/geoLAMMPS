@@ -890,7 +890,73 @@ void Pair::ev_tally_xyz_full(int i, double evdwl, double ecoul,
     }
   }
 }
+/* ----------------------------------------------------------------------
+   Calculates the stress tensor for each grain - see Potyondy and 
+   Cundall (2004) for details of the formula used. Called by granular pairs
+------------------------------------------------------------------------- */
+void Pair::ev_tally_gran(int i, int j, int nlocal,
+			double fx, double fy, double fz,
+			double xi, double yi, double zi, double radi,
+			double xj, double yj, double zj, double radj)
+{
+    double nx, ny, nz;
+    double dist;
+    double cx, cy, cz;
+    double volume;
+    double PI = 4.0*atan(1.0);
 
+    //distance between the center i and j
+    dist = sqrt((xj-xi)*(xj-xi)+(yj-yi)*(yj-yi)+(zj-zi)*(zj-zi));
+    //normal to the contact plane
+    nx = (xj-xi) / dist;
+    ny = (yj-yi) / dist;
+    nz = (zj-zi) / dist;
+    //coordinates of the contact
+    cx = xi + (radi- 0.5 * (radi + radj - dist)) * nx;
+    cy = yi + (radi- 0.5 * (radi + radj - dist)) * ny;
+    cz = zi + (radi- 0.5 * (radi + radj - dist)) * nz;
+
+    //calculate stresses and assign it to vatom array
+
+    if (vflag_either)
+    {
+        if (vflag_atom) {
+          if (i < nlocal)
+          {
+            //volume of the particle
+            if(domain->dimension == 3)
+                volume = 4.0*PI/3.0 * radi*radi*radi; //sphere
+            else if (domain->dimension == 2)
+                volume = PI * radi*radi; //disk
+            else
+                error->all(FLERR,"Cannot read correct dimension");
+            vatom[i][0] -= (cx-xi) * fx / volume;
+            vatom[i][1] -= (cy-yi) * fy / volume;
+            vatom[i][2] -= (cz-zi) * fz / volume;
+            vatom[i][3] -= (cx-xi) * fy / volume;
+            vatom[i][4] -= (cx-xi) * fz / volume;
+            vatom[i][5] -= (cy-yi) * fz / volume;
+          }
+          if (j < nlocal)
+           {
+            //volume of the particle
+            if(domain->dimension == 3)
+                volume = 4.0*PI/3.0 * radj*radj*radj; //sphere
+            else if (domain->dimension == 2)
+                volume = PI * radj*radj; //disk
+            else
+                error->all(FLERR,"Cannot read correct dimension");
+
+            vatom[j][0] += (cx-xj) * fx / volume;
+            vatom[j][1] += (cy-yj) * fy / volume;
+            vatom[j][2] += (cz-zj) * fz / volume;
+            vatom[j][3] += (cx-xj) * fy / volume;
+            vatom[j][4] += (cx-xj) * fz / volume;
+            vatom[j][5] += (cy-yj) * fz / volume;
+          }
+        }
+    }
+}
 /* ----------------------------------------------------------------------
    tally eng_vdwl and virial into global and per-atom accumulators
    called by SW and hbond potentials, newton_pair is always on

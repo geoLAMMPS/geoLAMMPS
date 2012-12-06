@@ -31,8 +31,11 @@
 
 <PRE>  <I>region</I> value = region-ID
     region-ID = ID of region to use as insertion volume
-  <I>diam</I> values = lo hi
-    lo,hi = range of diameters for inserted particles (distance units)
+  <I>diam</I> values = Diameter1 Diameter2 Distribution_Type
+    Distribution_Type can be either uniform of gaussian. For backwards compatibility the word uniform can be omitted
+    Diameter1,Diameter2 (distance units) 
+        if uniform Diameter1 is lower and Diameter2 is higher limit
+        if gaussian Diameter1 is mean diameter and Diameter2 is standard deviation
   <I>dens</I> values = lo hi
     lo,hi = range of densities for inserted particles
   <I>vol</I> values = fraction Nattempt

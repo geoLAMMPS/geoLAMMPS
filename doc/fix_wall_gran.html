@@ -27,7 +27,7 @@
 
 <LI>gamma_t = damping coefficient for collisions in tangential direction (1/time units or 1/time-distance units - see discussion below) 
 
-<LI>xmu = static yield criterion (unitless fraction between 0.0 and 1.0) 
+<LI>xmu = static yield criterion (unitless fraction over 0.0) 
 
 <LI>dampflag = 0 or 1 if tangential damping force is excluded or included 
 
@@ -42,15 +42,16 @@
 </PRE>
 <LI>zero or more keyword/value pairs may be appended to args 
 
-<LI>keyword = <I>wiggle</I> or <I>shear</I> 
-
-<PRE>  <I>wiggle</I> values = dim amplitude period
+<PRE>keyword = <I>wiggle</I> or <I>shear</I> or <I>translate</I>:l
+  <I>wiggle</I> values = dim amplitude period
     dim = <I>x</I> or <I>y</I> or <I>z</I>
     amplitude = size of oscillation (distance units)
     period = time of oscillation (time units)
   <I>shear</I> values = dim vshear
     dim = <I>x</I> or <I>y</I> or <I>z</I>
-    vshear = magnitude of shear velocity (velocity units) 
+    vshear = magnitude of shear velocity (velocity units)
+  <I>translate</I> values = vwallx vwally vwallz
+    vwallx, vwally, vwallz = the velocity of the wall in the x, y and z directions (distance/time units) 
 </PRE>
 
 </UL>
@@ -109,8 +110,9 @@ specify a pair of walls in a dimension.  Wall positions are given by
 single wall is desired.  For a <I>zcylinder</I> wallstyle, the cylinder's
 axis is at x = y = 0.0, and the radius of the cylinder is specified.
 </P>
-<P>Optionally, the wall can be moving, if the <I>wiggle</I> or <I>shear</I>
-keywords are appended.  Both keywords cannot be used together.
+<P>Optionally, the wall can be moving, if the <I>wiggle</I>, <I>shear</I> or
+<I>translate</I> keywords are appended.  Only one of the above keywords can
+be used at a time.
 </P>
 <P>For the <I>wiggle</I> keyword, the wall oscillates sinusoidally, similar to
 the oscillations of particles which can be specified by the
@@ -142,6 +144,9 @@ the clockwise direction for <I>vshear</I> > 0 or counter-clockwise for
 <I>vshear</I> < 0.  In this case, <I>vshear</I> is the tangential velocity of
 the wall at whatever <I>radius</I> has been defined.
 </P>
+<P>For the <I>translate</I> keyword, the wall moves continuously with the
+specified velocity <I>vwallx vwally vwallz</I>.
+</P>
 <P><B>Restart, fix_modify, output, run start/stop, minimize info:</B>
 </P>
 <P>This fix writes the shear friction state of atoms interacting with the
@@ -150,12 +155,15 @@ continue correctly if granular potentials with shear "history" effects
 are being used.  See the <A HREF = "read_restart.html">read_restart</A> command for
 info on how to re-specify a fix in an input script that reads a
 restart file, so that the operation of the fix continues in an
-uninterrupted fashion.
+uninterrupted fashion.  
+<B>Important Note:</B> The position of the walls is not written to the restart files so the
+user should specify the new wall position in a restart file.
 </P>
-<P>None of the <A HREF = "fix_modify.html">fix_modify</A> options are relevant to this
-fix.  No global or per-atom quantities are stored by this fix for
-access by various <A HREF = "Section_howto.html#howto_15">output commands</A>.  No
-parameter of this fix can be used with the <I>start/stop</I> keywords of
+<P><A HREF = "fix_modify.html">fix_modify</A> can be used to change the frictional coefficient (xmu), the damping coefficients (gamma_n and gamma_t) and the dampflag.  With the <I>translate</I> keyword in conjunction with <I>off</I> wall velocities can be set to zero and movement switched off.  The <I>translate</I> keyword can also be used to reset the wall velocities to different values.  
+</P>
+<P>This fix returns the wall positions and forces applied by the walls to the atoms in the sample.  These can be accessed by various <A HREF = "Section_howto.html#howto_15">output commands</A>.  The number of values returned for each granular wall fix command is 5, the first one is the current position of the lower plane (lo), the second the current position of the upper plane (hi), and the third, fourth and fifth the values of the <I>total</I> force applied by <I>both</I> walls to the atoms in the Cartesian x, y and z directions respectively.
+</P>
+<P>No parameter of this fix can be used with the <I>start/stop</I> keywords of
 the <A HREF = "run.html">run</A> command.  This fix is not invoked during <A HREF = "minimize.html">energy
 minimization</A>.
 </P>
