@@ -1,0 +1,160 @@
+<HTML>
+<CENTER><A HREF = "http://lammps.sandia.gov">LAMMPS WWW Site</A> - <A HREF = "Manual.html">LAMMPS Documentation</A> - <A HREF = "Section_commands.html#comm">LAMMPS Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>dump vtk command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>dump ID group-ID vtk N dump.*.vtp args 
+</PRE>
+<UL><LI>ID = user-assigned name for the dump 
+
+<LI>group-ID = ID of the group of atoms to be dumped 
+
+<LI>vtk = style name of this dump command 
+
+<LI>N = create vtp files every this many timesteps 
+
+<LI>file = name of file to write dump info to 
+
+<LI>args = list of atom attributes to be written to the .vtp files 
+
+<PRE>    possible attributes = id, mol, type, element, mass,
+			  x, y, z, xs, ys, zs, xu, yu, zu, 
+			  xsu, ysu, zsu, ix, iy, iz,
+			  vx, vy, vz, fx, fy, fz,
+                          q, mux, muy, muz, mu,
+                          radius, diameter, omegax, omegay, omegaz,
+			  angmomx, angmomy, angmomz, tqx, tqy, tqz,
+			  spin, eradius, ervel, erforce,
+			  c_ID, c_ID[N], f_ID, f_ID[N], v_name 
+</PRE>
+<PRE>      id = atom ID
+      mol = molecule ID
+      type = atom type
+      element = name of atom element, as defined by <A HREF = "dump_modify.html">dump_modify</A> command
+      mass = atom mass
+      x,y,z = unscaled atom coordinates
+      xs,ys,zs = scaled atom coordinates
+      xu,yu,zu = unwrapped atom coordinates
+      xsu,ysu,zsu = scaled unwrapped atom coordinates
+      ix,iy,iz = box image that the atom is in
+      vx,vy,vz = atom velocities
+      fx,fy,fz = forces on atoms
+      q = atom charge
+      mux,muy,muz = orientation of dipole moment of atom
+      mu = magnitude of dipole moment of atom
+      radius,diameter = radius,diameter of spherical particle
+      omegax,omegay,omegaz = angular velocity of extended particle
+      angmomx,angmomy,angmomz = angular momentum of extended particle
+      tqx,tqy,tqz = torque on extended particles
+      spin = electron spin
+      eradius = electron radius
+      ervel = electron radial velocity
+      erforce = electron radial force
+      c_ID = per-atom vector calculated by a compute with ID
+      c_ID[N] = Nth column of per-atom array calculated by a compute with ID
+      f_ID = per-atom vector calculated by a fix with ID
+      f_ID[N] = Nth column of per-atom array calculated by a fix with ID
+      v_name = per-atom vector calculated by an atom-style variable with name 
+</PRE>
+
+</UL>
+<P><B>Example:</B>
+</P>
+<P>If we assume that fix_multistress has the fix id 1 and compute coord/gran has the compute id 6:
+</P>
+<PRE>dump 1 all vtk 1000 dump.*.vtp c_1_stress[1] mass id c_6 fx vy x 
+</PRE>
+<P>will cause one .vtp file to be written every 1000 timesteps. Each will contain the x-component
+of mean stress, the mass, the atom id, the number of contacts, the x-component of force and the
+y-component of velocity for all particles. Note that x was ignored - this is because it is
+written out by default (see below).
+</P>
+<P><B>Description:</B>
+</P>
+<P>This is a modification of <A HREF = "dump.html">dump</A> with the <I>custom</I> style. Instead of
+creating conventional dump files, this fix creates .vtp files which are formatted
+correctly for input to ParaView. The .vtp files are written every N timesteps and 
+only information for atoms in the specified group is dumped.
+</P>
+<P>You don't need to specify particle coordinates and diameters; these are written
+out automatically as ParaView needs them. If you do specify <I>x</I>, <I>y</I>, <I>z</I> or <I>diameter</I>
+among the list of arguments, they are ignored as they are written at the start of
+each .vtp file anyway. Therefore the following two lines do exactly the same thing
+if used in a script:
+</P>
+<PRE>dump 1 all vtk 5 dump.*.vtp y z x diameter
+dump 1 all vtk 5 dump.*.vtp 
+</PRE>
+<P>It is important to put an asterisk into the filename, as dump vtk is supposed to write 
+one file per requested timestep. As it would not be useful to write everything to the
+same file, an error message is returned if this is attempted (i.e., if the asterisk
+is omitted).
+</P>
+<P>The written .vtp files are sorted by default - this is necessary to guarantee
+that some of the data gathered from multiple processors is kept in sync properly.
+This is the case even if the <A HREF = "atom_modify.html">atom_modify sort</A> option is off.
+</P>
+<HR>
+
+<P>The <I>c_ID</I> and <I>c_ID[N]</I> attributes allow per-atom vectors or arrays
+calculated by a <A HREF = "compute.html">compute</A> to be output. The ID in the
+attribute should be replaced by the actual ID of the compute that has
+been defined previously in the input script. See the
+<A HREF = "compute.html">compute</A> command for details. Note that computes which
+calculate global or local quantities, as opposed to per-atom quantities,
+cannot be output in a dump vtk command. 
+</P>
+<P>If <I>c_ID</I> is used as a attribute, then the per-atom vector calculated
+by the compute is printed. If <I>c_ID[N]</I> is used, then N must be in
+the range from 1-M, which will print the Nth column of the M-length
+per-atom array calculated by the compute.
+</P>
+<P>The <I>f_ID</I> and <I>f_ID[N]</I> attributes allow vector or array per-atom
+quantities calculated by a <A HREF = "fix.html">fix</A> to be output.  The ID in the
+attribute should be replaced by the actual ID of the fix that has been
+defined previously in the input script.  The <A HREF = "fix_ave_atom.html">fix
+ave/atom</A> command is one that calculates per-atom
+quantities. Since it can time-average per-atom quantities produced by
+any <A HREF = "compute.html">compute</A>, <A HREF = "fix.html">fix</A>, or atom-style
+<A HREF = "variable.html">variable</A>, this allows those time-averaged results to
+be written to a dump file.
+</P>
+<P>If <I>f_ID</I> is used as a attribute, then the per-atom vector calculated
+by the fix is printed.  If <I>f_ID[N]</I> is used, then N must be in the
+range from 1-M, which will print the Nth column of the M-length
+per-atom array calculated by the fix.
+</P>
+<P>The <I>v_name</I> attribute allows per-atom vectors calculated by a
+<A HREF = "variable.html">variable</A> to be output.  The name in the attribute
+should be replaced by the actual name of the variable that has been
+defined previously in the input script.  Only an atom-style variable
+can be referenced, since it is the only style that generates per-atom
+values.  Variables of style <I>atom</I> can reference individual atom
+attributes, per-atom atom attributes, thermodynamic keywords, or
+invoke other computes, fixes, or variables when they are evaluated, so
+this is a very general means of creating quantities to output to a
+dump file.
+</P>
+<HR>
+
+<P><B>Restrictions:</B>
+</P>
+<P>dump vtk has not been written for 2D simulations: 3D only.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "dump.html">dump</A>, <A HREF = "dump_custom.html">dump_custom</A>, 
+<A HREF = "dump_image.html">dump image</A>, <A HREF = "dump_modify.html">dump_modify</A>,
+<A HREF = "undump.html">undump</A>
+</P>
+</HTML>

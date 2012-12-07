@@ -1,0 +1,148 @@
+"LAMMPS WWW Site"_lws - "LAMMPS Documentation"_ld - "LAMMPS Commands"_lc :c
+
+:link(lws,http://lammps.sandia.gov)
+:link(ld,Manual.html)
+:link(lc,Section_commands.html#comm)
+
+:line
+   
+dump vtk command :h3
+
+[Syntax:]
+
+dump ID group-ID vtk N dump.*.vtp args :pre
+
+ID = user-assigned name for the dump :ulb,l
+group-ID = ID of the group of atoms to be dumped :l
+vtk = style name of this dump command :l
+N = create vtp files every this many timesteps :l
+file = name of file to write dump info to :l
+args = list of atom attributes to be written to the .vtp files :l
+    possible attributes = id, mol, type, element, mass,
+			  x, y, z, xs, ys, zs, xu, yu, zu, 
+			  xsu, ysu, zsu, ix, iy, iz,
+			  vx, vy, vz, fx, fy, fz,
+                          q, mux, muy, muz, mu,
+                          radius, diameter, omegax, omegay, omegaz,
+			  angmomx, angmomy, angmomz, tqx, tqy, tqz,
+			  spin, eradius, ervel, erforce,
+			  c_ID, c_ID\[N\], f_ID, f_ID\[N\], v_name :pre
+
+      id = atom ID
+      mol = molecule ID
+      type = atom type
+      element = name of atom element, as defined by "dump_modify"_dump_modify.html command
+      mass = atom mass
+      x,y,z = unscaled atom coordinates
+      xs,ys,zs = scaled atom coordinates
+      xu,yu,zu = unwrapped atom coordinates
+      xsu,ysu,zsu = scaled unwrapped atom coordinates
+      ix,iy,iz = box image that the atom is in
+      vx,vy,vz = atom velocities
+      fx,fy,fz = forces on atoms
+      q = atom charge
+      mux,muy,muz = orientation of dipole moment of atom
+      mu = magnitude of dipole moment of atom
+      radius,diameter = radius,diameter of spherical particle
+      omegax,omegay,omegaz = angular velocity of extended particle
+      angmomx,angmomy,angmomz = angular momentum of extended particle
+      tqx,tqy,tqz = torque on extended particles
+      spin = electron spin
+      eradius = electron radius
+      ervel = electron radial velocity
+      erforce = electron radial force
+      c_ID = per-atom vector calculated by a compute with ID
+      c_ID\[N\] = Nth column of per-atom array calculated by a compute with ID
+      f_ID = per-atom vector calculated by a fix with ID
+      f_ID\[N\] = Nth column of per-atom array calculated by a fix with ID
+      v_name = per-atom vector calculated by an atom-style variable with name :pre
+:ule
+
+[Example:]
+
+If we assume that fix_multistress has the fix id 1 and compute coord/gran has the compute id 6:
+
+dump 1 all vtk 1000 dump.*.vtp c_1_stress\[1\] mass id c_6 fx vy x :pre
+
+will cause one .vtp file to be written every 1000 timesteps. Each will contain the x-component
+of mean stress, the mass, the atom id, the number of contacts, the x-component of force and the
+y-component of velocity for all particles. Note that x was ignored - this is because it is
+written out by default (see below).
+
+[Description:]
+
+This is a modification of "dump"_dump.html with the {custom} style. Instead of
+creating conventional dump files, this fix creates .vtp files which are formatted
+correctly for input to ParaView. The .vtp files are written every N timesteps and 
+only information for atoms in the specified group is dumped.
+
+You don't need to specify particle coordinates and diameters; these are written
+out automatically as ParaView needs them. If you do specify {x}, {y}, {z} or {diameter}
+among the list of arguments, they are ignored as they are written at the start of
+each .vtp file anyway. Therefore the following two lines do exactly the same thing
+if used in a script:
+
+dump 1 all vtk 5 dump.*.vtp y z x diameter
+dump 1 all vtk 5 dump.*.vtp :pre
+
+It is important to put an asterisk into the filename, as dump vtk is supposed to write 
+one file per requested timestep. As it would not be useful to write everything to the
+same file, an error message is returned if this is attempted (i.e., if the asterisk
+is omitted).
+
+The written .vtp files are sorted by default - this is necessary to guarantee
+that some of the data gathered from multiple processors is kept in sync properly.
+This is the case even if the "atom_modify sort"_atom_modify.html option is off.
+
+:line
+
+The {c_ID} and {c_ID\[N\]} attributes allow per-atom vectors or arrays
+calculated by a "compute"_compute.html to be output. The ID in the
+attribute should be replaced by the actual ID of the compute that has
+been defined previously in the input script. See the
+"compute"_compute.html command for details. Note that computes which
+calculate global or local quantities, as opposed to per-atom quantities,
+cannot be output in a dump vtk command. 
+
+If {c_ID} is used as a attribute, then the per-atom vector calculated
+by the compute is printed. If {c_ID\[N\]} is used, then N must be in
+the range from 1-M, which will print the Nth column of the M-length
+per-atom array calculated by the compute.
+
+The {f_ID} and {f_ID\[N\]} attributes allow vector or array per-atom
+quantities calculated by a "fix"_fix.html to be output.  The ID in the
+attribute should be replaced by the actual ID of the fix that has been
+defined previously in the input script.  The "fix
+ave/atom"_fix_ave_atom.html command is one that calculates per-atom
+quantities. Since it can time-average per-atom quantities produced by
+any "compute"_compute.html, "fix"_fix.html, or atom-style
+"variable"_variable.html, this allows those time-averaged results to
+be written to a dump file.
+
+If {f_ID} is used as a attribute, then the per-atom vector calculated
+by the fix is printed.  If {f_ID\[N\]} is used, then N must be in the
+range from 1-M, which will print the Nth column of the M-length
+per-atom array calculated by the fix.
+
+The {v_name} attribute allows per-atom vectors calculated by a
+"variable"_variable.html to be output.  The name in the attribute
+should be replaced by the actual name of the variable that has been
+defined previously in the input script.  Only an atom-style variable
+can be referenced, since it is the only style that generates per-atom
+values.  Variables of style {atom} can reference individual atom
+attributes, per-atom atom attributes, thermodynamic keywords, or
+invoke other computes, fixes, or variables when they are evaluated, so
+this is a very general means of creating quantities to output to a
+dump file.
+
+:line
+
+[Restrictions:]
+
+dump vtk has not been written for 2D simulations: 3D only.
+
+[Related commands:]
+
+"dump"_dump.html, "dump_custom"_dump_custom.html, 
+"dump image"_dump_image.html, "dump_modify"_dump_modify.html,
+"undump"_undump.html

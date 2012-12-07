@@ -71,6 +71,7 @@ Dump::Dump(LAMMPS *lmp, int narg, char **arg) : Pointers(lmp)
   sort_flag = 0;
   append_flag = 0;
   padflag = 0;
+  vtkflag = 0; //~ Initialise vtkflag at 0 [KH - 30 May 2012]
 
   maxbuf = maxids = maxsort = maxproc = 0;
   buf = bufsort = NULL;
@@ -315,7 +316,7 @@ void Dump::write()
   //   all other procs wait for ping, send their data to proc 0
 
   if (multiproc) write_data(nme,buf);
-  else {
+  else if (vtkflag == 0) {//~ Modified for dump_vtk [KH - 30 May 2012]
     int tmp,nlines;
     MPI_Status status;
     MPI_Request request;
@@ -338,8 +339,96 @@ void Dump::write()
       MPI_Recv(&tmp,0,MPI_INT,0,0,world,&status);
       MPI_Rsend(buf,nme*size_one,MPI_DOUBLE,0,0,world);
     }
-  }
+  } else {
+   /*~ This else condition was written so that the format of
+      the dump_vtk output files could differ from the standard
+      dump file format [KH - 30 May 2012]*/
+    int tmp,nlines;
+    MPI_Status status;
+    MPI_Request request;
 
+    //~ Create a temporary second buffer [KH - 31 May 2012]
+    double *secondbuf;
+    memory->create(secondbuf,maxbuf*size_one,"dump:secondbuf");
+
+    //~ Copy the buffer on each core to secondbuf
+    int nbytes = size_one*sizeof(double);
+    for (int i = 0; i < nme; i++)
+      memcpy(&secondbuf[i*size_one],&buf[index[i]*size_one],nbytes);
+
+    if (me == 0) {
+      for (int iproc = 0; iproc < nprocs; iproc++) {
+	if (iproc) {
+	  MPI_Irecv(secondbuf,maxbuf*size_one,MPI_DOUBLE,iproc,0,world,&request);
+	  MPI_Send(&tmp,0,MPI_INT,iproc,0,world);
+	  MPI_Wait(&request,&status);
+	  MPI_Get_count(&status,MPI_DOUBLE,&nlines);
+	  nlines /= size_one;
+	} else nlines = nme;
+	
+	//~ Write the particle positions
+	write_data(nlines,secondbuf);
+      }
+      if (flush_flag) fflush(fp);
+      
+    } else {
+      MPI_Recv(&tmp,0,MPI_INT,0,0,world,&status);
+      MPI_Rsend(secondbuf,nme*size_one,MPI_DOUBLE,0,0,world);
+    }
+
+    for (int i = 0; i < nme; i++)
+      memcpy(&secondbuf[i*size_one],&buf[index[i]*size_one],nbytes);
+
+    if (me == 0) {
+      for (int iproc = 0; iproc < nprocs; iproc++) {
+	if (iproc) {
+	  MPI_Irecv(secondbuf,maxbuf*size_one,MPI_DOUBLE,iproc,0,world,&request);
+	  MPI_Send(&tmp,0,MPI_INT,iproc,0,world);
+	  MPI_Wait(&request,&status);
+	  MPI_Get_count(&status,MPI_DOUBLE,&nlines);
+	  nlines /= size_one;
+	} else nlines = nme;
+	
+	//~ Write the particle diameters
+	write_diameter(nlines,secondbuf);
+      }
+      if (flush_flag) fflush(fp);
+    } else {
+      MPI_Recv(&tmp,0,MPI_INT,0,0,world,&status);
+      MPI_Rsend(secondbuf,nme*size_one,MPI_DOUBLE,0,0,world);
+    }
+
+    for (int counter = 4; counter < size_one; counter++) {
+      for (int i = 0; i < nme; i++)
+	memcpy(&secondbuf[i*size_one],&buf[index[i]*size_one],nbytes);
+
+      if (me == 0) {
+	for (int iproc = 0; iproc < nprocs; iproc++) {
+	  if (iproc) {
+	    MPI_Irecv(secondbuf,maxbuf*size_one,MPI_DOUBLE,iproc,0,world,&request);
+	    MPI_Send(&tmp,0,MPI_INT,iproc,0,world);
+	    MPI_Wait(&request,&status);
+	    MPI_Get_count(&status,MPI_DOUBLE,&nlines);
+	    nlines /= size_one;
+	  } else nlines = nme;
+	  
+	  //~ Write any additional data required
+	  write_extra(nlines,secondbuf,counter);
+	}
+	if (flush_flag) fflush(fp);
+	
+      } else {
+	MPI_Recv(&tmp,0,MPI_INT,0,0,world,&status);
+	MPI_Rsend(secondbuf,nme*size_one,MPI_DOUBLE,0,0,world);
+      }
+    }
+    
+    if (me == 0) write_footer(); //~ Write the footer
+
+    //~ Free the memory allocated to secondbuf [KH - 31 May 2012]
+    memory->destroy(secondbuf);
+  }
+  
   // if file per timestep, close file
 
   if (multifile) {

@@ -11,6 +11,14 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
+/*~ Dump::write had to be modified extensively to allow dump_vtk to work
+  properly. This involved replacing the central loop with three separate
+  loops, for coordinates, diameters and other data, and allocating twice
+  as much memory by means of a buffer copy if dump vtk is active.
+
+  One extra flag was defined (vtkflag) and three virtual functions were
+  added [KH - 31 May 2012]*/
+
 #ifndef LMP_DUMP_H
 #define LMP_DUMP_H
 
@@ -50,6 +58,7 @@ class Dump : protected Pointers {
 
  protected:
   int me,nprocs;             // proc info
+  int vtkflag;               //~ Added this to indicate dump_vtk active [KH - 30 May 2012]
 
   char *filename;            // user-specified file
   int compressed;            // 1 if dump file is written compressed, 0 no
@@ -105,6 +114,11 @@ class Dump : protected Pointers {
   virtual int count();
   virtual void pack(int *) = 0;
   virtual void write_data(int, double *) = 0;
+
+  //~ The following virtual functions were added [KH - 30 May 2012]
+  virtual void write_diameter(int, double *) {};
+  virtual void write_extra(int, double *, int) {};
+  virtual void write_footer() {};
 
   void sort();
   static int idcompare(const void *, const void *);
