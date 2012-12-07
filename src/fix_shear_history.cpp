@@ -23,6 +23,7 @@
 #include "modify.h"
 #include "memory.h"
 #include "error.h"
+#include "stdlib.h"  //added in GM
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -36,6 +37,10 @@ FixShearHistory::FixShearHistory(LAMMPS *lmp, int narg, char **arg) :
 {
   restart_peratom = 1;
   create_attribute = 1;
+
+  //~ Read in the number of shear quantities if available [KH - 21 November 2012]
+  if (narg == 4) num_quants = atoi(arg[3]); // added in GM
+  else num_quants = 3; //~ Assume the default value of 3 instead
 
   // perform initial allocation of atom-based arrays
   // register with atom class
@@ -149,24 +154,22 @@ void FixShearHistory::pre_exchange()
 
     for (jj = 0; jj < jnum; jj++) {
       if (touch[jj]) {
-        shear = &allshear[3*jj];
+        shear = &allshear[num_quants*jj]; // was 3, modified GM
         j = jlist[jj];
         j &= NEIGHMASK;
         if (npartner[i] < MAXTOUCH) {
           m = npartner[i];
           partner[i][m] = tag[j];
-          shearpartner[i][m][0] = shear[0];
-          shearpartner[i][m][1] = shear[1];
-          shearpartner[i][m][2] = shear[2];
+	  for (int kk = 0; kk < num_quants; kk++)
+            shearpartner[i][m][kk] = shear[kk]; // put the loop in, modified GM
         }
         npartner[i]++;
         if (j < nlocal) {
           if (npartner[j] < MAXTOUCH) {
             m = npartner[j];
             partner[j][m] = tag[i];
-            shearpartner[j][m][0] = -shear[0];
-            shearpartner[j][m][1] = -shear[1];
-            shearpartner[j][m][2] = -shear[2];
+	    for (int kk = 0; kk < num_quants; kk++)
+	      shearpartner[j][m][kk] = -shear[kk]; // put the loop in, modified GM
           }
           npartner[j]++;
         }
@@ -209,7 +212,7 @@ double FixShearHistory::memory_usage()
   int nmax = atom->nmax;
   double bytes = nmax * sizeof(int);
   bytes += nmax*MAXTOUCH * sizeof(int);
-  bytes += nmax*MAXTOUCH*3 * sizeof(double);
+  bytes += nmax*MAXTOUCH*num_quants * sizeof(double); // was 3, modified GM
   return bytes;
 }
 
@@ -221,7 +224,7 @@ void FixShearHistory::grow_arrays(int nmax)
 {
   memory->grow(npartner,nmax,"shear_history:npartner");
   memory->grow(partner,nmax,MAXTOUCH,"shear_history:partner");
-  memory->grow(shearpartner,nmax,MAXTOUCH,3,"shear_history:shearpartner");
+  memory->grow(shearpartner,nmax,MAXTOUCH,num_quants,"shear_history:shearpartner"); // changed from 3 to num_quants, the number of per-contact quantities required, modified GM
 }
 
 /* ----------------------------------------------------------------------
@@ -233,9 +236,8 @@ void FixShearHistory::copy_arrays(int i, int j)
   npartner[j] = npartner[i];
   for (int m = 0; m < npartner[j]; m++) {
     partner[j][m] = partner[i][m];
-    shearpartner[j][m][0] = shearpartner[i][m][0];
-    shearpartner[j][m][1] = shearpartner[i][m][1];
-    shearpartner[j][m][2] = shearpartner[i][m][2];
+    for (int k = 0; k < num_quants; k++) // put the loop in, modified GM
+      shearpartner[j][m][k] = shearpartner[i][m][k];
   }
 }
 
@@ -258,9 +260,8 @@ int FixShearHistory::pack_exchange(int i, double *buf)
   buf[m++] = npartner[i];
   for (int n = 0; n < npartner[i]; n++) {
     buf[m++] = partner[i][n];
-    buf[m++] = shearpartner[i][n][0];
-    buf[m++] = shearpartner[i][n][1];
-    buf[m++] = shearpartner[i][n][2];
+    for (int k = 0; k < num_quants; k++) // put the loop in, modified GM
+      buf[m++] = shearpartner[i][n][k];
   }
   return m;
 }
@@ -275,9 +276,8 @@ int FixShearHistory::unpack_exchange(int nlocal, double *buf)
   npartner[nlocal] = static_cast<int> (buf[m++]);
   for (int n = 0; n < npartner[nlocal]; n++) {
     partner[nlocal][n] = static_cast<int> (buf[m++]);
-    shearpartner[nlocal][n][0] = buf[m++];
-    shearpartner[nlocal][n][1] = buf[m++];
-    shearpartner[nlocal][n][2] = buf[m++];
+    for (int k = 0; k < num_quants; k++) // put the loop in, modified GM
+      shearpartner[nlocal][n][k] = buf[m++];
   }
   return m;
 }
@@ -289,13 +289,12 @@ int FixShearHistory::unpack_exchange(int nlocal, double *buf)
 int FixShearHistory::pack_restart(int i, double *buf)
 {
   int m = 0;
-  buf[m++] = 4*npartner[i] + 2;
+  buf[m++] = (num_quants+1)*npartner[i] + 2; // changed from 4 to num_quants+1 , modified GM
   buf[m++] = npartner[i];
   for (int n = 0; n < npartner[i]; n++) {
     buf[m++] = partner[i][n];
-    buf[m++] = shearpartner[i][n][0];
-    buf[m++] = shearpartner[i][n][1];
-    buf[m++] = shearpartner[i][n][2];
+    for (int k = 0; k < num_quants; k++) // put the loop in, modified GM
+      buf[m++] = shearpartner[i][n][k];
   }
   return m;
 }
@@ -317,9 +316,8 @@ void FixShearHistory::unpack_restart(int nlocal, int nth)
   npartner[nlocal] = static_cast<int> (extra[nlocal][m++]);
   for (int n = 0; n < npartner[nlocal]; n++) {
     partner[nlocal][n] = static_cast<int> (extra[nlocal][m++]);
-    shearpartner[nlocal][n][0] = extra[nlocal][m++];
-    shearpartner[nlocal][n][1] = extra[nlocal][m++];
-    shearpartner[nlocal][n][2] = extra[nlocal][m++];
+    for (int k = 0; k < num_quants; k++) // put the loop in, modified GM
+      shearpartner[nlocal][n][k] = extra[nlocal][m++];
   }
 }
 
@@ -329,7 +327,7 @@ void FixShearHistory::unpack_restart(int nlocal, int nth)
 
 int FixShearHistory::maxsize_restart()
 {
-  return 4*MAXTOUCH + 2;
+  return (num_quants+1)*MAXTOUCH + 2; // changed from 4 to num_quants+1 , modified GM
 }
 
 /* ----------------------------------------------------------------------
@@ -338,5 +336,5 @@ int FixShearHistory::maxsize_restart()
 
 int FixShearHistory::size_restart(int nlocal)
 {
-  return 4*npartner[nlocal] + 2;
+  return (num_quants+1)*npartner[nlocal] + 2; // changed from 4 to num_quants+1 , modified GM
 }

@@ -53,7 +53,8 @@ class FixShearHistory : public Fix {
  protected:
   int *npartner;                // # of touching partners of each atom
   int **partner;                // tags for the partners
-  double ***shearpartner;       // 3 shear values with the partner
+  double ***shearpartner;       // num_quants shear values with the partner
+  int num_quants;               // the number of extra quantities for each partner (i.e. contact) modified GM
 
   class Pair *pair;
   int *computeflag;             // computeflag in PairGranHookeHistory

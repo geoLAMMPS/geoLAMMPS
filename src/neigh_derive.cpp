@@ -272,6 +272,9 @@ void Neighbor::skip_from_granular(NeighList *list)
   int **pages_touch = listgranhistory->pages;
   double **pages_shear = listgranhistory->dpages;
 
+  //~ Added to allow access to dnum
+  int dnum = listgranhistory->dnum;
+
   int inum = 0;
   int npage = 0;
   int npnt = 0;
@@ -299,7 +302,7 @@ void Neighbor::skip_from_granular(NeighList *list)
     neighptr = &pages[npage][npnt];
     nn = 0;
     touchptr = &pages_touch[npage][npnt];
-    shearptr = &pages_shear[npage][3*npnt];
+    shearptr = &pages_shear[npage][dnum*npnt]; // changed 3 to dnum. Modified GM
 
     // loop over parent non-skip granular list and its history info
 
@@ -314,9 +317,8 @@ void Neighbor::skip_from_granular(NeighList *list)
       if (ijskip[itype][type[j]]) continue;
       neighptr[n] = joriginal;
       touchptr[n++] = touchptr_skip[jj];
-      shearptr[nn++] = shearptr_skip[3*jj];
-      shearptr[nn++] = shearptr_skip[3*jj+1];
-      shearptr[nn++] = shearptr_skip[3*jj+2];
+      for (int d = 0; d < dnum; d++)
+        shearptr[nn++] = shearptr_skip[dnum*jj+d];
     }
 
     ilist[inum++] = i;

@@ -37,6 +37,7 @@ void Neighbor::granular_nsq_no_newton(NeighList *list)
   double *shearptr;
 
   NeighList *listgranhistory;
+  int num_quants; // added in, modified GM
   int *npartner,**partner;
   double ***shearpartner;
   int **firsttouch;
@@ -67,6 +68,7 @@ void Neighbor::granular_nsq_no_newton(NeighList *list)
     npartner = fix_history->npartner;
     partner = fix_history->partner;
     shearpartner = fix_history->shearpartner;
+    num_quants = fix_history->num_quants; // added in, modified GM
     listgranhistory = list->listgranhistory;
     firsttouch = listgranhistory->firstneigh;
     firstshear = listgranhistory->firstdouble;
@@ -97,7 +99,7 @@ void Neighbor::granular_nsq_no_newton(NeighList *list)
     if (fix_history) {
       nn = 0;
       touchptr = &pages_touch[npage][npnt];
-      shearptr = &pages_shear[npage][3*npnt];
+      shearptr = &pages_shear[npage][num_quants*npnt]; // changed 3 to num_quants. Modified GM
     }
 
     xtmp = x[i][0];
@@ -127,20 +129,17 @@ void Neighbor::granular_nsq_no_newton(NeighList *list)
               if (partner[i][m] == tag[j]) break;
             if (m < npartner[i]) {
               touchptr[n] = 1;
-              shearptr[nn++] = shearpartner[i][m][0];
-              shearptr[nn++] = shearpartner[i][m][1];
-              shearptr[nn++] = shearpartner[i][m][2];
+	      for (int kk = 0; kk < num_quants; kk++) // put the loop in, modified GM
+                shearptr[nn++] = shearpartner[i][m][kk];
             } else {
               touchptr[n] = 0;
-              shearptr[nn++] = 0.0;
-              shearptr[nn++] = 0.0;
-              shearptr[nn++] = 0.0;
+	      for (int kk = 0; kk < num_quants; kk++) // put the loop in, modified GM
+                shearptr[nn++] = 0.0;
             }
           } else {
             touchptr[n] = 0;
-            shearptr[nn++] = 0.0;
-            shearptr[nn++] = 0.0;
-            shearptr[nn++] = 0.0;
+	    for (int kk = 0; kk < num_quants; kk++) // put the loop in, modified GM
+	      shearptr[nn++] = 0.0;
           }
         }
 
@@ -279,6 +278,7 @@ void Neighbor::granular_bin_no_newton(NeighList *list)
   double *shearptr;
 
   NeighList *listgranhistory;
+  int num_quants; // added in, modified GM
   int *npartner,**partner;
   double ***shearpartner;
   int **firsttouch;
@@ -313,6 +313,7 @@ void Neighbor::granular_bin_no_newton(NeighList *list)
     npartner = fix_history->npartner;
     partner = fix_history->partner;
     shearpartner = fix_history->shearpartner;
+    num_quants = fix_history->num_quants; // added in, modified GM
     listgranhistory = list->listgranhistory;
     firsttouch = listgranhistory->firstneigh;
     firstshear = listgranhistory->firstdouble;
@@ -343,7 +344,7 @@ void Neighbor::granular_bin_no_newton(NeighList *list)
     if (fix_history) {
       nn = 0;
       touchptr = &pages_touch[npage][npnt];
-      shearptr = &pages_shear[npage][3*npnt];
+      shearptr = &pages_shear[npage][num_quants*npnt]; // changed 3 to num_quants. Modified GM
     }
 
     xtmp = x[i][0];
@@ -378,20 +379,17 @@ void Neighbor::granular_bin_no_newton(NeighList *list)
                 if (partner[i][m] == tag[j]) break;
               if (m < npartner[i]) {
                 touchptr[n] = 1;
-                shearptr[nn++] = shearpartner[i][m][0];
-                shearptr[nn++] = shearpartner[i][m][1];
-                shearptr[nn++] = shearpartner[i][m][2];
+		for (int kk = 0; kk < num_quants; kk++) // put the loop in, modified GM
+		  shearptr[nn++] = shearpartner[i][m][kk];
               } else {
                 touchptr[n] = 0;
-                shearptr[nn++] = 0.0;
-                shearptr[nn++] = 0.0;
-                shearptr[nn++] = 0.0;
+		for (int kk = 0; kk < num_quants; kk++) // put the loop in, modified GM
+		  shearptr[nn++] = 0.0;
               }
             } else {
               touchptr[n] = 0;
-              shearptr[nn++] = 0.0;
-              shearptr[nn++] = 0.0;
-              shearptr[nn++] = 0.0;
+	      for (int kk = 0; kk < num_quants; kk++) // put the loop in, modified GM
+		shearptr[nn++] = 0.0;
             }
           }
 
