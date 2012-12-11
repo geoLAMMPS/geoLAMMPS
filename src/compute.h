@@ -115,6 +115,10 @@ class Compute : protected Pointers {
 
   virtual double memory_usage() {return 0.0;}
 
+  /*~ Added a function to export the averages of the stress array from 
+    ComputeStressAtom to any calling function [KH - 1 November 2011]*/
+  virtual double *array_export() {return 0;}
+
   virtual int unsigned data_mask() {return datamask;}
   virtual int unsigned data_mask_ext() {return datamask_ext;}
 

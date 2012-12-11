@@ -33,6 +33,7 @@ class ComputeStressAtom : public Compute {
   int pack_reverse_comm(int, int, double *);
   void unpack_reverse_comm(int, int *, double *);
   double memory_usage();
+  double *array_export(); //~ Added this function [KH - 1 November 2011]
 
  private:
   int keflag,pairflag,bondflag,angleflag,dihedralflag,improperflag;

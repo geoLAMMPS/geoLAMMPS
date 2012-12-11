@@ -28,6 +28,8 @@
 #include "fix.h"
 #include "memory.h"
 #include "error.h"
+#include "domain.h" //~ Added these two header files [KH - 1 November 2011]
+#include "math.h"
 
 using namespace LAMMPS_NS;
 
@@ -74,6 +76,10 @@ ComputeStressAtom::ComputeStressAtom(LAMMPS *lmp, int narg, char **arg) :
       iarg++;
     }
   }
+
+  //~ Added the following warning [KH - 11 December 2012]
+  if (force->pair_match("gran",0) && keflag)
+    error->warning(FLERR,"Spurious kinetic energy terms may be included by ComputeStressAtom unless additional arguments are provided");
 
   nmax = 0;
   stress = NULL;
@@ -303,4 +309,45 @@ double ComputeStressAtom::memory_usage()
 {
   double bytes = nmax*6 * sizeof(double);
   return bytes;
+}
+
+/* ----------------------------------------------------------------------
+   The purpose of this function is to calculate the mean stresses which
+  are used in the servo control algorithm. Eq. 9.25 from COS book was used
+  [KH - 1 November 2011]
+------------------------------------------------------------------------- */
+
+double *ComputeStressAtom::array_export()
+{
+  /*~ The static specifier ensures that the means exist for the duration of
+    the program. Important to reinitialise the elements to 0 each time the
+    function is called [KH - 2 November 2011]*/
+  static double means[6];
+  for (int i = 0; i < 6; i++)
+    means[i] = 0.0;
+
+  double PI = 4.0*atan(1.0);
+  double pvolume; //~ Volume of any individual particle
+  int *mask = atom->mask;
+  double *radius = atom->radius;
+  int nlocal = atom->nlocal;
+ 
+  for (int i = 0; i < nlocal; i++)
+    if (mask[i] & groupbit) {
+      if (domain->dimension == 3) {
+	pvolume = (4*PI/3)*radius[i]*radius[i]*radius[i];
+      } else pvolume = PI*radius[i]*radius[i];
+      
+      for (int j = 0; j < 6; j++)
+ 	means[j] += stress[i][j]*pvolume;
+    }
+  
+  double totalvolume = 1.0; //~ Total volume enclosed by bounding box
+  for (int i = 0; i < domain->dimension; i++)
+    totalvolume *= (domain->boxhi[i]-domain->boxlo[i]);
+
+  for (int i = 0; i < 6; i++)
+    means[i] /= totalvolume;
+
+  return means;
 }

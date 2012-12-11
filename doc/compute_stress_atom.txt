@@ -99,6 +99,18 @@ compute		p all reduce sum c_peratom\[1\] c_peratom\[2\] c_peratom\[3\]
 variable	press equal -(c_p\[1\]+c_p\[2\]+c_p\[3\])/(3*vol)
 thermo_style	custom step temp etotal press v_press :pre
 
+An additional function was added to this compute to allow the mean
+stresses to be calculated, for use with the servo-control implementation
+in "fix multistress"_fix_multistress.html. The stress components on each
+processor are summed and divided by the total volume enclosed by the
+bounding walls or periodic boundaries. Then these must be summed across
+processors by the calling function using an MPI_Allreduce to obtain the 
+correct mean stresses.
+
+A warning has also been added which is issued if keflag == 1 and a 
+granular pairstyle is selected so that spurious kinetic energy terms are not
+included among the stresses.
+
 [Output info:]
 
 This compute calculates a per-atom array with 6 columns, which can be
