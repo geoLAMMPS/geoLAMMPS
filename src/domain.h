@@ -80,6 +80,20 @@ class Domain : protected Pointers {
   int deform_vremap;              // 1 if fix deform remaps v, else 0
   int deform_groupbit;            // atom group to perform v remap for
 
+ /*~ The following double variable was defined to store the initial
+    volume enclosed by the periodic boundaries, which is required
+    for persistence when fix_multistress is deleted and redefined
+    [KH - 9 May 2012]*/
+  double initialvolume;
+
+  /*~ Added for persistent storage of the number of timesteps for 
+    which cyclic loading was active [KH - 10 October 2012]*/
+  int ncyclicsteps;
+
+  /*~ Added to store the initial value of mean effective stress 
+    [KH - 13 November 2012]*/
+  double meaneffectivestress;
+
   class Lattice *lattice;                  // user-defined lattice
 
   int nregion;                             // # of defined Regions

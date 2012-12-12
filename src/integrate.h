@@ -19,6 +19,8 @@
 namespace LAMMPS_NS {
 
 class Integrate : protected Pointers {
+    friend class FixMultistress; //~ Added to allow access to vflag [KH - 12 December 2012]
+
  public:
   Integrate(class LAMMPS *, int, char **);
   virtual ~Integrate();

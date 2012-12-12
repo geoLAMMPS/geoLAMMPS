@@ -28,6 +28,8 @@ class FixDeform : public Fix {
  public:
   int remapflag;                   // whether x,v are remapped across PBC
   int dimflag[6];                  // which dims are deformed
+  int flip; //~ Changed this from private to public to allow access from the fix_multistress function [KH - 14 November 2011]
+  int mstractive; //~ A flag to indicate whether or not there is a fix_multistress active [KH - 13 December 2011]
 
   FixDeform(class LAMMPS *, int, char **);
   ~FixDeform();
@@ -36,9 +38,13 @@ class FixDeform : public Fix {
   void pre_exchange();
   void end_of_step();
 
+  /*~ Added *param_export to allow the calling function to access 
+    details of the rates of boundary movement [KH - 9 November 2011]*/
+  double *param_export();
+
  private:
   int triclinic,scaleflag,flipflag;
-  int flip,flipxy,flipxz,flipyz;
+  int flipxy,flipxz,flipyz;
   double *h_rate,*h_ratelo;
   int varflag;                     // 1 if VARIABLE option is used, 0 if not
   int kspace_flag;                 // 1 if KSpace invoked, 0 if not

@@ -86,6 +86,10 @@ Domain::Domain(LAMMPS *lmp) : Pointers(lmp)
   lattice = NULL;
   nregion = maxregion = 0;
   regions = NULL;
+
+  //~ Initialise at 0 [KH - 13 November 2012]
+  ncyclicsteps = 0;
+  initialvolume = meaneffectivestress = 0.0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -112,14 +116,18 @@ void Domain::init()
   // check for fix deform
 
   deform_flag = deform_vremap = deform_groupbit = 0;
-  for (int i = 0; i < modify->nfix; i++)
+  for (int i = 0; i < modify->nfix; i++) {
     if (strcmp(modify->fix[i]->style,"deform") == 0) {
       deform_flag = 1;
       if (((FixDeform *) modify->fix[i])->remapflag == V_REMAP) {
         deform_vremap = 1;
         deform_groupbit = modify->fix[i]->groupbit;
       }
+    } else if (strcmp(modify->fix[i]->style,"multistress") == 0) {
+      //~ To account for the presence of a fix_multistress
+      deform_flag = 1;
     }
+  }
 
   // region inits
 

@@ -84,6 +84,11 @@ class Pair : protected Pointers {
   class NeighList *listmiddle;
   class NeighList *listouter;
 
+  /*~ *ierates was defined as a public class member as access may be
+    needed from fix_multistress if linkvolstress is enabled
+    [KH - 2 June 2012] */
+  double *ierates;
+
   unsigned int datamask;
   unsigned int datamask_ext;
 

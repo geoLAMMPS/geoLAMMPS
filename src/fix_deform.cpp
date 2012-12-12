@@ -366,6 +366,13 @@ FixDeform::FixDeform(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
   else irregular = NULL;
 
   TWOPI = 2.0*MY_PI;
+
+  /*~ The following code was added to determine whether there is (= 1)
+    or is not (= 0) a fix_multistress active [KH - 13 December 2011]*/
+  mstractive = 0;
+
+  for (int q = 0; q < modify->nfix; q++)
+    if (strcmp(modify->fix[q]->style,"multistress") == 0) mstractive = 1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -419,9 +426,11 @@ void FixDeform::init()
   else kspace_flag = 0;
 
   // elapsed time for entire simulation, including multiple runs if defined
-
-  double delt = (update->endstep - update->beginstep) * update->dt;
-
+  //~ Change the delt specification [KH - 13 December 2011]
+  double delt = update->dt;
+  if (mstractive == 0)
+    delt *= (update->endstep - update->beginstep);
+  
   // check variables for VARIABLE style
 
   for (int i = 0; i < 6; i++) {
@@ -680,6 +689,9 @@ void FixDeform::end_of_step()
 
   double delta = update->ntimestep - update->beginstep;
   delta /= update->endstep - update->beginstep;
+
+  //~ Change the delta specification [KH - 29 June 2012]
+  if (mstractive == 1) delta = 1.0;
 
   // wrap variable evaluations with clear/add
 
@@ -990,4 +1002,94 @@ void FixDeform::options(int narg, char **arg)
       iarg += 2;
     } else error->all(FLERR,"Illegal fix deform command");
   }
+}
+
+/* ---------------------------------------------------------------------- */
+
+double *FixDeform::param_export()
+{
+  /*~ This function is not as straightforward as its analogue in the
+    fix_multistress class, as it it possible for the user to specify boundary
+    movement rates using keywords other than "erate", e.g., final or delta.*/
+  
+  /*~ The static specifier ensures that the data exist for the duration of
+    the program*/
+  static double erates[6];
+  
+  for (int i = 0; i < 6; i++)
+    erates[i] = 0.0; //~ (Re)initialise at 0
+
+  /*~ Note that if a fix_multistress is active, the param_export function
+    in that fix takes precedence over this function [KH - 13 December 2011]*/
+  double delt = (update->endstep - update->beginstep) * update->dt;
+
+  for (int i = 0; i < 3; i++) {
+    if (set[i].style == ERATE) {
+      erates[i] = set[i].rate;
+    } else if (set[i].style == FINAL) {
+      erates[i] = (set[i].lo_start-set[i].hi_start-set[i].flo+set[i].fhi)/(delt*(set[i].hi_start-set[i].lo_start));
+    } else if (set[i].style == DELTA) {
+      erates[i] = (set[i].dhi-set[i].dlo)/(delt*(set[i].hi_start-set[i].lo_start));
+    } else if (set[i].style == SCALE) {
+      erates[i] = (set[i].scale - 1)/delt;
+    } else if (set[i].style == VEL) {
+      erates[i] = set[i].vel/(set[i].hi_start-set[i].lo_start);
+    } else {
+      if (set[i].style == VOLUME)
+	error->all(FLERR,"Not implemented for volume changes");
+
+      if (set[i].style == TRATE)
+	error->all(FLERR,"Not implemented for trate changes");
+
+      if (set[i].style == WIGGLE)
+	error->all(FLERR,"Not implemented for wiggle changes");
+    }
+  }
+
+  int q = 3;
+  if (set[q].style == ERATE) {
+    erates[q] = set[q].rate;
+  } else if (set[q].style == FINAL) {
+    erates[q] = (set[q].ftilt - set[q].tilt_start)/(delt*(set[1].hi_start-set[1].lo_start));
+  } else if (set[q].style == DELTA) {
+    erates[q] = set[q].dtilt/(delt*(set[1].hi_start-set[1].lo_start));
+  } else if (set[q].style == SCALE) {
+    error->all(FLERR,"Scale is valid in fix deform only for orthogonal boxes");
+  } else if (set[q].style == VEL) {
+    erates[q] = set[q].vel/(set[1].hi_start-set[1].lo_start);
+  } else {
+    if (set[q].style == VOLUME)
+      error->all(FLERR,"Not implemented for volume changes");
+    
+    if (set[q].style == TRATE)
+      error->all(FLERR,"Not implemented for trate changes");
+    
+    if (set[q].style == WIGGLE)
+      error->all(FLERR,"Not implemented for wiggle changes");
+  }
+  
+  for (int i = 4; i < 6; i++) {
+    if (set[i].style == ERATE) {
+      erates[i] = set[i].rate;
+    } else if (set[i].style == FINAL) {
+      erates[i] = (set[i].ftilt - set[i].tilt_start)/(delt*(set[2].hi_start-set[2].lo_start));
+    } else if (set[i].style == DELTA) {
+      erates[i] = set[i].dtilt/(delt*(set[2].hi_start-set[2].lo_start));
+    } else if (set[i].style == SCALE) {
+      error->all(FLERR,"Scale is valid in fix deform only for orthogonal boxes");
+    } else if (set[i].style == VEL) {
+      erates[i] = set[i].vel/(set[2].hi_start-set[2].lo_start);
+    } else {
+      if (set[i].style == VOLUME)
+	error->all(FLERR,"Not implemented for volume changes");
+
+      if (set[i].style == TRATE)
+	error->all(FLERR,"Not implemented for trate changes");
+
+      if (set[i].style == WIGGLE)
+	error->all(FLERR,"Not implemented for wiggle changes");
+    }
+  }
+
+  return erates;
 }
