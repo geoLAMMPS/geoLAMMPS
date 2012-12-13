@@ -334,14 +334,14 @@ double PairGranShmHistory::single(int i, int j, int itype, int jtype,
                                     double factor_coul, double factor_lj,
                                     double &fforce)
 {
-  error->all(FLERR,"More coding needed in PairGranShmHistory::single");
+  /*~ This is more straightforward than in the other granular 
+    pairstyles as the shear forces are stored in shear and do
+    not need to be recalculated [KH - 13 December 2012]*/
+
   double radi,radj,radsum;
-  double r,rinv,rsqinv,delx,dely,delz;
-  double vr1,vr2,vr3,vnnr,vn1,vn2,vn3,vt1,vt2,vt3,wr1,wr2,wr3;
-  double mi,mj,meff,damp,ccel,polyhertz;
-  double vtr1,vtr2,vtr3,vrel;
+  double r,rinv;
+  double ccel,polyhertz;
   double fs1,fs2,fs3,fs,fn;
-  double deltan,cri,crj;
 
   double *radius = atom->radius;
   radi = radius[i];
@@ -356,88 +356,12 @@ double PairGranShmHistory::single(int i, int j, int itype, int jtype,
 
   r = sqrt(rsq);
   rinv = 1.0/r;
-  rsqinv = 1.0/rsq;
-  deltan = radsum-r;
-  cri = radi-0.5*deltan;
-  crj = radj-0.5*deltan; 
 
-  // relative translational velocity
+  // normal force = Hertzian contact
 
-  double **v = atom->v;
-  vr1 = v[i][0] - v[j][0];
-  vr2 = v[i][1] - v[j][1];
-  vr3 = v[i][2] - v[j][2];
-
-  // normal component
-
-  double **x = atom->x;
-  delx = x[i][0] - x[j][0];
-  dely = x[i][1] - x[j][1];
-  delz = x[i][2] - x[j][2];
-
-  vnnr = vr1*delx + vr2*dely + vr3*delz;
-  vn1 = delx*vnnr * rsqinv;
-  vn2 = dely*vnnr * rsqinv;
-  vn3 = delz*vnnr * rsqinv;
-
-  // tangential component
-
-  vt1 = vr1 - vn1;
-  vt2 = vr2 - vn2;
-  vt3 = vr3 - vn3;
-
-  // relative rotational velocity
-
-  double **omega = atom->omega;
-  wr1 = (cri*omega[i][0] + crj*omega[j][0]) * rinv;
-  wr2 = (cri*omega[i][1] + crj*omega[j][1]) * rinv;
-  wr3 = (cri*omega[i][2] + crj*omega[j][2]) * rinv;
-
-  // meff = effective mass of pair of particles
-  // if I or J part of rigid body, use body mass
-  // if I or J is frozen, meff is other particle
-
-  double *rmass = atom->rmass;
-  double *mass = atom->mass;
-  int *type = atom->type;
-  int *mask = atom->mask;
-
-  if (rmass) {
-    mi = rmass[i];
-    mj = rmass[j];
-  } else {
-    mi = mass[type[i]];
-    mj = mass[type[j]];
-  }
-  if (fix_rigid) {
-    // NOTE: need to make sure ghost atoms have updated body?
-    // depends on where single() is called from
-    int tmp;
-    body = (int *) fix_rigid->extract("body",tmp);
-    mass_rigid = (double *) fix_rigid->extract("masstotal",tmp);
-    if (body[i] >= 0) mi = mass_rigid[body[i]];
-    if (body[j] >= 0) mj = mass_rigid[body[j]];
-  }
-
-  meff = mi*mj / (mi+mj);
-  if (mask[i] & freeze_group_bit) meff = mj;
-  if (mask[j] & freeze_group_bit) meff = mi;
-
-
-  // normal force = Hertzian contact + normal velocity damping
-
-  damp = meff*gamman*vnnr*rsqinv;
-  ccel = kn*(radsum-r)*rinv - damp;
+  ccel = kn*(radsum-r)*rinv;
   polyhertz = sqrt((radsum-r)*radi*radj / radsum);
   ccel *= polyhertz;
-
-  // relative velocities
-
-  vtr1 = vt1 - (delz*wr2-dely*wr3);
-  vtr2 = vt2 - (delx*wr3-delz*wr1);
-  vtr3 = vt3 - (dely*wr1-delx*wr2);
-  vrel = vtr1*vtr1 + vtr2*vtr2 + vtr3*vtr3;
-  vrel = sqrt(vrel);
 
   // shear history effects
   // neighprev = index of found neigh on previous call
@@ -457,35 +381,14 @@ double PairGranShmHistory::single(int i, int j, int itype, int jtype,
   }
 
   double *shear = &allshear[3*neighprev];
-
-  // rotate shear displacements - not needed- shear already updated by compute!
-
-  // tangential forces = shear + tangential velocity damping
-
-  fs1 = -polyhertz * (kt*shear[0] + meff*gammat*vtr1);
-  fs2 = -polyhertz * (kt*shear[1] + meff*gammat*vtr2);
-  fs3 = -polyhertz * (kt*shear[2] + meff*gammat*vtr3);
-
-  // rescale frictional displacements and forces if needed
-
-  fs = sqrt(fs1*fs1 + fs2*fs2 + fs3*fs3);
-  fn = xmu * fabs(ccel*r);
-
-  if (fs > fn) {
-    if (fs != 0.0) {
-      fs1 *= fn/fs;
-      fs2 *= fn/fs;
-      fs3 *= fn/fs;
-      fs *= fn/fs;
-    } else fs1 = fs2 = fs3 = fs = 0.0;
-  }
+  fs = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
 
   // set all forces and return no energy
 
   fforce = ccel;
-  svector[0] = fs1;
-  svector[1] = fs2;
-  svector[2] = fs3;
+  svector[0] = shear[0];
+  svector[1] = shear[1];
+  svector[2] = shear[2];
   svector[3] = fs;
   return 0.0;
 }
