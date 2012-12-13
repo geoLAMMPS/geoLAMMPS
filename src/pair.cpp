@@ -930,12 +930,12 @@ void Pair::ev_tally_gran(int i, int j, int nlocal,
                 volume = PI * radi*radi; //disk
             else
                 error->all(FLERR,"Cannot read correct dimension");
-            vatom[i][0] -= (cx-xi) * fx / volume;
-            vatom[i][1] -= (cy-yi) * fy / volume;
-            vatom[i][2] -= (cz-zi) * fz / volume;
-            vatom[i][3] -= (cx-xi) * fy / volume;
-            vatom[i][4] -= (cx-xi) * fz / volume;
-            vatom[i][5] -= (cy-yi) * fz / volume;
+            vatom[i][0] += (cx-xi) * fx / volume;
+            vatom[i][1] += (cy-yi) * fy / volume;
+            vatom[i][2] += (cz-zi) * fz / volume;
+            vatom[i][3] += (cx-xi) * fy / volume;
+            vatom[i][4] += (cx-xi) * fz / volume;
+            vatom[i][5] += (cy-yi) * fz / volume;
           }
           if (j < nlocal)
            {
@@ -947,12 +947,12 @@ void Pair::ev_tally_gran(int i, int j, int nlocal,
             else
                 error->all(FLERR,"Cannot read correct dimension");
 
-            vatom[j][0] += (cx-xj) * fx / volume;
-            vatom[j][1] += (cy-yj) * fy / volume;
-            vatom[j][2] += (cz-zj) * fz / volume;
-            vatom[j][3] += (cx-xj) * fy / volume;
-            vatom[j][4] += (cx-xj) * fz / volume;
-            vatom[j][5] += (cy-yj) * fz / volume;
+            vatom[j][0] -= (cx-xj) * fx / volume;
+            vatom[j][1] -= (cy-yj) * fy / volume;
+            vatom[j][2] -= (cz-zj) * fz / volume;
+            vatom[j][3] -= (cx-xj) * fy / volume;
+            vatom[j][4] -= (cx-xj) * fz / volume;
+            vatom[j][5] -= (cy-yj) * fz / volume;
           }
         }
     }
