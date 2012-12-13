@@ -54,7 +54,7 @@ DumpVTK::DumpVTK(LAMMPS *lmp, int narg, char **arg) :
   Dump(lmp, narg, arg)
 {
   //~ Even if no arguments are specified, the positions and diameters will be written anyway [KH - 5 May 2012].
-  if (narg == 5) error->all(FLERR,"No dump vtk arguments specified");
+  if (narg < 5) error->all(FLERR,"Insufficient dump vtk arguments supplied");
 
   clearstep = 1;
 

@@ -188,10 +188,9 @@ class DumpVTK : public Dump {
 
 /* ERROR/WARNING messages:
 
-E: No dump vtk arguments specified
+E: Insufficient dump vtk arguments supplied
 
-The dump vtk command requires that atom quantities be specified to
-output to dump file.
+Self-explantory.
 
 E: Invalid attribute in dump vtk command
 
