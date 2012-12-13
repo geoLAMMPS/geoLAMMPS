@@ -100,7 +100,9 @@ void ComputeStressAtom::compute_peratom()
   double onemass;
 
   invoked_peratom = update->ntimestep;
-  if (update->vflag_atom != invoked_peratom)
+
+  //~ Modified to avoid conflict with FixMultistress [KH - 13 December 2012]
+  if (update->vflag_atom != invoked_peratom && !force->pair_match("gran",0))
     error->all(FLERR,"Per-atom virial was not tallied on needed timestep");
 
   // grow local stress array if necessary
