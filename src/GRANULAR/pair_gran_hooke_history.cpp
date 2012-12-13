@@ -663,6 +663,14 @@ double PairGranHookeHistory::single(int i, int j, int itype, int jtype,
   dely = x[i][1] - x[j][1];
   delz = x[i][2] - x[j][2];
 
+  //~ Add in the periodic boundary updating code [KH - 13 December 2012]
+  if ((domain->xperiodic || domain->yperiodic || domain->zperiodic) &&
+      domain->box_change == 1) {
+    vr1 += (ierates[0]*delx + ierates[3]*dely + ierates[4]*delz);
+    vr2 += (ierates[3]*delx + ierates[1]*dely + ierates[5]*delz);
+    vr3 += (ierates[4]*delx + ierates[5]*dely + ierates[2]*delz);
+  }
+
   vnnr = vr1*delx + vr2*dely + vr3*delz;
   vn1 = delx*vnnr * rsqinv;
   vn2 = dely*vnnr * rsqinv;
