@@ -28,6 +28,8 @@
 #include "neigh_list.h"
 #include "comm.h"
 #include "error.h"
+#include "domain.h" //~ Two header files were added [KH - 9 November 2011]
+#include "modify.h"
 
 using namespace LAMMPS_NS;
 
@@ -89,6 +91,29 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
   firsttouch = list->listgranhistory->firstneigh;
   firstshear = list->listgranhistory->firstdouble;
 
+  /*~ The following piece of code was added to determine whether or not
+    any periodic boundaries, if present, are moving either via fix_
+    multistress or fix_deform [KH - 9 November 2011]*/
+  int velmapflag = 0;
+
+  if (domain->xperiodic || domain->yperiodic || domain->zperiodic) {
+    for (int q = 0; q < modify->nfix; q++)
+      if (strcmp(modify->fix[q]->style,"multistress") == 0) {
+	ierates = modify->fix[q]->param_export();
+	velmapflag = 1;
+	break;
+      }
+  
+    if (velmapflag == 0)
+      for (int q = 0; q < modify->nfix; q++) {
+	if (strcmp(modify->fix[q]->style,"deform") == 0) {
+	  ierates = modify->fix[q]->param_export();
+	  velmapflag = 1;
+	  break;
+	}
+      }
+  }
+
   // loop over neighbors of my atoms
 
   for (ii = 0; ii < inum; ii++) {
@@ -136,6 +161,14 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
         vr1 = v[i][0] - v[j][0];
         vr2 = v[i][1] - v[j][1];
         vr3 = v[i][2] - v[j][2];
+
+	/*~ These relative velocity components have to be updated for the
+	  periodic boundaries [KH - 14 November 2011]*/
+	if (velmapflag == 1) {
+	  vr1 += (ierates[0]*delx + ierates[3]*dely + ierates[4]*delz);
+	  vr2 += (ierates[3]*delx + ierates[1]*dely + ierates[5]*delz);
+	  vr3 += (ierates[4]*delx + ierates[5]*dely + ierates[2]*delz);
+	}
 
         // normal component
 
