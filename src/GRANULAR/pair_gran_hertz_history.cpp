@@ -501,10 +501,23 @@ double PairGranHertzHistory::single(int i, int j, int itype, int jtype,
 
   // set all forces and return no energy
 
+  int *tag = atom->tag; //~ Write out the atom tags
+
+  /*~ Some of the following are included only for convenience as
+    the data could instead be obtained from a dump of the sphere
+    coordinates [KH - 13 December 2011]*/
   fforce = ccel;
   svector[0] = fs1;
   svector[1] = fs2;
   svector[2] = fs3;
-  svector[3] = fs;
+  svector[3] = ccel;
+  svector[4] = tag[i];
+  svector[5] = tag[j];
+  for (int q = 0; q < 3; q++)
+    svector[q+6] = x[i][q];
+  svector[9] = radi;
+  for (int q = 0; q < 3; q++)
+    svector[q+10] = x[j][q];
+  svector[13] = radj;
   return 0.0;
 }
