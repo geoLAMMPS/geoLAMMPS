@@ -28,6 +28,7 @@ class Pair : protected Pointers {
   friend class FixGPU;
   friend class FixOMP;
   friend class ThrOMP;
+  friend class Input; //~ Added this friendship for the auto_timestep function [KH - 14 December 2012]
 
  public:
   double eng_vdwl,eng_coul;      // accumulated energies
@@ -182,6 +183,7 @@ class Pair : protected Pointers {
 
   int vflag_fdotr;
   int maxeatom,maxvatom;
+  double kn,kt,xmu; //~ Moved from pair/gran/hooke/history [KH - 14 December 2012]
 
   virtual void ev_setup(int, int);
   void ev_unset();

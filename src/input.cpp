@@ -1381,7 +1381,13 @@ void Input::thermo_style()
 void Input::timestep()
 {
   if (narg != 1) error->all(FLERR,"Illegal timestep command");
-  update->dt = atof(arg[0]);
+
+  //~ Check for the presence of "auto" [KH - 20 April 2012]
+  if (strcmp(arg[0],"auto") == 0) update->dt = auto_timestep();
+  else update->dt = atof(arg[0]);
+
+  //~ Check whether the timestep has been calculated as zero
+  if (update->dt == 0.0) error->all(FLERR,"Timestep calculated as zero");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1416,4 +1422,106 @@ void Input::units()
   if (domain->box_exist)
     error->all(FLERR,"Units command after simulation box is defined");
   update->set_units(arg[0]);
+}
+
+/* ---------------------------------------------------------------------- */
+
+double Input::auto_timestep()
+{
+  /*~ This function was added to allow automated calculation of a
+    suitable timestep, so that the command "timestep auto" is defined
+    in a similar manner to PFC's command "set dt auto". The existing 
+    timestep function also required modification.
+
+    Note that if the automated timestep calculation is used, some
+    conditions must be met:
+
+    - SI units must be used
+    - The pairstyle must be specified in the LAMMPS file before "timestep
+    auto" is issued
+    - The same is true for particle diameters and densities, whether
+    specified by read_data, create_atoms etc.
+    - The atom_style must be sphere
+    - The pairstyle must be gran/~/history
+
+    All of these are checked for below [KH - 20 April 2012]*/
+
+  //~ Firstly check for units si and atom_style sphere
+  if (strcmp(update->unit_style,"si") != 0)
+    error->all(FLERR,"timestep auto is defined only for SI units");
+
+  if (strcmp(atom->atom_style,"sphere") != 0)
+    error->all(FLERR,"timestep auto is defined only for the sphere atom style");
+
+  //~ Check whether radii have been set
+  if (atom->radius == NULL)
+    error->all(FLERR,"Atom radii must be specified before timestep auto");
+
+  //~ Check whether a granular pairstyle has been defined
+  int calc_method;
+  if (force->pair_match("gran/hooke/history",1))
+    calc_method = 1;
+  else if (force->pair_match("gran/hertz/history",1) || force->pair_match("gran/shm/history",1))
+    calc_method = 2;
+  else error->all(FLERR,"A granular pairstyle with shear history must be defined before timestep auto");
+
+  //~ Read in the masses and radii, and import the stiffnesses from pair
+  double *radius = atom->radius;
+  double *rmass = atom->rmass;
+  double *mass = atom->mass;
+  double kn = force->pair->kn;
+  double kt = force->pair->kt;
+
+  /*~ Now calculate the shear modulus and Poisson's ratio from these values
+    if Hertzian*/
+  double smod,pr;
+
+  if (calc_method == 2) {
+    //~ From equations in LAMMPS manual entry for pair/gran
+    smod = 0.75*kn*kt/(3.0*kn-kt);
+    pr = (3.0*kn-2.0*kt)/(3.0*kn-kt);
+
+    /*~ It is possible to get a negative value of smod, a negative
+      value of pr or pr > 1 in certain cases*/
+    if (smod < 0.0 || pr < 0.0 || pr > 1.0)
+      error->all(FLERR,"Values input for kn and kt give physically unrealistic results for G and Poisson's ratio");
+  }
+
+  /*~ Work out sqrt(m/k) for all particles in the system. The assumption is 
+    made that each particle overlaps with a copy of itself. Firstly find 
+    the largest stiffness using Eq. 2.17 and 2.18 from the PFC manual.*/
+  double smkmin = 1e100; //~ Initialise the minimum value of sqrt(m/k)
+  int *type = atom->type;
+  int nlocal = atom->nlocal;
+  double a,b,c,d,fin; //~ Set up some variables for use in the for loop below
+  double foverlap = 0.05; //~ Assume a standard 5% overlap
+
+  for (int i = 0; i < nlocal; i++) {
+    if (calc_method == 1) {
+      kn > kt ? c = kn : c = kt; //~ Find the largest stiffness
+    } else {
+      a = kn*radius[i]*sqrt(foverlap);
+      fin = 2.0*a*foverlap*radius[i];
+      b = (2.0/(2.0-pr))*pow(3.0*smod*smod*(1-pr)*radius[i]*fin,0.3333333333);
+      a > b ? c = a : c = b; //~ Find the largest stiffness
+    }
+    
+    if (rmass) d = sqrt(rmass[i]/c);
+    else d = sqrt(mass[type[i]]/c);
+    
+    if (d < smkmin) smkmin = d; //~ Store this value if smaller
+  }
+  
+  //~ Gather the minimum from all processors
+  double overallsmkmin = 0.0;
+  MPI_Allreduce(&smkmin,&overallsmkmin,1,MPI_DOUBLE,MPI_MIN,world);
+
+  double multfac = 0.1; //~ A user-defined factor by which to multiply sqrt(m/k)
+  double calcstep = multfac*overallsmkmin; //~ The recommended timestep
+
+  //~ Display the timestep
+  if (comm->me == 0 && screen)
+    fprintf(screen,"The calculated timestep is %e s.\n",calcstep);
+  
+  return calcstep;
 }

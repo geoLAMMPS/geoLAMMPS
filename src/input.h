@@ -115,6 +115,7 @@ class Input : protected Pointers {
   void undump();
   void unfix();
   void units();
+  double auto_timestep(); //~ Added to calculate timestep automatically [KH - 20 April 2012]
 };
 
 }

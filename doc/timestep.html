@@ -15,12 +15,13 @@
 </P>
 <PRE>timestep dt 
 </PRE>
-<UL><LI>dt = timestep size (time units) 
+<UL><LI>dt = timestep size (time units) or auto 
 </UL>
 <P><B>Examples:</B>
 </P>
 <PRE>timestep 2.0 
 timestep 0.003 
+timestep auto 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -28,6 +29,14 @@ timestep 0.003
 See the <A HREF = "units.html">units</A> command for a discussion of time units.
 The default value for the timestep also depends on the choice of units
 for the simulation; see the default values below.
+</P>
+<P>An automatic timestep calculation capability has been added for
+granular simulations where shear history is stored. For the Hertzian 
+contact models, the stiffnesses are calculated based on the assumption
+of a 5% overlap, so are somewhat conservative. Furthermore the
+multiplicative factor is 0.1, so the timestep is 0.1*sqrt(m/k): again
+this is quite conservative. These choices are hard-coded in the function
+Input::auto_timestep, so the user can change these figures if so desired.
 </P>
 <P>When the <A HREF = "run_style.html">run style</A> is <I>respa</I>, dt is the timestep for
 the outer loop (largest) timestep.

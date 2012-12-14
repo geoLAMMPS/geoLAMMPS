@@ -47,7 +47,7 @@ class PairGranHookeHistory : public Pair {
   void *extract(const char *, int &);
 
  protected:
-  double kn,kt,gamman,gammat,xmu;
+  double gamman,gammat;
   int dampflag;
   double dt;
   int freeze_group_bit;
