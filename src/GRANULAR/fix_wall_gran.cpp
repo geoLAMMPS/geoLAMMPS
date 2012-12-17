@@ -171,7 +171,7 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     } else error->all(FLERR,"Illegal fix wall/gran command");
   }
 
-  if (wscontrol = 1 && (lo != -BIG || hi != BIG)) error->all(FLERR,"Cannot have both lo and hi walls with stresscontrol"); // put warning message for fix output too?
+  if (wscontrol == 1 && (lo != -BIG || hi != BIG)) error->all(FLERR,"Cannot have both lo and hi walls with stresscontrol"); // put warning message for fix output too?
   if (wallstyle == XPLANE && domain->xperiodic)
     error->all(FLERR,"Cannot use wall in periodic dimension");
   if (wallstyle == YPLANE && domain->yperiodic)
