@@ -167,6 +167,7 @@ int ComputePairLocal::compute_pairs(int flag)
 
   Pair *pair = force->pair;
   double **cutsq = force->pair->cutsq;
+  int *tag = atom->tag; //~ Added this for use below [KH - 10 January 2013]
 
   m = 0;
   for (ii = 0; ii < inum; ii++) {
@@ -187,7 +188,11 @@ int ComputePairLocal::compute_pairs(int flag)
       j &= NEIGHMASK;
 
       if (!(mask[j] & groupbit)) continue;
-      if (newton_pair == 0 && j >= nlocal) continue;
+      /*~ Modified the line below so that contact forces are written
+	correctly without duplication when ghost atoms are present
+	for which the atom tags are required [KH - 10 January 2013]*/
+      //~ if (newton_pair == 0 && j >= nlocal) continue;
+      if (j >= nlocal && tag[i] > tag[j]) continue;
 
       delx = xtmp - x[j][0];
       dely = ytmp - x[j][1];
