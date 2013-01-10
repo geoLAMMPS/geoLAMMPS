@@ -348,9 +348,21 @@ double PairGranShmHistory::single(int i, int j, int itype, int jtype,
   radj = radius[j];
   radsum = radi + radj;
 
+  double **x = atom->x;
+  int *tag = atom->tag; //~ Write out the atom tags
+
   if (rsq >= radsum*radsum) {
     fforce = 0.0;
     svector[0] = svector[1] = svector[2] = svector[3] = 0.0;
+    //~ The tags, radii etc. will not be zero [KH - 10 January 2013]
+    svector[4] = tag[i];
+    svector[5] = tag[j];
+    for (int q = 0; q < 3; q++)
+      svector[q+6] = x[i][q];
+    svector[9] = radi;
+    for (int q = 0; q < 3; q++)
+      svector[q+10] = x[j][q];
+    svector[13] = radj;
     return 0.0;
   }
 
@@ -381,12 +393,6 @@ double PairGranShmHistory::single(int i, int j, int itype, int jtype,
   }
 
   double *shear = &allshear[3*neighprev];
-  fs = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
-
-  // set all forces and return no energy
-
-  int *tag = atom->tag; //~ Write out the atom tags
-  double **x = atom->x; //~ ...and the particle positions
 
   /*~ Some of the following are included only for convenience as
     the data could instead be obtained from a dump of the sphere
