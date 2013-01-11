@@ -28,6 +28,7 @@ class FixShearHistory : public Fix {
   friend class Neighbor;
   friend class PairGranHookeHistory;
   friend class FixPour;
+  friend class PairGranShmHistory; //~ Added this [KH - 23 November 2012]
 
  public:
   FixShearHistory(class LAMMPS *, int, char **);

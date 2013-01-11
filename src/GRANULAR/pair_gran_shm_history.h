@@ -30,6 +30,9 @@ class PairGranShmHistory : public PairGranHookeHistory {
   void compute(int, int);
   void settings(int, char **);
   double single(int, int, int, int, double, double, double, double &);
+  void init_style();
+  void write_restart_settings(FILE *);
+  void read_restart_settings(FILE *);
 
  protected:
   double Geq,Poiseq;

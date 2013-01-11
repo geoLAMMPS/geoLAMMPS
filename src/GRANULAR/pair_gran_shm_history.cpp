@@ -30,6 +30,10 @@
 #include "error.h"
 #include "domain.h"
 #include "modify.h" //~ This header file was added [KH - 9 November 2011]
+#include "neigh_request.h" //~ Added four more header files [KH - 23 November 2012]
+#include "fix.h"
+#include "fix_pour.h"
+#include "fix_shear_history.h"
 
 using namespace LAMMPS_NS;
 
@@ -144,10 +148,11 @@ void PairGranShmHistory::compute(int eflag, int vflag)
         // unset non-touching neighbors
 
         touch[jj] = 0;
-        shear = &allshear[3*jj]; // shear[] refers to a shear force here, not shear displacement
+        shear = &allshear[4*jj]; // shear[] refers to a shear force here, not shear displacement
         shear[0] = 0.0;
         shear[1] = 0.0;
         shear[2] = 0.0;
+	shear[3] = 0.0;
 
       } else {
         r = sqrt(rsq);
@@ -201,7 +206,7 @@ void PairGranShmHistory::compute(int eflag, int vflag)
         // shear history effects
 
         touch[jj] = 1;
-        shear = &allshear[3*jj]; // shear[] refers to a shear force here, not shear displacement
+        shear = &allshear[4*jj]; // shear[] refers to a shear force here, not shear displacement
 
         shsqmag = shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2];
 
@@ -245,11 +250,21 @@ void PairGranShmHistory::compute(int eflag, int vflag)
 
         // tangential forces done incrementally
 
-        if (shearupdate) { // is sign convention OK?
-          shear[0] -= polyhertz*kt*vtr1*dt;//shear displacement =vtr*dt
-          shear[1] -= polyhertz*kt*vtr2*dt;
-          shear[2] -= polyhertz*kt*vtr3*dt;
-        }
+        if (shearupdate) {
+	  /*~ Apply Colin Thornton's suggested correction (see
+	    Eq. 18 of 2013 P. Tech. paper) [KH - 23 November 2012]*/
+	  if (shear[3] > polyhertz) {
+	    /*~ Note that as polyhertz is >= 0, there is no need to
+	      check for shear[3] == 0 in the expressions below*/
+	    shear[0] *= polyhertz/shear[3];
+	    shear[1] *= polyhertz/shear[3];
+	    shear[2] *= polyhertz/shear[3];
+	  }
+
+	  shear[0] -= polyhertz*kt*vtr1*dt;//shear displacement =vtr*dt
+	  shear[1] -= polyhertz*kt*vtr2*dt;
+	  shear[2] -= polyhertz*kt*vtr3*dt;
+	}
 
         // rescale frictional forces if needed
 
@@ -266,6 +281,8 @@ void PairGranShmHistory::compute(int eflag, int vflag)
           } else shear[0] = shear[1] = shear[2] = 0.0;
         }
 
+	//~ Assign current polyhertz value to shear[3] [KH - 23 November 2012]
+	shear[3] = polyhertz;
 
         // forces & torques
 
@@ -392,7 +409,7 @@ double PairGranShmHistory::single(int i, int j, int itype, int jtype,
     if (touch[neighprev] == j) break;
   }
 
-  double *shear = &allshear[3*neighprev];
+  double *shear = &allshear[4*neighprev]; //~ 4 shear quantities stored
 
   /*~ Some of the following are included only for convenience as
     the data could instead be obtained from a dump of the sphere
@@ -411,4 +428,136 @@ double PairGranShmHistory::single(int i, int j, int itype, int jtype,
     svector[q+10] = x[j][q];
   svector[13] = radj;
   return 0.0;
+}
+
+/* ----------------------------------------------------------------------
+   init specific to this pair style
+------------------------------------------------------------------------- */
+
+void PairGranShmHistory::init_style()
+{
+  int i;
+
+  // error and warning checks
+
+  if (!atom->sphere_flag)
+    error->all(FLERR,"Pair granular requires atom style sphere");
+  if (comm->ghost_velocity == 0)
+    error->all(FLERR,"Pair granular requires ghost atoms store velocity");
+
+  // need a granular neigh list and optionally a granular history neigh list
+
+  int irequest = neighbor->request(this);
+  neighbor->requests[irequest]->half = 0;
+  neighbor->requests[irequest]->gran = 1;
+  if (history) {
+    irequest = neighbor->request(this);
+    neighbor->requests[irequest]->id = 1;
+    neighbor->requests[irequest]->half = 0;
+    neighbor->requests[irequest]->granhistory = 1;
+    neighbor->requests[irequest]->dnum = 4; //~ Increased to 4 to accommodate the extra shear quantity [KH - 23 November 2012]
+  }
+
+  dt = update->dt;
+
+  // if shear history is stored:
+  // check if newton flag is valid
+  // if first init, create Fix needed for storing shear history
+
+  if (history && force->newton_pair == 1)
+    error->all(FLERR,
+               "Pair granular with shear history requires newton pair off");
+
+  if (history && fix_history == NULL) {
+    char **fixarg = new char*[4]; //~ Also increased [KH - 23 November 2012]
+    fixarg[0] = (char *) "SHEAR_HISTORY";
+    fixarg[1] = (char *) "all";
+    fixarg[2] = (char *) "SHEAR_HISTORY";
+    fixarg[3] = (char *) "4"; //~ Added this line [KH - 23 November 2012]
+    modify->add_fix(4,fixarg,suffix); //~ Increased to 4
+    delete [] fixarg;
+    fix_history = (FixShearHistory *) modify->fix[modify->nfix-1];
+    fix_history->pair = this;
+  }
+
+  // check for FixFreeze and set freeze_group_bit
+
+  for (i = 0; i < modify->nfix; i++)
+    if (strcmp(modify->fix[i]->style,"freeze") == 0) break;
+  if (i < modify->nfix) freeze_group_bit = modify->fix[i]->groupbit;
+  else freeze_group_bit = 0;
+
+  // check for FixPour and set pour_type and pour_maxdiam
+
+  int pour_type = 0;
+  double pour_maxrad = 0.0;
+  for (i = 0; i < modify->nfix; i++)
+    if (strcmp(modify->fix[i]->style,"pour") == 0) break;
+  if (i < modify->nfix) {
+    pour_type = ((FixPour *) modify->fix[i])->ntype;
+    pour_maxrad = ((FixPour *) modify->fix[i])->radius_hi;
+  }
+
+  // check for FixRigid
+
+  fix_rigid = NULL;
+  for (i = 0; i < modify->nfix; i++)
+    if (modify->fix[i]->rigid_flag) break;
+  if (i < modify->nfix) fix_rigid = modify->fix[i];
+
+  // set maxrad_dynamic and maxrad_frozen for each type
+  // include future Fix pour particles as dynamic
+
+  for (i = 1; i <= atom->ntypes; i++)
+    onerad_dynamic[i] = onerad_frozen[i] = 0.0;
+  if (pour_type) onerad_dynamic[pour_type] = pour_maxrad;
+
+  double *radius = atom->radius;
+  int *mask = atom->mask;
+  int *type = atom->type;
+  int nlocal = atom->nlocal;
+
+  for (i = 0; i < nlocal; i++)
+    if (mask[i] & freeze_group_bit)
+      onerad_frozen[type[i]] = MAX(onerad_frozen[type[i]],radius[i]);
+    else
+      onerad_dynamic[type[i]] = MAX(onerad_dynamic[type[i]],radius[i]);
+
+  MPI_Allreduce(&onerad_dynamic[1],&maxrad_dynamic[1],atom->ntypes,
+                MPI_DOUBLE,MPI_MAX,world);
+  MPI_Allreduce(&onerad_frozen[1],&maxrad_frozen[1],atom->ntypes,
+                MPI_DOUBLE,MPI_MAX,world);
+}
+
+/* ----------------------------------------------------------------------
+  proc 0 writes to restart file
+------------------------------------------------------------------------- */
+
+void PairGranShmHistory::write_restart_settings(FILE *fp)
+{
+  fwrite(&kn,sizeof(double),1,fp);
+  fwrite(&kt,sizeof(double),1,fp);
+  fwrite(&Geq,sizeof(double),1,fp);
+  fwrite(&Poiseq,sizeof(double),1,fp);
+  fwrite(&xmu,sizeof(double),1,fp);
+}
+
+/* ----------------------------------------------------------------------
+  proc 0 reads from restart file, bcasts
+------------------------------------------------------------------------- */
+
+void PairGranShmHistory::read_restart_settings(FILE *fp)
+{
+  if (comm->me == 0) {
+    fread(&kn,sizeof(double),1,fp);
+    fread(&kt,sizeof(double),1,fp);
+    fread(&Geq,sizeof(double),1,fp);
+    fread(&Poiseq,sizeof(double),1,fp);
+    fread(&xmu,sizeof(double),1,fp);
+  }
+  MPI_Bcast(&kn,1,MPI_DOUBLE,0,world);
+  MPI_Bcast(&kt,1,MPI_DOUBLE,0,world);
+  MPI_Bcast(&Geq,1,MPI_DOUBLE,0,world);
+  MPI_Bcast(&Poiseq,1,MPI_DOUBLE,0,world);
+  MPI_Bcast(&xmu,1,MPI_DOUBLE,0,world);
 }

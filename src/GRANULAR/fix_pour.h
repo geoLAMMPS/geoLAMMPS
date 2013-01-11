@@ -32,6 +32,7 @@ class FixPour : public Fix {
   friend class PairGranHookeHistory;
   friend class PairGranHookeHistoryOMP;
   friend class PairGranHookeCuda;
+  friend class PairGranShmHistory; //~ Added this [KH - 23 November 2012]
 
  public:
   FixPour(class LAMMPS *, int, char **);

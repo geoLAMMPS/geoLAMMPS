@@ -33,13 +33,13 @@ class PairGranHookeHistory : public Pair {
   virtual void compute(int, int);
   virtual void settings(int, char **);
   void coeff(int, char **);
-  void init_style();
+  virtual void init_style(); //~ Made virtual [KH - 23 November 2012]
   void init_list(int, class NeighList *);
   double init_one(int, int);
   void write_restart(FILE *);
   void read_restart(FILE *);
-  void write_restart_settings(FILE *);
-  void read_restart_settings(FILE *);
+  virtual void write_restart_settings(FILE *); //~ Made virtual
+  virtual void read_restart_settings(FILE *); //~ Made virtual
   void reset_dt();
   virtual double single(int, int, int, int, double, double, double, double &);
   int pack_comm(int, int *, double *, int, int *);
