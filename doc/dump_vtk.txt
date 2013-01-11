@@ -60,7 +60,8 @@ args = list of atom attributes to be written to the .vtp files :l
 
 [Example:]
 
-If we assume that fix_multistress has the fix id 1 and compute coord/gran has the compute id 6:
+If we assume that "fix multistress"_fix_multistress.html has the fix id 1 and "compute coord/gran"_compute_coord_gran.html
+has the compute id 6:
 
 dump 1 all vtk 1000 dump.*.vtp c_1_stress\[1\] mass id c_6 fx vy x :pre
 
@@ -92,7 +93,7 @@ is omitted).
 
 The written .vtp files are sorted by default - this is necessary to guarantee
 that some of the data gathered from multiple processors is kept in sync properly.
-This is the case even if the "atom_modify sort"_atom_modify.html option is off.
+This is the case even if the {sort} option of "atom_modify"_atom_modify.html is off.
 
 :line
 
@@ -143,6 +144,6 @@ dump vtk has not been written for 2D simulations: 3D only.
 
 [Related commands:]
 
-"dump"_dump.html, "dump_custom"_dump_custom.html, 
+"dump"_dump.html, 
 "dump image"_dump_image.html, "dump_modify"_dump_modify.html,
 "undump"_undump.html

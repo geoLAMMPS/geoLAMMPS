@@ -70,7 +70,8 @@
 </UL>
 <P><B>Example:</B>
 </P>
-<P>If we assume that fix_multistress has the fix id 1 and compute coord/gran has the compute id 6:
+<P>If we assume that <A HREF = "fix_multistress.html">fix multistress</A> has the fix id 1 and <A HREF = "compute_coord_gran.html">compute coord/gran</A>
+has the compute id 6:
 </P>
 <PRE>dump 1 all vtk 1000 dump.*.vtp c_1_stress[1] mass id c_6 fx vy x 
 </PRE>
@@ -102,7 +103,7 @@ is omitted).
 </P>
 <P>The written .vtp files are sorted by default - this is necessary to guarantee
 that some of the data gathered from multiple processors is kept in sync properly.
-This is the case even if the <A HREF = "atom_modify.html">atom_modify sort</A> option is off.
+This is the case even if the <I>sort</I> option of <A HREF = "atom_modify.html">atom_modify</A> is off.
 </P>
 <HR>
 
@@ -153,7 +154,7 @@ dump file.
 </P>
 <P><B>Related commands:</B>
 </P>
-<P><A HREF = "dump.html">dump</A>, <A HREF = "dump_custom.html">dump_custom</A>, 
+<P><A HREF = "dump.html">dump</A>, 
 <A HREF = "dump_image.html">dump image</A>, <A HREF = "dump_modify.html">dump_modify</A>,
 <A HREF = "undump.html">undump</A>
 </P>
