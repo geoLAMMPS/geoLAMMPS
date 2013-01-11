@@ -229,7 +229,8 @@ void FixFluidDrag::init()
   pgradient = specificweight*hydgrad;
 
   //~ Confirm that the largest atom is unique
-  int counter,totalcounter = {0};
+  int counter,totalcounter;
+  counter = 0;
 
   for (int i = 0; i < nlocal; i++)
     if ((mask[i] & groupbit) && radius[i] == overallmaxrad)
