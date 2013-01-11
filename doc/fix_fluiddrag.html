@@ -1,0 +1,135 @@
+<HTML>
+<CENTER><A HREF = "http://lammps.sandia.gov">LAMMPS WWW Site</A> - <A HREF = "Manual.html">LAMMPS Documentation</A> - <A HREF = "Section_commands.html#comm">LAMMPS Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix fluiddrag command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID group-ID fluiddrag i N style magnitude args 
+</PRE>
+<UL><LI>ID, group-ID are documented in <A HREF = "fix.html">fix</A> command 
+
+<LI>fluiddrag = style name of this fix command 
+
+<LI>i = hydraulic gradient 
+
+<LI>N = <I>0</I> or <I>1</I> 
+
+<PRE><I>0</I> = subtract the velocity of the largest particle from
+the velocities of all particles in the system on each timestep
+<I>1</I> = do not perform this velocity adjustment 
+</PRE>
+<LI>magnitude = size of acceleration (force/mass units) 
+
+<LI>style = <I>chute</I> or <I>spherical</I> or <I>gradient</I> or <I>vector</I> 
+
+<PRE>  <I>chute</I> args = angle
+    angle = angle in +x away from -z or -y axis in 3d/2d (in degrees)
+  <I>spherical</I> args = phi theta
+    phi = azimuthal angle from +x axis (in degrees)
+    theta = angle from +z or +y axis in 3d/2d (in degrees)
+  <I>gradient</I> args = phi theta phi_grad theta_grad
+    phi = azimuthal angle from +x axis (in degrees)
+    theta = angle from +z or +y axis in 3d/2d (in degrees)
+    phi_grad = rate of change of angle phi (full rotations per time unit)
+    theta_grad = rate of change of angle theta (full rotations per time unit)
+  <I>vector</I> args = x y z
+    x y z = vector direction to apply the acceleration 
+</PRE>
+
+</UL>
+<P><B>Examples:</B>
+</P>
+<PRE>fix 1 all fluiddrag 5.0 0 vector 1 0 0 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>A fix based on <A HREF = "fix_gravity.html">fix gravity</A> which simulates the flow
+of water through a packing of particles using a simple model. It is
+important to note that SI units must be used as the specific weight
+of water is hard-coded as 9810 kg/(m2.s2) for convenience.
+</P>
+<P>A per-atom array is created by this fix which contains data about the
+simulation which may be of interest. This can be written to a file using the
+<A HREF = "dump_custom.html">dump custom</A> command, for example:
+</P>
+<PRE>fix		9 all fluiddrag 1.0 1 vector 1 0 0 
+dump		1 all custom 5000 dump.drag_forces f_9[1] f_9[2] f_9[3] f_9[4] f_9[5] f_9[6] f_9[7] f_9[8] f_9[9] f_9[10] f_9[11] 
+</PRE>
+<P>Of course, asterisks can be used to write separate files at each write interval
+if so desired. There are 9 available columns in 2D and 11 in 3D which are ordered as follows:
+</P>
+<P><I><B>2D:</B></I>
+</P>
+<LI> <B>1</B> The tag of particle <I>i</I> 
+
+<LI> <B>2</B> The x-coordinate of particle <I>i</I> 
+
+<LI> <B>3</B> The y-coordinate of particle <I>i</I> 
+
+<LI> <B>4</B> The radius of particle <I>i</I> 
+
+<LI> <B>5</B> The total volume enclosed by the walls or periodic boundaries 
+
+<LI> <B>6</B> The x-component of the particle-fluid interaction force applied to particle <I>i</I> 
+
+<LI> <B>7</B> The y-component of the particle-fluid interaction force 
+
+<LI> <B>8</B> The porosity of the sample 
+
+<LI> <B>9</B> The drag force (based on effective diameter) 
+
+<P><I><B>3D:</B></I>
+</P>
+<LI> <B>1</B> The tag of particle <I>i</I> 
+
+<LI> <B>2</B> The x-coordinate of particle <I>i</I> 
+
+<LI> <B>3</B> The y-coordinate of particle <I>i</I> 
+
+<LI> <B>4</B> The z-coordinate of particle <I>i</I> 
+
+<LI> <B>5</B> The radius of particle <I>i</I> 
+
+<LI> <B>6</B> The total volume enclosed by the walls or periodic boundaries 
+
+<LI> <B>7</B> The x-component of the particle-fluid interaction force applied to particle <I>i</I> 
+
+<LI> <B>8</B> The y-component of the particle-fluid interaction force 
+
+<LI> <B>9</B> The z-component of the particle-fluid interaction force 
+
+<LI> <B>10</B> The porosity of the sample 
+
+<LI> <B>11</B> The drag force (based on effective diameter) 
+
+<P><B>Restart, fix_modify, output, run start/stop, minimize info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.  None of the <A HREF = "fix_modify.html">fix_modify</A> options
+are relevant to this fix. No parameter of this fix can
+be used with the <I>start/stop</I> keywords of the <A HREF = "run.html">run</A> command.
+This fix is not invoked during <A HREF = "minimize.html">energy minimization</A>.
+The existence of per-atom quantities has already be described.
+</P>
+<P><B>Restrictions:</B>
+</P>
+<P>* Fix fluiddrag requires the use of the sphere atom_style.
+</P>
+<P>* SI units must be used at present.
+</P>
+<P><B>Related commands:</B>
+</P>
+<P><A HREF = "fix_gravity.html">fix gravity</A>
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>

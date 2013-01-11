@@ -3,6 +3,7 @@
 if (test $1 = 1) then
 
   cp compute_coord_gran.cpp ..
+  cp fix_fluiddrag.cpp ..
   cp fix_freeze.cpp ..
   cp fix_pour.cpp ..
   cp fix_wall_gran.cpp ..
@@ -12,6 +13,7 @@ if (test $1 = 1) then
   cp pair_gran_shm_history.cpp ..
 
   cp compute_coord_gran.h ..
+  cp fix_fluiddrag.h ..
   cp fix_freeze.h ..
   cp fix_pour.h ..
   cp fix_wall_gran.h ..
@@ -23,6 +25,7 @@ if (test $1 = 1) then
 elif (test $1 = 0) then
 
   rm -f ../compute_coord_gran.cpp
+  rm -f ../fix_fluiddrag.cpp
   rm -f ../fix_freeze.cpp
   rm -f ../fix_pour.cpp
   rm -f ../fix_wall_gran.cpp
@@ -32,6 +35,7 @@ elif (test $1 = 0) then
   rm -f ../pair_gran_shm_history.cpp
 
   rm -f ../compute_coord_gran.h
+  rm -f ../fix_fluiddrag.h
   rm -f ../fix_freeze.h
   rm -f ../fix_pour.h
   rm -f ../fix_wall_gran.h
