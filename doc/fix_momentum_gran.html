@@ -1,0 +1,84 @@
+<HTML>
+<CENTER><A HREF = "http://lammps.sandia.gov">LAMMPS WWW Site</A> - <A HREF = "Manual.html">LAMMPS Documentation</A> - <A HREF = "Section_commands.html#comm">LAMMPS Commands</A> 
+</CENTER>
+
+
+
+
+
+
+<HR>
+
+<H3>fix momentum/gran command 
+</H3>
+<P><B>Syntax:</B>
+</P>
+<PRE>fix ID group-ID momentum/gran 
+</PRE>
+<UL><LI>ID, group-ID are documented in <A HREF = "fix.html">fix</A> command 
+
+<LI>momentum/gran = style name of this fix command 
+
+
+</UL>
+<P><B>Example:</B>
+</P>
+<PRE>fix 1 all momentum/gran 
+</PRE>
+<P><B>Description:</B>
+</P>
+<P>Zero the angular momentum of the group of atoms on every
+timestep. This was originally developed to facilitate validation
+simulations using the approach of Thornton (1979) (based on
+face-centred cubic arrays). Usage could not be simpler as there are
+no optional arguments.
+</P>
+<P>The <A HREF = "fix_momentum.html">fix momentum</A> option does weird things
+with granular materials, which prompted development of this fix.
+</P>
+<P>It is worth explaining briefly how this fix works, for which it
+is necessary to understand how a timestep is ordered using the
+velocity-Verlet scheme in LAMMPS.
+</P>
+<P>Initially the velocities are updated using the forces from the previous
+timestep and then the positions are updated based on these velocities. Both of
+these operations are done within the initial_integrate function of
+fix_nve_sphere. The forces are updated by the compute function of the 
+pairstyle. Finally the velocities are updated once more using these
+updated forces. This second velocity updating step is done by the
+final_integrate function of fix_nve_sphere.
+</P>
+<P>This fix zeroes two quantities at different points within the integration loop.
+The angular velocities are set to zero immediately before the force computation
+(as a pre_force step). Therefore the angular velocities are zero in the
+pairstyle when the forces are calculated.
+</P>
+<P>This force computation updates the torque on the atoms using the shear
+component of the forces. The torques are zeroed immediately after the force
+computation (as a post_force step). Therefore when the final_integrate
+function is run to update the velocities, the angular velocities (which are
+calculated from the torques) are not changed. The same is true in the
+initial_integrate function on the next timestep as the torque will still
+be zero.
+</P>
+<P>The fact that the angular velocities are zeroed on every timestep despite
+not being updated means that it would suffice to zero the angular velocities
+only on the first timestep, and set the torques to zero on all timesteps.
+This is more straightforward though, and the effect on efficiency is
+completely negligible.
+</P>
+<P><B>Restart, fix_modify, output, run start/stop, minimize info:</B>
+</P>
+<P>No information about this fix is written to <A HREF = "restart.html">binary restart
+files</A>.  None of the <A HREF = "fix_modify.html">fix_modify</A> options
+are relevant to this fix.  No global or per-atom quantities are stored
+by this fix for access by various <A HREF = "Section_howto.html#howto_15">output
+commands</A>.  No parameter of this fix can
+be used with the <I>start/stop</I> keywords of the <A HREF = "run.html">run</A> command.
+This fix is not invoked during <A HREF = "minimize.html">energy minimization</A>.
+</P>
+<P><B>Restrictions:</B> none
+</P>
+<P><B>Default:</B> none
+</P>
+</HTML>
