@@ -36,18 +36,18 @@ ComputeCoordGran::ComputeCoordGran(LAMMPS *lmp, int narg, char **arg) :
 {
   if (narg < 3) error->all(FLERR,"Illegal compute coord/gran command");
 
-  ncol = narg-4 + 1;
+  ncol = narg-3 + 1;
   int ntypes = atom->ntypes;
   typelo = new int[ncol];
   typehi = new int[ncol];
 
-  if (narg == 4) {
+  if (narg == 3) {
     ncol = 1;
     typelo[0] = 1;
     typehi[0] = ntypes;
   } else {
     ncol = 0;
-    int iarg = 4;
+    int iarg = 3;
     while (iarg < narg) {
       force->bounds(arg[iarg],ntypes,typelo[ncol],typehi[ncol]);
       if (typelo[ncol] > typehi[ncol])
