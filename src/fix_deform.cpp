@@ -688,7 +688,7 @@ void FixDeform::end_of_step()
   int i;
 
   double delta = update->ntimestep - update->beginstep;
-  delta /= update->endstep - update->beginstep;
+  if (delta != 0.0) delta /= update->endstep - update->beginstep;
 
   //~ Change the delta specification [KH - 29 June 2012]
   if (mstractive == 1) delta = 1.0;
