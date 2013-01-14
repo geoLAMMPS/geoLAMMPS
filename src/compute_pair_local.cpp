@@ -168,6 +168,7 @@ int ComputePairLocal::compute_pairs(int flag)
   Pair *pair = force->pair;
   double **cutsq = force->pair->cutsq;
   int *tag = atom->tag; //~ Added this for use below [KH - 10 January 2013]
+  double *radius = atom->radius; //~ Also added this [KH - 14 January 2013]
 
   m = 0;
   for (ii = 0; ii < inum; ii++) {
@@ -199,7 +200,10 @@ int ComputePairLocal::compute_pairs(int flag)
       delz = ztmp - x[j][2];
       rsq = delx*delx + dely*dely + delz*delz;
       jtype = type[j];
-      if (rsq >= cutsq[itype][jtype]) continue;
+      /*~ Modified the line below to use the same contact condition
+	as in ComputeCoordGran [KH - 14 January 2013]*/
+      //~ if (rsq >= cutsq[itype][jtype]) continue;
+      if (rsq > (radius[i] + radius[j])*(radius[i] + radius[j])) continue;
 
       if (flag) {
         if (singleflag)
