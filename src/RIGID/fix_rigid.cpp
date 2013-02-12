@@ -511,12 +511,6 @@ FixRigid::FixRigid(LAMMPS *lmp, int narg, char **arg) :
   MINUSPI = -MY_PI;
   TWOPI = 2.0*MY_PI;
 
-  // atom style pointers to particles that store extra info
-
-  avec_ellipsoid = (AtomVecEllipsoid *) atom->style_match("ellipsoid");
-  avec_line = (AtomVecLine *) atom->style_match("line");
-  avec_tri = (AtomVecTri *) atom->style_match("tri");
-
   // print statistics
 
   int nsum = 0;
@@ -598,6 +592,12 @@ void FixRigid::init()
   int i,ibody;
 
   triclinic = domain->triclinic;
+
+  // atom style pointers to particles that store extra info
+
+  avec_ellipsoid = (AtomVecEllipsoid *) atom->style_match("ellipsoid");
+  avec_line = (AtomVecLine *) atom->style_match("line");
+  avec_tri = (AtomVecTri *) atom->style_match("tri");
 
   // warn if more than one rigid fix
 
@@ -1131,7 +1131,7 @@ void FixRigid::pre_neighbor()
 }
 
 /* ----------------------------------------------------------------------
-   count # of degrees-of-freedom removed by fix_rigid for atoms in igroup
+   count # of degrees-of-freedom removed by rigid bodies for atoms in igroup
 ------------------------------------------------------------------------- */
 
 int FixRigid::dof(int igroup)
@@ -2139,9 +2139,9 @@ void FixRigid::readfile(int which, double *vec, double **array, int *inbody)
         array[id][0] = atof(values[5]);
         array[id][1] = atof(values[6]);
         array[id][2] = atof(values[7]);
-        array[id][5] = atof(values[8]);
-        array[id][4] = atof(values[9]);
         array[id][3] = atof(values[10]);
+        array[id][4] = atof(values[9]);
+        array[id][5] = atof(values[8]);
       }
 
       buf = next + 1;
@@ -2165,7 +2165,7 @@ double FixRigid::memory_usage()
   int nmax = atom->nmax;
   double bytes = nmax * sizeof(int);
   bytes += nmax*3 * sizeof(double);
-  bytes += maxvatom*6 * sizeof(double);
+  bytes += maxvatom*6 * sizeof(double);    // vatom
   if (extended) {
     bytes += nmax * sizeof(int);
     if (orientflag) bytes = nmax*orientflag * sizeof(double);
@@ -2193,7 +2193,7 @@ void FixRigid::grow_arrays(int nmax)
    copy values within local atom-based arrays
 ------------------------------------------------------------------------- */
 
-void FixRigid::copy_arrays(int i, int j)
+void FixRigid::copy_arrays(int i, int j, int delflag)
 {
   body[j] = body[i];
   displace[j][0] = displace[i][0];

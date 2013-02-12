@@ -1,4 +1,4 @@
-/* ----------------------------------------------------------------------
+/* -*- c++ -*- ----------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
    http://lammps.sandia.gov, Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
@@ -217,9 +217,12 @@ class Neighbor : protected Pointers {
   void respa_bin_newton(class NeighList *);
   void respa_bin_newton_tri(class NeighList *);
 
-  // OpenMP multi-threaded neighbor list build versions
+  // include prototypes for multi-threaded neighbor lists
+  // builds or their corresponding dummy versions
 
+#define LMP_INSIDE_NEIGHBOR_H
 #include "accelerator_omp.h"
+#undef LMP_INSIDE_NEIGHBOR_H
 
   // pairwise stencil creation functions
 
@@ -266,7 +269,7 @@ class Neighbor : protected Pointers {
   BondPtr dihedral_build;             // ptr to dihedral list functions
   void dihedral_all();                // dihedral list with all dihedrals
   void dihedral_partial();            // exclude certain dihedrals
-  void dihedral_check(int **);
+  void dihedral_check(int, int **);
 
   BondPtr improper_build;             // ptr to improper list functions
   void improper_all();                // improper list with all impropers

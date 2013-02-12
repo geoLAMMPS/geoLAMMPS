@@ -59,8 +59,7 @@ using namespace LAMMPS_NS;
 #define BUF_FLOAT double
 /* ---------------------------------------------------------------------- */
 
-AtomVecChargeCuda::AtomVecChargeCuda(LAMMPS *lmp, int narg, char **arg) :
-  AtomVecCharge(lmp, narg, arg)
+AtomVecChargeCuda::AtomVecChargeCuda(LAMMPS *lmp) : AtomVecCharge(lmp)
 {
    cuda = lmp->cuda;
    if(cuda == NULL)
@@ -337,7 +336,7 @@ int AtomVecChargeCuda::pack_exchange(int dim, double *buf)
         int dm = modify->fix[atom->extra_grow[iextra]]->pack_exchange(i,&((*buf_pointer)[m]));
         m+=dm;
                   nextra+=dm;
-        if(i<nlocal)modify->fix[atom->extra_grow[iextra]]->copy_arrays(copylist[j],i);
+                  if(i<nlocal)modify->fix[atom->extra_grow[iextra]]->copy_arrays(copylist[j],i,delflag);
         if(m>*maxsend)  grow_send(m,buf_pointer,1);
       }
       (*buf_pointer)[j+1] = nextra;

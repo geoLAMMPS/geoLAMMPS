@@ -87,11 +87,26 @@ Comm::Comm(LAMMPS *lmp) : Pointers(lmp)
 
   // use of OpenMP threads
   // query OpenMP for number of threads/process set by user at run-time
-  // need to be in a parallel area for this operation
+  // if the OMP_NUM_THREADS environment variable is not set, we default
+  // to using 1 thread. This follows the principle of the least surprise,
+  // while practically all OpenMP implementations violate it by using
+  // as many threads as there are (virtual) CPU cores by default.
 
   nthreads = 1;
 #ifdef _OPENMP
-  nthreads = omp_get_max_threads();
+  if (getenv("OMP_NUM_THREADS") == NULL) {
+    nthreads = 1;
+    if (me == 0)
+      error->warning(FLERR,"OMP_NUM_THREADS environment is not set.");
+  } else {
+    nthreads = omp_get_max_threads();
+  }
+
+  // enforce consistent number of threads across all MPI tasks
+
+  MPI_Bcast(&nthreads,1,MPI_INT,0,world);
+  omp_set_num_threads(nthreads);
+
   if (me == 0) {
     if (screen)
       fprintf(screen,"  using %d OpenMP thread(s) per MPI task\n",nthreads);
@@ -798,10 +813,13 @@ void Comm::exchange()
 
   // clear global->local map for owned and ghost atoms
   // b/c atoms migrate to new procs in exchange() and
-  // new ghosts are created in borders()
+  //   new ghosts are created in borders()
   // map_set() is done at end of borders()
+  // clear ghost count and any ghost bonus data internal to AtomVec
 
   if (map_style) atom->map_clear();
+  atom->nghost = 0;
+  atom->avec->clear_bonus();
 
   // subbox bounds for orthogonal or triclinic
 
@@ -835,6 +853,7 @@ void Comm::exchange()
       } else i++;
     }
     atom->nlocal = nlocal;
+
 
     // send/recv atoms in both directions
     // if 1 proc in dimension, no send/recv, set recv buf to send buf
@@ -906,11 +925,6 @@ void Comm::borders()
   MPI_Request request;
   MPI_Status status;
   AtomVec *avec = atom->avec;
-
-  // clear old ghosts and any ghost bonus data internal to AtomVec
-
-  atom->nghost = 0;
-  atom->avec->clear_bonus();
 
   // do swaps over all 3 dimensions
 
@@ -1146,6 +1160,7 @@ void Comm::reverse_comm_pair(Pair *pair)
 
 /* ----------------------------------------------------------------------
    forward communication invoked by a Fix
+   n = constant number of datums per atom
 ------------------------------------------------------------------------- */
 
 void Comm::forward_comm_fix(Fix *fix)
@@ -1183,6 +1198,7 @@ void Comm::forward_comm_fix(Fix *fix)
 
 /* ----------------------------------------------------------------------
    reverse communication invoked by a Fix
+   n = constant number of datums per atom
 ------------------------------------------------------------------------- */
 
 void Comm::reverse_comm_fix(Fix *fix)
@@ -1207,6 +1223,81 @@ void Comm::reverse_comm_fix(Fix *fix)
                   world,&request);
       if (recvnum[iswap])
         MPI_Send(buf_send,n*recvnum[iswap],MPI_DOUBLE,recvproc[iswap],0,world);
+      if (sendnum[iswap]) MPI_Wait(&request,&status);
+      buf = buf_recv;
+    } else buf = buf_send;
+
+    // unpack buffer
+
+    fix->unpack_reverse_comm(sendnum[iswap],sendlist[iswap],buf);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   forward communication invoked by a Fix
+   n = total datums for all atoms, allows for variable number/atom
+------------------------------------------------------------------------- */
+
+void Comm::forward_comm_variable_fix(Fix *fix)
+{
+  int iswap,n;
+  double *buf;
+  MPI_Request request;
+  MPI_Status status;
+
+  for (iswap = 0; iswap < nswap; iswap++) {
+
+    // pack buffer
+
+    n = fix->pack_comm(sendnum[iswap],sendlist[iswap],
+                       buf_send,pbc_flag[iswap],pbc[iswap]);
+
+    // exchange with another proc
+    // if self, set recv buffer to send buffer
+
+    if (sendproc[iswap] != me) {
+      if (recvnum[iswap])
+        MPI_Irecv(buf_recv,maxrecv,MPI_DOUBLE,recvproc[iswap],0,
+                  world,&request);
+      if (sendnum[iswap])
+        MPI_Send(buf_send,n,MPI_DOUBLE,sendproc[iswap],0,world);
+      if (recvnum[iswap]) MPI_Wait(&request,&status);
+      buf = buf_recv;
+    } else buf = buf_send;
+
+    // unpack buffer
+
+    fix->unpack_comm(recvnum[iswap],firstrecv[iswap],buf);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   reverse communication invoked by a Fix
+   n = total datums for all atoms, allows for variable number/atom
+------------------------------------------------------------------------- */
+
+void Comm::reverse_comm_variable_fix(Fix *fix)
+{
+  int iswap,n;
+  double *buf;
+  MPI_Request request;
+  MPI_Status status;
+
+  for (iswap = nswap-1; iswap >= 0; iswap--) {
+
+    // pack buffer
+
+    n = fix->pack_reverse_comm(recvnum[iswap],firstrecv[iswap],buf_send);
+
+    // exchange with another proc
+    // if self, set recv buffer to send buffer
+
+    if (sendproc[iswap] != me) {
+      if (sendnum[iswap])
+        MPI_Irecv(buf_recv,maxrecv,MPI_DOUBLE,sendproc[iswap],0,
+                  world,&request);
+      if (recvnum[iswap])
+        MPI_Send(buf_send,n,MPI_DOUBLE,recvproc[iswap],0,world);
       if (sendnum[iswap]) MPI_Wait(&request,&status);
       buf = buf_recv;
     } else buf = buf_send;
@@ -1361,6 +1452,102 @@ void Comm::reverse_comm_dump(Dump *dump)
 
     dump->unpack_reverse_comm(sendnum[iswap],sendlist[iswap],buf);
   }
+}
+
+/* ----------------------------------------------------------------------
+   forward communication of N values in array
+------------------------------------------------------------------------- */
+
+void Comm::forward_comm_array(int n, double **array)
+{
+  int i,j,k,m,iswap,last;
+  double *buf;
+  MPI_Request request;
+  MPI_Status status;
+
+  // check that buf_send and buf_recv are big enough
+
+
+
+
+  for (iswap = 0; iswap < nswap; iswap++) {
+
+    // pack buffer
+
+    m = 0;
+    for (i = 0; i < sendnum[iswap]; i++) {
+      j = sendlist[iswap][i];
+      for (k = 0; k < n; k++)
+        buf_send[m++] = array[j][k];
+    }
+
+    // exchange with another proc
+    // if self, set recv buffer to send buffer
+
+    if (sendproc[iswap] != me) {
+      if (recvnum[iswap])
+        MPI_Irecv(buf_recv,n*recvnum[iswap],MPI_DOUBLE,recvproc[iswap],0,
+                  world,&request);
+      if (sendnum[iswap])
+        MPI_Send(buf_send,n*sendnum[iswap],MPI_DOUBLE,sendproc[iswap],0,world);
+      if (recvnum[iswap]) MPI_Wait(&request,&status);
+      buf = buf_recv;
+    } else buf = buf_send;
+
+    // unpack buffer
+
+    m = 0;
+    last = firstrecv[iswap] + recvnum[iswap];
+    for (i = firstrecv[iswap]; i < last; i++)
+      for (k = 0; k < n; k++)
+        array[i][k] = buf[m++];
+  }
+}
+
+/* ----------------------------------------------------------------------
+   communicate inbuf around full ring of processors with messtag
+   nbytes = size of inbuf = n datums * nper bytes
+   callback() is invoked to allow caller to process/update each proc's inbuf
+   note that callback() is invoked on final iteration for original inbuf
+   for non-NULL outbuf, final updated inbuf is copied to it
+   outbuf = inbuf is OK
+------------------------------------------------------------------------- */
+
+void Comm::ring(int n, int nper, void *inbuf, int messtag,
+                void (*callback)(int, char *), void *outbuf)
+{
+  MPI_Request request;
+  MPI_Status status;
+
+  int nbytes = n*nper;
+  int maxbytes;
+  MPI_Allreduce(&nbytes,&maxbytes,1,MPI_INT,MPI_MAX,world);
+
+  char *buf,*bufcopy;
+  memory->create(buf,maxbytes,"comm:buf");
+  memory->create(bufcopy,maxbytes,"comm:bufcopy");
+  memcpy(buf,inbuf,nbytes);
+
+  int next = me + 1;
+  int prev = me - 1;
+  if (next == nprocs) next = 0;
+  if (prev < 0) prev = nprocs - 1;
+
+  for (int loop = 0; loop < nprocs; loop++) {
+    if (me != next) {
+      MPI_Irecv(bufcopy,maxbytes,MPI_CHAR,prev,messtag,world,&request);
+      MPI_Send(buf,nbytes,MPI_CHAR,next,messtag,world);
+      MPI_Wait(&request,&status);
+      MPI_Get_count(&status,MPI_CHAR,&nbytes);
+      memcpy(buf,bufcopy,nbytes);
+    }
+    callback(nbytes/nper,buf);
+  }
+
+  if (outbuf) memcpy(outbuf,buf,nbytes);
+
+  memory->destroy(buf);
+  memory->destroy(bufcopy);
 }
 
 /* ----------------------------------------------------------------------

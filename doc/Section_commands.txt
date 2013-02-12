@@ -446,6 +446,7 @@ of each style or click on the style itself for a full description:
 "nve"_fix_nve.html,
 "nve/asphere"_fix_nve_asphere.html,
 "nve/asphere/noforce"_fix_nve_asphere_noforce.html,
+"nve/body"_fix_nve_body.html,
 "nve/limit"_fix_nve_limit.html,
 "nve/line"_fix_nve_line.html,
 "nve/noforce"_fix_nve_noforce.html,
@@ -547,6 +548,7 @@ each style or click on the style itself for a full description:
 
 "angle/local"_compute_angle_local.html,
 "atom/molecule"_compute_atom_molecule.html,
+"body/local"_compute_body_local.html,
 "bond/local"_compute_bond_local.html,
 "centro/atom"_compute_centro_atom.html,
 "cluster/atom"_compute_cluster_atom.html,
@@ -594,7 +596,8 @@ each style or click on the style itself for a full description:
 "temp/ramp"_compute_temp_ramp.html,
 "temp/region"_compute_temp_region.html,
 "temp/sphere"_compute_temp_sphere.html,
-"ti"_compute_ti.html :tb(c=6,ea=c)
+"ti"_compute_ti.html,
+"voronoi/atom"_compute_voronoi_atom.html :tb(c=6,ea=c)
 
 These are compute styles contributed by users, which can be used if
 "LAMMPS is built with the appropriate
@@ -633,15 +636,18 @@ potentials.  Click on the style itself for a full description:
 "adp"_pair_adp.html,
 "airebo"_pair_airebo.html,
 "beck"_pair_beck.html,
+"body"_pair_body.html,
 "bop"_pair_bop.html,
 "born"_pair_born.html,
 "born/coul/long"_pair_born.html,
+"born/coul/msm"_pair_born.html,
 "born/coul/wolf"_pair_born.html,
 "brownian"_pair_brownian.html,
 "brownian/poly"_pair_brownian.html,
 "buck"_pair_buck.html,
 "buck/coul/cut"_pair_buck.html,
 "buck/coul/long"_pair_buck.html,
+"buck/coul/msm"_pair_buck.html,
 "buck/long/coul/long"_pair_buck_long.html,
 "colloid"_pair_colloid.html,
 "comb"_pair_comb.html,
@@ -649,6 +655,7 @@ potentials.  Click on the style itself for a full description:
 "coul/debye"_pair_coul.html,
 "coul/dsf"_pair_coul.html,
 "coul/long"_pair_coul.html,
+"coul/msm"_pair_coul.html,
 "coul/wolf"_pair_coul.html,
 "dipole/cut"_pair_dipole.html,
 "dpd"_pair_dpd.html,
@@ -671,6 +678,7 @@ potentials.  Click on the style itself for a full description:
 "lj/charmm/coul/charmm"_pair_charmm.html,
 "lj/charmm/coul/charmm/implicit"_pair_charmm.html,
 "lj/charmm/coul/long"_pair_charmm.html,
+"lj/charmm/coul/msm"_pair_charmm.html,
 "lj/class2"_pair_class2.html,
 "lj/class2/coul/cut"_pair_class2.html,
 "lj/class2/coul/long"_pair_class2.html,
@@ -679,6 +687,7 @@ potentials.  Click on the style itself for a full description:
 "lj/cut/coul/debye"_pair_lj.html,
 "lj/cut/coul/dsf"_pair_lj.html,
 "lj/cut/coul/long"_pair_lj.html,
+"lj/cut/coul/msm"_pair_lj.html,
 "lj/long/coul/long"_pair_lj_long.html,
 "lj/cut/tip4p/long"_pair_lj.html,
 "lj/long/tip4p/long"_pair_lj_long.html,
@@ -722,6 +731,7 @@ package"_Section_start.html#start_3.
 "gauss/cut"_pair_gauss.html,
 "lj/sdk"_pair_sdk.html,
 "lj/sdk/coul/long"_pair_sdk.html,
+"lj/sdk/coul/msm"_pair_sdk.html,
 "lj/sf"_pair_lj_sf.html,
 "meam/spline"_pair_meam_spline.html,
 "meam/sw/spline"_pair_meam_sw_spline.html,
@@ -744,6 +754,7 @@ package"_Section_accelerate.html.
 "born/coul/long/cuda"_pair_born.html,
 "born/coul/long/gpu"_pair_born.html,
 "born/coul/long/omp"_pair_born.html,
+"born/coul/msm/omp"_pair_born.html,
 "born/coul/wolf/gpu"_pair_born.html,
 "born/coul/wolf/omp"_pair_born.html,
 "born/gpu"_pair_born.html,
@@ -756,6 +767,7 @@ package"_Section_accelerate.html.
 "buck/coul/long/cuda"_pair_buck.html,
 "buck/coul/long/gpu"_pair_buck.html,
 "buck/coul/long/omp"_pair_buck.html,
+"buck/coul/msm/omp"_pair_buck.html,
 "buck/cuda"_pair_buck.html,
 "buck/long/coul/long/omp"_pair_buck_long.html,
 "buck/gpu"_pair_buck.html,
@@ -768,6 +780,7 @@ package"_Section_accelerate.html.
 "coul/dsf/gpu"_pair_coul.html,
 "coul/long/gpu"_pair_coul.html,
 "coul/long/omp"_pair_coul.html,
+"coul/msm/omp"_pair_coul.html,
 "coul/wolf"_pair_coul.html,
 "dipole/cut/gpu"_pair_dipole.html,
 "dipole/cut/omp"_pair_dipole.html,
@@ -809,13 +822,12 @@ package"_Section_accelerate.html.
 "lj/charmm/coul/long/gpu"_pair_charmm.html,
 "lj/charmm/coul/long/omp"_pair_charmm.html,
 "lj/charmm/coul/long/opt"_pair_charmm.html,
-"lj/charmm/coul/pppm/omp"_pair_charmm.html,
 "lj/class2/coul/cut/cuda"_pair_class2.html,
 "lj/class2/coul/cut/omp"_pair_class2.html,
 "lj/class2/coul/long/cuda"_pair_class2.html,
 "lj/class2/coul/long/gpu"_pair_class2.html,
-"lj/class2/coul/pppm/omp"_pair_class2.html,
 "lj/class2/coul/long/omp"_pair_class2.html,
+"lj/class2/coul/msm/omp"_pair_class2.html,
 "lj/class2/cuda"_pair_class2.html,
 "lj/class2/gpu"_pair_class2.html,
 "lj/class2/omp"_pair_class2.html,
@@ -831,7 +843,7 @@ package"_Section_accelerate.html.
 "lj/cut/coul/long/gpu"_pair_lj.html,
 "lj/cut/coul/long/omp"_pair_lj.html,
 "lj/cut/coul/long/opt"_pair_lj.html,
-"lj/cut/coul/pppm/omp"_pair_lj.html,
+"lj/cut/coul/msm/opt"_pair_lj.html,
 "lj/cut/cuda"_pair_lj.html,
 "lj/cut/experimental/cuda"_pair_lj.html,
 "lj/cut/gpu"_pair_lj.html,
@@ -850,6 +862,7 @@ package"_Section_accelerate.html.
 "lj/sdk/omp"_pair_sdk.html,
 "lj/sdk/coul/long/gpu"_pair_sdk.html,
 "lj/sdk/coul/long/omp"_pair_sdk.html,
+"lj/sdk/coul/msm/omp"_pair_sdk.html,
 "lj/sf/omp"_pair_lj_sf.html,
 "lj/smooth/cuda"_pair_lj_smooth.html,
 "lj/smooth/omp"_pair_lj_smooth.html,
@@ -967,7 +980,10 @@ package"_Section_accelerate.html.
 "cosine/shift/exp/omp"_angle_cosine_shift_exp.html,
 "cosine/squared/omp"_angle_cosine_squared.html,
 "dipole/omp"_angle_dipole.html
+"fourier/omp"_angle_fourier.html,
+"fourier/simple/omp"_angle_fourier_simple.html,
 "harmonic/omp"_angle_harmonic.html,
+"quartic/omp"_angle_quartic.html
 "table/omp"_angle_table.html :tb(c=4,ea=c,w=100)
 
 :line
@@ -1004,10 +1020,13 @@ package"_Section_accelerate.html.
 "charmm/omp"_dihedral_charmm.html,
 "class2/omp"_dihedral_class2.html,
 "cosine/shift/exp/omp"_dihedral_cosine_shift_exp.html,
+"fourier/omp"_dihedral_fourier.html,
 "harmonic/omp"_dihedral_harmonic.html,
 "helix/omp"_dihedral_helix.html,
 "multi/harmonic/omp"_dihedral_multi_harmonic.html,
+"nharmonic/omp"_dihedral_nharmonic.html,
 "opls/omp"_dihedral_opls.html
+"quadratic/omp"_dihedral_quadratic.html,
 "table/omp"_dihedral_table.html :tb(c=4,ea=c,w=100)
 
 :line
@@ -1030,6 +1049,7 @@ These are improper styles contributed by users, which can be used if
 package"_Section_start.html#start_3.
 
 "cossq"_improper_cossq.html,
+"fourier"_improper_fourier.html,
 "ring"_improper_ring.html :tb(c=4,ea=c)
 
 These are accelerated improper styles, which can be used if LAMMPS is
@@ -1039,7 +1059,7 @@ package"_Section_accelerate.html.
 "class2/omp"_improper_class2.html,
 "cossq/omp"_improper_cossq.html,
 "cvff/omp"_improper_cvff.html,
-"fourier"_improper_fourier.html,
+"fourier/omp"_improper_fourier.html,
 "harmonic/omp"_improper_harmonic.html,
 "ring/omp"_improper_ring.html,
 "umbrella/omp"_improper_umbrella.html :tb(c=4,ea=c,w=100)
@@ -1054,6 +1074,7 @@ Kspace solvers.  Click on the style itself for a full description:
 "ewald"_kspace_style.html,
 "ewald/disp"_kspace_style.html,
 "msm"_kspace_style.html,
+"msm/cg"_kspace_style.html,
 "pppm"_kspace_style.html,
 "pppm/cg"_kspace_style.html,
 "pppm/disp"_kspace_style.html,
@@ -1065,6 +1086,8 @@ built with the "appropriate accelerated
 package"_Section_accelerate.html.
 
 "ewald/omp"_kspace_style.html,
+"msm/omp"_kspace_style.html,
+"msm/cg/omp"_kspace_style.html,
 "pppm/cuda"_kspace_style.html,
 "pppm/gpu"_kspace_style.html,
 "pppm/omp"_kspace_style.html,
