@@ -295,7 +295,6 @@ void FixWallGran::setup(int vflag)
 void FixWallGran::post_force(int vflag)
 {
   double dx,dy,dz,del1,del2,delxy,delr,rsq;
-  fwall[0] = fwall[1] = fwall[2] = fwall_all[0] = fwall_all[1] = fwall_all[2] = 0.0;
 
   // if wiggle or shear, set wall position and velocity accordingly
   // if wtranslate lo and hi track the wall position and velwall is set in the constructor
@@ -307,9 +306,13 @@ void FixWallGran::post_force(int vflag)
     }
     velwall[axis] = amplitude*omega*sin(arg);
   } else if (wtranslate || wscontrol) {
-      if (wscontrol) velscontrol(); // velocty calculation for stress control
+      // velocity calculation for stress control- uses fwall_all from previous timestep
+      // not performed for first timestep after wall defined
+      if (wscontrol) velscontrol();
       move_wall(); // move_wall will update hi & lo
   } else if (wshear) velwall[axis] = vshear;
+
+  fwall[0] = fwall[1] = fwall[2] = 0.0; //per-processor force// fwall_all[0] = fwall_all[1] = fwall_all[2] = 0.0;
 
   // loop over all my atoms
   // rsq = distance from wall
@@ -925,15 +928,16 @@ void FixWallGran::velscontrol() {
    targetf = input->variable->compute_equal(fvar);
    //modify->addstep_compute(update->ntimestep + 1);needed???
  }
- velwall[wallstyle] = gain * (targetf - fwall_all[wallstyle]);
+ if (update->ntimestep != time_origin) velwall[wallstyle] = gain * (targetf - fwall_all[wallstyle]);
+ else error->warning(FLERR,"No velocity set for first timestep after fix_wall_gran definition");
 
 }
 
 /* ---------------------------------------------------------------------- 
 A function that calculates the outputs of the fix
-fid[0]:low wall position
-fid[1]:high wall position
-fid[2-5]:forces on wall
+1st output:low wall position
+2nd output:high wall position
+3rd-5th outputs:forces on atoms by wall
 ------------------------------------------------------------------------- */
 
 double FixWallGran::compute_vector(int n)
@@ -943,6 +947,7 @@ double FixWallGran::compute_vector(int n)
   if (n == 1) return hi;
   // only sum across procs one time?? //if (eflag == 0) {??
   MPI_Allreduce(fwall,fwall_all,3,MPI_DOUBLE,MPI_SUM,world);
+  if (update->ntimestep == time_origin) error->warning(FLERR,"Force output by fix_wall_gran not computed properly");
   if (n>4) error->all(FLERR,"Illegal fix_wall_gran output");
   return fwall_all[n-2];
 }
