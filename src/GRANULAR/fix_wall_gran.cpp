@@ -306,10 +306,7 @@ void FixWallGran::post_force(int vflag)
     }
     velwall[axis] = amplitude*omega*sin(arg);
   } else if (wtranslate || wscontrol) {
-      // velocity calculation for stress control- uses fwall_all from previous timestep
-      // not performed for first timestep after wall defined
-      if (wscontrol) velscontrol();
-      move_wall(); // move_wall will update hi & lo
+      if (shearupdate) move_wall(); // move_wall will update hi & lo
   } else if (wshear) velwall[axis] = vshear;
 
   fwall[0] = fwall[1] = fwall[2] = 0.0; //per-processor force// fwall_all[0] = fwall_all[1] = fwall_all[2] = 0.0;
@@ -393,6 +390,7 @@ void FixWallGran::post_force(int vflag)
       }
     }
   }
+  if (wscontrol) velscontrol();   // velocity calculation for next timestep
 }
 
 /* ---------------------------------------------------------------------- */
@@ -928,8 +926,8 @@ void FixWallGran::velscontrol() {
    targetf = input->variable->compute_equal(fvar);
    //modify->addstep_compute(update->ntimestep + 1);needed???
  }
- if (update->ntimestep != time_origin) velwall[wallstyle] = gain * (targetf - fwall_all[wallstyle]);
- else error->warning(FLERR,"No velocity set for first timestep after fix_wall_gran definition");
+ //if (update->ntimestep != time_origin)
+ velwall[wallstyle] = gain * (targetf - fwall_all[wallstyle]);
 
 }
 
