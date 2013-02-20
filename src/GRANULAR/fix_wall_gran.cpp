@@ -46,6 +46,7 @@ enum{HOOKE,HOOKE_HISTORY,HERTZ_HISTORY};
 FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg)
 {
+  virial_flag = 1; // this fix can contribute to compute stress/atom
   if (narg < 10) error->all(FLERR,"Illegal fix wall/gran command");
 
   if (!atom->sphere_flag)
@@ -294,6 +295,10 @@ void FixWallGran::setup(int vflag)
 
 void FixWallGran::post_force(int vflag)
 {
+  // virial setup
+  if (vflag) v_setup(vflag);
+  else evflag = 0;
+
   double dx,dy,dz,del1,del2,delxy,delr,rsq;
 
   // if wiggle or shear, set wall position and velocity accordingly
@@ -380,13 +385,13 @@ void FixWallGran::post_force(int vflag)
       } else {
         if (pairstyle == HOOKE)
           hooke(rsq,dx,dy,dz,velwall,v[i],f[i],omega[i],torque[i],
-                radius[i],rmass[i]);
+                radius[i],rmass[i],i);
         else if (pairstyle == HOOKE_HISTORY)
           hooke_history(rsq,dx,dy,dz,velwall,v[i],f[i],omega[i],torque[i],
-                        radius[i],rmass[i],shear[i]);
+                        radius[i],rmass[i],shear[i],i);
         else if (pairstyle == HERTZ_HISTORY)
           hertz_history(rsq,dx,dy,dz,velwall,v[i],f[i],omega[i],torque[i],
-                        radius[i],rmass[i],shear[i]);
+                        radius[i],rmass[i],shear[i],i);
       }
     }
   }
@@ -405,7 +410,7 @@ void FixWallGran::post_force_respa(int vflag, int ilevel, int iloop)
 void FixWallGran::hooke(double rsq, double dx, double dy, double dz,
                         double *vwall, double *v,
                         double *f, double *omega, double *torque,
-                        double radius, double mass)
+                        double radius, double mass, int i)
 {
   double r,vr1,vr2,vr3,vnnr,vn1,vn2,vn3,vt1,vt2,vt3;
   double meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
@@ -481,6 +486,7 @@ void FixWallGran::hooke(double rsq, double dx, double dy, double dz,
   fwall[0] += fx;
   fwall[1] += fy;
   fwall[2] += fz;
+  if (evflag) ev_tally_wall(i,fx,fy,fz,dx,dy,dz,radius);
 
 }
 
@@ -489,7 +495,7 @@ void FixWallGran::hooke(double rsq, double dx, double dy, double dz,
 void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
                                 double *vwall, double *v,
                                 double *f, double *omega, double *torque,
-                                double radius, double mass, double *shear)
+                                double radius, double mass, double *shear, int i)
 {
   double r,vr1,vr2,vr3,vnnr,vn1,vn2,vn3,vt1,vt2,vt3;
   double meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
@@ -596,6 +602,8 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
   fwall[0] += fx;
   fwall[1] += fy;
   fwall[2] += fz;
+  if (evflag) ev_tally_wall(i,fx,fy,fz,dx,dy,dz,radius);
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -603,7 +611,7 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
 void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
                                 double *vwall, double *v,
                                 double *f, double *omega, double *torque,
-                                double radius, double mass, double *shear)
+                                double radius, double mass, double *shear, int i)
 {
   double r,vr1,vr2,vr3,vnnr,vn1,vn2,vn3,vt1,vt2,vt3;
   double meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
@@ -712,6 +720,8 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
   fwall[0] += fx;
   fwall[1] += fy;
   fwall[2] += fz;
+  if (evflag) ev_tally_wall(i,fx,fy,fz,dx,dy,dz,radius);
+
 }
 
 /* ----------------------------------------------------------------------
@@ -723,6 +733,7 @@ double FixWallGran::memory_usage()
   int nmax = atom->nmax;
   double bytes = nmax * sizeof(int);
   bytes += 3*nmax * sizeof(double);
+  //add vatom memory!
   return bytes;
 }
 
@@ -950,3 +961,37 @@ double FixWallGran::compute_vector(int n)
   return fwall_all[n-2];
 }
 
+/* ---------------------------------------------------------------------- 
+Adds the wall forces to the per-atom stress accessed through
+compute stress/atom
+------------------------------------------------------------------------- */
+
+void FixWallGran::ev_tally_wall(int i, double fx, double fy, double fz,
+			double dx, double dy, double dz, double radi)
+{
+
+    double volume;
+
+    //calculate stresses and assign them to vatom array
+    //if (vflag_either) {
+        if (vflag_atom) {
+          //if (i < nlocal) {//i already lower than nlocal
+            //volume of the particle
+            if(domain->dimension == 3)
+                volume = 4.0*MY_PI/3.0 * radi*radi*radi; //sphere
+            else if (domain->dimension == 2)
+                volume = MY_PI * radi*radi; //disk
+            else
+                error->all(FLERR,"Cannot read correct dimension");
+
+            vatom[i][0] += dx * fx / volume;
+            vatom[i][1] += dy * fy / volume;
+            vatom[i][2] += dz * fz / volume;
+            vatom[i][3] += dx * fy / volume;
+            vatom[i][4] += dx * fz / volume;
+            vatom[i][5] += dy * fz / volume;
+          //}
+        }
+    //}
+
+}
