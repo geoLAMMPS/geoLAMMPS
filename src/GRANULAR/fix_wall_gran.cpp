@@ -897,6 +897,37 @@ int FixWallGran::modify_param(int narg, char **arg)
          fprintf(screen, "changed wall velocity to [ %e %e %e ]\n",velwall[0],velwall[1],velwall[2]);
       }
     }
+    else if (strcmp(arg[argsread],"stresscontrol") == 0) {
+      if (wtranslate == 1 && wscontrol == 0 && strcmp(arg[argsread+1],"off") == 0) {
+        error->all(FLERR,"Illegal fix modify wall/gran command");
+      }
+      wscontrol = 1;
+      wtranslate = 1;
+      if (strcmp(arg[argsread+1],"off") == 0) {
+        wscontrol = 0;
+        wtranslate = 0;
+        ftvarying = 0;
+        if (fstr) delete [] fstr;
+        gain = 0.0;
+        argsread += 2;
+        fprintf(screen, "stopped wall stress control\n");
+      } else if (strstr(arg[argsread+1],"v_") == arg[argsread+1]) {
+        ftvarying = 1;
+        int nn = strlen(&arg[argsread+1][2]) + 1;
+        if (fstr) delete [] fstr;// command to extend fstr?
+        fstr = new char[nn];
+        strcpy(fstr,&arg[argsread+1][2]);
+        gain = atof(arg[argsread+2]);
+        argsread += 3;
+        fprintf(screen, "Set wall stress control with varying target force\n");
+      } else {
+        targetf = atof(arg[argsread+1]);
+        ftvarying = 0;
+        gain = atof(arg[argsread+2]);
+        argsread += 3;
+        fprintf(screen, "Set wall stress control with constant target force\n");
+      }
+    }
     else {
        fprintf(screen,"Argument %s not yet supported\n",arg[argsread]);
        error->all(FLERR,"Illegal fix modify wall/gran command");
