@@ -53,7 +53,8 @@ class ThrData {
   void init_eam(int, double *);                       // EAM
   void init_eim(int, double *, double *);             // EIM (+ EAM)
 
-  void init_pppm(void *r1d) { _rho1d = r1d; };
+  void init_pppm(int, class Memory *);
+  void init_pppm_disp(int, class Memory *);
 
   // access methods for arrays that we handle in this class
   double **get_lambda() const { return _lambda; };
@@ -63,6 +64,9 @@ class ThrData {
   double *get_rho() const { return _rho; };
   double *get_rhoB() const { return _rhoB; };
   void *get_rho1d() const { return _rho1d; };
+  void *get_drho1d() const { return _drho1d; };
+  void *get_rho1d_6() const { return _rho1d_6; };
+  void *get_drho1d_6() const { return _drho1d_6; };
 
  private:
   double eng_vdwl;        // non-bonded non-coulomb energy
@@ -108,7 +112,10 @@ class ThrData {
 
   // this is for pppm/omp
   void *_rho1d;
-
+  void *_drho1d;
+  // this is for pppm/disp/omp
+  void *_rho1d_6;
+  void *_drho1d_6;
   // my thread id
   const int _tid;
 

@@ -21,16 +21,11 @@ AtomStyle(body,AtomVecBody)
 #define LMP_ATOM_VEC_BODY_H
 
 #include "atom_vec.h"
+#include "my_pool.h"
 
 namespace LAMMPS_NS {
 
 class AtomVecBody : public AtomVec {
-    friend class Comm;
-
-
-
-
-
  public:
   class Body *bptr;
 
@@ -38,6 +33,7 @@ class AtomVecBody : public AtomVec {
     double quat[4];
     double inertia[3];
     int ninteger,ndouble;
+    int iindex,dindex;
     int *ivalue;
     double *dvalue;
     int ilocal;
@@ -100,6 +96,9 @@ class AtomVecBody : public AtomVec {
   int copyflag;
   int intdoubleratio;    // sizeof(double) / sizeof(int)
 
+  MyPool<int> *icp;
+  MyPool<double> *dcp;
+
   void grow_bonus();
   void copy_bonus(int, int);
   //void check(int);
@@ -112,9 +111,17 @@ class AtomVecBody : public AtomVec {
 
 /* ERROR/WARNING messages:
 
-E: Atom_style tri can only be used in 3d simulations
+E: Internal error in atom_style body
 
-Self-explanatory.
+This error should not occur.  Contact the developers.
+
+E: Invalid atom_style body command
+
+No body style argument was provided.
+
+E: Invalid body style
+
+The choice of body style is unknown.
 
 E: Per-processor system is too big
 
@@ -133,22 +140,8 @@ E: Invalid density in Atoms section of data file
 
 Density value cannot be <= 0.0.
 
-E: Assigning tri parameters to non-tri atom
+E: Assigning body parameters to non-body atom
 
 Self-explanatory.
-
-E: Invalid shape in Triangles section of data file
-
-Two or more of the triangle corners are duplicate points.
-
-E: Inconsistent triangle in data file
-
-The centroid of the triangle as defined by the corner points is not
-the atom coordinate.
-
-E: Insufficient Jacobi rotations for triangle
-
-The calculation of the intertia tensor of the triangle failed.  This
-should not happen if it is a reasonably shaped triangle.
 
 */

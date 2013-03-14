@@ -21,13 +21,14 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "memory.h"
+
 using namespace LAMMPS_NS;
 
 
 ThrData::ThrData(int tid)
-  : _f(NULL), _torque(NULL), _erforce(NULL), _de(NULL), _drho(NULL), _mu(NULL),
-    _lambda(NULL), _rhoB(NULL), _D_values(NULL), _rho(NULL), _fp(NULL),
-    _rho1d(NULL), _tid(tid)
+  : _f(0),_torque(0),_erforce(0),_de(0),_drho(0),_mu(0),_lambda(0),_rhoB(0),
+    _D_values(0),_rho(0),_fp(0),_rho1d(0),_drho1d(0),_tid(tid)
 {
   // nothing else to do here.
 }
@@ -135,6 +136,61 @@ void ThrData::init_eim(int nall, double *rho, double *fp)
   if (nall > 0)
     memset(_fp,0,nall*sizeof(double));
 }
+
+/* ----------------------------------------------------------------------
+   if order > 0 : set up per thread storage for PPPM
+   if order < 0 : free per thread storage for PPPM
+------------------------------------------------------------------------- */
+#if defined(FFT_SINGLE)
+typedef float FFT_SCALAR;
+#else
+typedef double FFT_SCALAR;
+#endif
+
+void ThrData::init_pppm(int order, Memory *memory)
+{
+  FFT_SCALAR **rho1d, **drho1d;
+  if (order > 0) {
+      memory->create2d_offset(rho1d,3,-order/2,order/2,"thr_data:rho1d");
+      memory->create2d_offset(drho1d,3,-order/2,order/2,"thr_data:drho1d");
+      _rho1d = static_cast<void *>(rho1d);
+      _drho1d = static_cast<void *>(drho1d);
+  } else {
+    order = -order;
+    rho1d = static_cast<FFT_SCALAR **>(_rho1d);
+    drho1d = static_cast<FFT_SCALAR **>(_drho1d);
+    memory->destroy2d_offset(rho1d,-order/2);
+    memory->destroy2d_offset(drho1d,-order/2);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   if order > 0 : set up per thread storage for PPPM
+   if order < 0 : free per thread storage for PPPM
+------------------------------------------------------------------------- */
+#if defined(FFT_SINGLE)
+typedef float FFT_SCALAR;
+#else
+typedef double FFT_SCALAR;
+#endif
+
+void ThrData::init_pppm_disp(int order_6, Memory *memory)
+{
+  FFT_SCALAR **rho1d_6, **drho1d_6;
+  if (order_6 > 0) {
+      memory->create2d_offset(rho1d_6,3,-order_6/2,order_6/2,"thr_data:rho1d_6");
+      memory->create2d_offset(drho1d_6,3,-order_6/2,order_6/2,"thr_data:drho1d_6");
+      _rho1d_6 = static_cast<void *>(rho1d_6);
+      _drho1d_6 = static_cast<void *>(drho1d_6);
+  } else {
+    order_6 = -order_6;
+    rho1d_6 = static_cast<FFT_SCALAR **>(_rho1d_6);
+    drho1d_6 = static_cast<FFT_SCALAR **>(_drho1d_6);
+    memory->destroy2d_offset(rho1d_6,-order_6/2);
+    memory->destroy2d_offset(drho1d_6,-order_6/2);
+  }
+}
+
 
 /* ----------------------------------------------------------------------
    compute global pair virial via summing F dot r over own & ghost atoms
