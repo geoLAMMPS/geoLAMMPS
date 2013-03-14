@@ -18,8 +18,12 @@ include ..\/VORONOI\/Makefile.lammps
 ' ../Makefile.package.settings
   fi
 
-  cp compute_voronoi_atom.h ..
-  cp compute_voronoi_atom.cpp ..
+  cp -p compute_laguerre_atom.h ..
+  cp -p compute_voronoi_atom.h ..
+  cp -p fix_membrane_gran.h ..
+  cp -p compute_laguerre_atom.cpp ..
+  cp -p compute_voronoi_atom.cpp ..
+  cp -p fix_membrane_gran.cpp ..
 
 elif (test $1 = 0) then
 
@@ -31,6 +35,10 @@ elif (test $1 = 0) then
     sed -i -e '/^include.*VORONOI.*$/d' ../Makefile.package.settings
   fi
 
+  rm -f ../compute_laguerre_atom.h
   rm -f ../compute_voronoi_atom.h
+  rm -f ../fix_membrane_gran.h
+  rm -f ../compute_laguerre_atom.cpp
   rm -f ../compute_voronoi_atom.cpp
+  rm -f ../fix_membrane_gran.cpp
 fi
