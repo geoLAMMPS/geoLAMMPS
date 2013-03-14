@@ -69,15 +69,16 @@ class FixWallGran : public Fix {
   int shearupdate;
 
   void hooke(double, double, double, double, double *,
-             double *, double *, double *, double *, double, double);
+             double *, double *, double *, double *, double, double, int);
   void hooke_history(double, double, double, double, double *,
                      double *, double *, double *, double *, double, double,
-                     double *);
+                     double *, int);
   void hertz_history(double, double, double, double, double *,
                      double *, double *, double *, double *, double, double,
-                     double *);
+                     double *, int);
   void move_wall();
   void velscontrol();
+  void ev_tally_wall(int, double, double, double, double, double, double, double);
 };
 
 }
