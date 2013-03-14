@@ -2,25 +2,25 @@
 
 if (test $1 = 1) then
 
-  cp compute_coord_gran.cpp ..
-  cp fix_fluiddrag.cpp ..
-  cp fix_freeze.cpp ..
-  cp fix_pour.cpp ..
-  cp fix_wall_gran.cpp ..
-  cp pair_gran_hertz_history.cpp ..
-  cp pair_gran_hooke.cpp ..
-  cp pair_gran_hooke_history.cpp ..
-  cp pair_gran_shm_history.cpp ..
+  cp -p compute_coord_gran.cpp ..
+  cp -p fix_fluiddrag.cpp ..
+  cp -p fix_freeze.cpp ..
+  cp -p fix_pour.cpp ..
+  cp -p fix_wall_gran.cpp ..
+  cp -p pair_gran_hertz_history.cpp ..
+  cp -p pair_gran_hooke.cpp ..
+  cp -p pair_gran_hooke_history.cpp ..
+  cp -p pair_gran_shm_history.cpp ..
 
-  cp compute_coord_gran.h ..
-  cp fix_fluiddrag.h ..
-  cp fix_freeze.h ..
-  cp fix_pour.h ..
-  cp fix_wall_gran.h ..
-  cp pair_gran_hertz_history.h ..
-  cp pair_gran_hooke.h ..
-  cp pair_gran_hooke_history.h ..
-  cp pair_gran_shm_history.h ..
+  cp -p compute_coord_gran.h ..
+  cp -p fix_fluiddrag.h ..
+  cp -p fix_freeze.h ..
+  cp -p fix_pour.h ..
+  cp -p fix_wall_gran.h ..
+  cp -p pair_gran_hertz_history.h ..
+  cp -p pair_gran_hooke.h ..
+  cp -p pair_gran_hooke_history.h ..
+  cp -p pair_gran_shm_history.h ..
 
 elif (test $1 = 0) then
 
