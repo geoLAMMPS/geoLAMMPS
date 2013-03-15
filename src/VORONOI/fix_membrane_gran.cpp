@@ -131,7 +131,6 @@ int FixMembraneGran::setmask()
 
 void FixMembraneGran::init()
 {
- printf("init started ok\n");
   if (domain->dimension != 3)
     error->all(FLERR,"Fix membrane/gran only coded for 3d systems at the moment");
 
@@ -167,7 +166,6 @@ void FixMembraneGran::setup(int vflag)
 
 void FixMembraneGran::post_force(int vflag)
 {
- printf("post_force started ok\n");
 
   //FROM compute! Modify cause some things not needed!
 
@@ -362,7 +360,7 @@ void FixMembraneGran::post_force(int vflag)
               fx-=pressurez*areas[kk]*nx;
               fy-=pressurez*areas[kk]*ny;
               fz-=pressurez*areas[kk]*nz;
-            } else error->all(FLERR,"Error in fix/membrane/gran - what is whichmem?");
+            } else if (xflag*yflag*zflag!=0) error->all(FLERR,"Error in fix/membrane/gran - what is whichmem?");
 
             if (verflag == 1) { // the vertices of the kk'th face are needed
               cimag.face_vertices(iverts);
