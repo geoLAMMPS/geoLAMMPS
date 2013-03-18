@@ -326,42 +326,7 @@ void FixMembraneGran::post_force(int vflag)
         //loop through neighimag and get areas id<=-7
         for (kk = 0; kk < maxk; kk++) {
           if (neighimag[kk]>=nall + 1) {
-            thisis=neighimag[kk]%(nall + 1); // the id of grain
-            whichmem=neighimag[kk]/(nall + 1); // the id of membrane
-            fprintf(fpp1,"%d %f %f %f %d %d %f %f %f ",i,x[i][0],x[i][1],x[i][2],neighimag[kk],thisis,x[thisis][0],x[thisis][1],x[thisis][2]);
-            cimag.face_areas(areas);
-            cimag.normals(vnormal);
-            magnorminv=1.0/sqrt(vnormal[0]*vnormal[0]+vnormal[1]*vnormal[1]+vnormal[2]*vnormal[2]);
-            nx=vnormal[kk*3]*magnorminv;// why not vnormal[kk]???
-            ny=vnormal[kk*3+1]*magnorminv;
-            nz=vnormal[kk*3+2]*magnorminv;
-            //add leverarm of fx,fy and fz!!!!
-            if ((whichmem==1 || whichmem==2) && xflag==1) {
-            /*  fx+=pressurex*areas[kk]*nx; // it seems that nx,ny,nz always points outwards
-              fy+=pressurex*areas[kk]*ny;
-              fz+=pressurex*areas[kk]*nz;
-            } else if (whichmem==2) {*/
-              fx-=pressurex*areas[kk]*nx;
-              fy-=pressurex*areas[kk]*ny;
-              fz-=pressurex*areas[kk]*nz;
-            } else if ((whichmem==3 || whichmem==4) && yflag==1) {
-              /*fx+=pressurey*areas[kk]*nx;
-              fy+=pressurey*areas[kk]*ny;
-              fz+=pressurey*areas[kk]*nz;//Check all these again!
-            } else if (whichmem==4) {*/
-              fx-=pressurey*areas[kk]*nx;
-              fy-=pressurey*areas[kk]*ny;
-              fz-=pressurey*areas[kk]*nz;
-            } else if ((whichmem==5 || whichmem==6) && zflag==1) {
-              /*fx+=pressurez*areas[kk]*nx;
-              fy+=pressurez*areas[kk]*ny;
-              fz+=pressurez*areas[kk]*nz;
-            } else if (whichmem==6) {*/
-              fx-=pressurez*areas[kk]*nx;
-              fy-=pressurez*areas[kk]*ny;
-              fz-=pressurez*areas[kk]*nz;
-            } else if (xflag*yflag*zflag!=0) error->all(FLERR,"Error in fix/membrane/gran - what is whichmem?");
-
+            // first print out vertices information
             if (verflag == 1) { // the vertices of the kk'th face are needed
               cimag.face_vertices(iverts);
               cimag.vertices(x[i][0],x[i][1],x[i][2],xyzverts);
@@ -379,9 +344,54 @@ void FixMembraneGran::post_force(int vflag)
                  }
               }
             }
+            // then do the force calculation
 
-       fprintf(fpp2,"%d %d %e %e %e %e %e %e %e\n",i,whichmem,fx,fy,fz,areas[kk],nx,ny,nz);
-
+            thisis=neighimag[kk]%(nall + 1); // the id of grain
+            whichmem=neighimag[kk]/(nall + 1); // the id of membrane
+            fprintf(fpp1,"%d %f %f %f %d %d %f %f %f ",i,x[i][0],x[i][1],x[i][2],neighimag[kk],thisis,x[thisis][0],x[thisis][1],x[thisis][2]);
+            cimag.face_areas(areas);
+            cimag.normals(vnormal);
+            int sizeA= areas.size();
+            int sizen= vnormal.size();
+            if (sizeA*3!=sizen) printf("size of areas =%d and size of normals = %d\n",sizeA,sizen);
+            magnorminv=1.0/sqrt(vnormal[kk*3]*vnormal[kk*3]+vnormal[kk*3+1]*vnormal[kk*3+1]+vnormal[kk*3+2]*vnormal[kk*3+2]);
+            if (vnormal[kk*3]==0.0 && vnormal[kk*3+1]==0.0 && vnormal[kk*3+2]==0.0) printf("Found zero normal, area=%e\n",areas[kk]);
+            else {
+             if (sqrt(vnormal[kk*3]*vnormal[kk*3]+vnormal[kk*3+1]*vnormal[kk*3+1]+vnormal[kk*3+2]*vnormal[kk*3+2])==0.0) {
+              printf("timestep %d and area %e and normal [%e %e %e]\n",update->ntimestep,areas[kk],vnormal[kk*3],vnormal[kk*3+1],vnormal[kk*3+2]);
+              error->all(FLERR,"Divide by zero in membrane!");
+             }
+             nx=vnormal[kk*3]*magnorminv;// why not vnormal[kk]???
+             ny=vnormal[kk*3+1]*magnorminv;
+             nz=vnormal[kk*3+2]*magnorminv;
+             //add leverarm of fx,fy and fz!!!!
+             if ((whichmem==1 || whichmem==2) && xflag==1) {
+             /*  fx+=pressurex*areas[kk]*nx; // it seems that nx,ny,nz always points outwards
+              fy+=pressurex*areas[kk]*ny;
+              fz+=pressurex*areas[kk]*nz;
+             } else if (whichmem==2) {*/
+              fx-=pressurex*areas[kk]*nx;
+              fy-=pressurex*areas[kk]*ny;
+              fz-=pressurex*areas[kk]*nz;
+             } else if ((whichmem==3 || whichmem==4) && yflag==1) {
+              /*fx+=pressurey*areas[kk]*nx;
+              fy+=pressurey*areas[kk]*ny;
+              fz+=pressurey*areas[kk]*nz;//Check all these again!
+             } else if (whichmem==4) {*/
+              fx-=pressurey*areas[kk]*nx;
+              fy-=pressurey*areas[kk]*ny;
+              fz-=pressurey*areas[kk]*nz;
+             } else if ((whichmem==5 || whichmem==6) && zflag==1) {
+              /*fx+=pressurez*areas[kk]*nx;
+              fy+=pressurez*areas[kk]*ny;
+              fz+=pressurez*areas[kk]*nz;
+             } else if (whichmem==6) {*/
+              fx-=pressurez*areas[kk]*nx;
+              fy-=pressurez*areas[kk]*ny;
+              fz-=pressurez*areas[kk]*nz;
+             } else if (xflag*yflag*zflag!=0) error->all(FLERR,"Error in fix/membrane/gran - what is whichmem?");
+             fprintf(fpp2,"%d %d %e %e %e %e %e %e %e\n",i,whichmem,fx,fy,fz,areas[kk],nx,ny,nz);
+            }
           }
         }
        f[i][0]+=fx;
