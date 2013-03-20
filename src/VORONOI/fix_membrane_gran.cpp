@@ -229,14 +229,16 @@ void FixMembraneGran::post_force(int vflag)
   std::vector<double> areas,vnormal;
   std::vector<double> xyzverts;
 
- FILE *fpp,*fpp1,*fpp2;
+ FILE *fpp,*fpp1,*fpp2,*fpp0;
 
  fpp = fopen("/home/gmarketo/LammpsWork/ForgitLAMMPS/ForGMmain/Membrane/FixOldEdges.txt","w");
  fpp1 = fopen("/home/gmarketo/LammpsWork/ForgitLAMMPS/ForGMmain/Membrane/FixNewEdges.txt","w");
  fpp2 = fopen("/home/gmarketo/LammpsWork/ForgitLAMMPS/ForGMmain/Membrane/FixAddForces.txt","w");
- fprintf(fpp2,"%%i,whichmem,fx,fy,fz,area[kk],nx,ny,nz\n");
- fprintf(fpp1,"%% i,x[i][0],x[i][1],x[i][2],neighimag[kk],thisis,x[thisis][0],x[thisis][1],x[thisis][2],    VORONOI VERTICES\n");
+ fpp0 = fopen("/home/gmarketo/LammpsWork/ForgitLAMMPS/ForGMmain/Membrane/Areas0Normal.txt","w");
+ fprintf(fpp2,"%%i,whichmem,neighimag[kk],fx,fy,fz,area[kk],nx,ny,nz\n");
+ fprintf(fpp1,"%% i,x[i][0],x[i][1],x[i][2],neighimag[kk],thisis,x[thisis][0],x[thisis][1],x[thisis][2],whichmem,    VORONOI VERTICES\n");
  fprintf(fpp,"%% i,x[i][0],x[i][1],x[i][2],neigh[kk],idimag\n");
+ fprintf(fpp0,"%%Vertices with zero normals\n");
 
  int memflag,verflag;
  memflag = verflag = 1;
@@ -327,6 +329,9 @@ void FixMembraneGran::post_force(int vflag)
         for (kk = 0; kk < maxk; kk++) {
           if (neighimag[kk]>=nall + 1) {
             // first print out vertices information
+            thisis=neighimag[kk]%(nall + 1); // the id of grain
+            whichmem=neighimag[kk]/(nall + 1); // the id of membrane
+            fprintf(fpp1,"%d %f %f %f %d %d %f %f %f %d ",i,x[i][0],x[i][1],x[i][2],neighimag[kk],thisis,x[thisis][0],x[thisis][1],x[thisis][2],whichmem);
             if (verflag == 1) { // the vertices of the kk'th face are needed
               cimag.face_vertices(iverts);
               cimag.vertices(x[i][0],x[i][1],x[i][2],xyzverts);
@@ -345,17 +350,16 @@ void FixMembraneGran::post_force(int vflag)
               }
             }
             // then do the force calculation
-
-            thisis=neighimag[kk]%(nall + 1); // the id of grain
-            whichmem=neighimag[kk]/(nall + 1); // the id of membrane
-            fprintf(fpp1,"%d %f %f %f %d %d %f %f %f ",i,x[i][0],x[i][1],x[i][2],neighimag[kk],thisis,x[thisis][0],x[thisis][1],x[thisis][2]);
             cimag.face_areas(areas);
             cimag.normals(vnormal);
             int sizeA= areas.size();
             int sizen= vnormal.size();
             if (sizeA*3!=sizen) printf("size of areas =%d and size of normals = %d\n",sizeA,sizen);
             magnorminv=1.0/sqrt(vnormal[kk*3]*vnormal[kk*3]+vnormal[kk*3+1]*vnormal[kk*3+1]+vnormal[kk*3+2]*vnormal[kk*3+2]);
-            if (vnormal[kk*3]==0.0 && vnormal[kk*3+1]==0.0 && vnormal[kk*3+2]==0.0) printf("Found zero normal, area=%e\n",areas[kk]);
+            if (vnormal[kk*3]==0.0 && vnormal[kk*3+1]==0.0 && vnormal[kk*3+2]==0.0) {
+            printf("Found zero normal");
+            fprintf(fpp0,"%d %f \n",i,areas[kk]);
+            }
             else {
              if (sqrt(vnormal[kk*3]*vnormal[kk*3]+vnormal[kk*3+1]*vnormal[kk*3+1]+vnormal[kk*3+2]*vnormal[kk*3+2])==0.0) {
               printf("timestep %d and area %e and normal [%e %e %e]\n",update->ntimestep,areas[kk],vnormal[kk*3],vnormal[kk*3+1],vnormal[kk*3+2]);
@@ -390,7 +394,7 @@ void FixMembraneGran::post_force(int vflag)
               fy-=pressurez*areas[kk]*ny;
               fz-=pressurez*areas[kk]*nz;
              } else if (xflag*yflag*zflag!=0) error->all(FLERR,"Error in fix/membrane/gran - what is whichmem?");
-             fprintf(fpp2,"%d %d %e %e %e %e %e %e %e\n",i,whichmem,fx,fy,fz,areas[kk],nx,ny,nz);
+             fprintf(fpp2,"%d %d %d %e %e %e %e %e %e %e\n",i,whichmem,neighimag[kk],fx,fy,fz,areas[kk],nx,ny,nz);
             }
           }
         }
@@ -407,7 +411,7 @@ void FixMembraneGran::post_force(int vflag)
 
 fclose(fpp1);
 fclose(fpp2);
-
+fclose(fpp0);
 
 
 
