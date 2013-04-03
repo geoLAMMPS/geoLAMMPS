@@ -168,6 +168,8 @@ PPPMDisp::PPPMDisp(LAMMPS *lmp, int narg, char **arg) : KSpace(lmp, narg, arg)
   cg_peratom = NULL;
   cg_6 = NULL;
   cg_peratom_6 = NULL;
+
+  memset(function, 0, EWALD_FUNCS*sizeof(int));
 }
 
 /* ----------------------------------------------------------------------
@@ -221,10 +223,11 @@ void PPPMDisp::init()
   }
 
   // free all arrays previously allocated
-
   deallocate();
   deallocate_peratom(); 
   peratom_allocate_flag = 0;
+
+
 
   // set scale
 
@@ -3354,11 +3357,13 @@ void PPPMDisp::compute_gf_6()
       
 	sqk = pow(qx,2.0) + pow(qy,2.0) + pow(qz,2.0);
 
-	denominator = gf_denom(snx2,sny2,snz2, gf_b_6, order_6); 
-	rtsqk = sqrt(sqk);
-        term = (1-2*sqk*inv2ew*inv2ew)*sx*sy*sz +
-                2*sqk*rtsqk*inv2ew*inv2ew*inv2ew*rtpi*erfc(rtsqk*inv2ew);
-	greensfn_6[n++] = numerator*term*wx*wy*wz/denominator;
+        if (sqk != 0.0) {
+	  denominator = gf_denom(snx2,sny2,snz2, gf_b_6, order_6); 
+	  rtsqk = sqrt(sqk);
+          term = (1-2*sqk*inv2ew*inv2ew)*sx*sy*sz +
+                  2*sqk*rtsqk*inv2ew*inv2ew*inv2ew*rtpi*erfc(rtsqk*inv2ew);
+	  greensfn_6[n++] = numerator*term*wx*wy*wz/denominator;
+        } else greensfn_6[n++] = 0.0;
       }
     }
   }
