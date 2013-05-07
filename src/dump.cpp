@@ -890,5 +890,10 @@ bigint Dump::memory_usage()
     bytes += memory->usage(proclist,maxproc);
     if (irregular) bytes += irregular->memory_usage();
   }
+
+  //~ If vtkflag is active, buf is copied to secondbuf [KH - 7 May 2013]
+  if (vtkflag)
+    bytes += memory->usage(buf,size_one*maxbuf);
+
   return bytes;
 }

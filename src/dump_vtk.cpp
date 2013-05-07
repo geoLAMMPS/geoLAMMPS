@@ -326,7 +326,7 @@ void DumpVTK::header_item(bigint ndump)
   fprintf(fp,"<?xml version=\"1.0\"?>\n");
   fprintf(fp,"<VTKFile type=\"PolyData\" version=\"0.1\" format=\"ascii\">\n");
   fprintf(fp,"<PolyData>\n");
-  fprintf(fp,"<Piece NumberOfPoints=\"%i\">\n",ndump);
+  fprintf(fp,"<Piece NumberOfPoints=\""BIGINT_FORMAT"\">\n",ndump);
   fprintf(fp,"<Points>\n");
   fprintf(fp,"<DataArray type=\"Float32\" NumberOfComponents=\"3\" format=\"ascii\">\n");
 }
