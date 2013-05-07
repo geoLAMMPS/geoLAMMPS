@@ -1,4 +1,4 @@
-# linux = RedHat Linux box, Intel icc, MPICH2, No FFTW
+# cx1 = RedHat Linux box, Intel icc, MPICH2, No FFTW
 
 SHELL = /bin/sh
 
