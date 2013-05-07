@@ -1174,7 +1174,7 @@ double PPPM::final_accuracy()
   bigint natoms = atom->natoms;
 
   double df_kspace = compute_df_kspace();
-  double q2_over_sqrt = q2 / sqrt(natoms*cutoff*xprd*yprd*zprd_slab);
+  double q2_over_sqrt = q2 / sqrt(natoms*cutoff*xprd*yprd*zprd);
   double df_rspace = 2.0 * q2_over_sqrt * exp(-g_ewald*g_ewald*cutoff*cutoff);
   double df_table = estimate_table_accuracy(q2_over_sqrt,df_rspace);
   double estimated_accuracy = sqrt(df_kspace*df_kspace + df_rspace*df_rspace +
@@ -1357,7 +1357,7 @@ void PPPM::compute_gf_denom()
     gf_b[0] = 4.0 * (gf_b[0]*(l-m)*(l-m-0.5));
   }
 
-  int ifact = 1;
+  bigint ifact = 1;
   for (k = 1; k < 2*order; k++) ifact *= k;
   double gaminv = 1.0/ifact;
   for (l = 0; l < order; l++) gf_b[l] *= gaminv;
