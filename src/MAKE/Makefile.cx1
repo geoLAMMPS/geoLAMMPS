@@ -1,21 +1,25 @@
-# cx1 = RedHat Linux box, Intel icpc, MPICH2, FFTW
+# linux = RedHat Linux box, Intel icc, MPICH2, No FFTW
 
 SHELL = /bin/sh
 
 # ---------------------------------------------------------------------
 # compiler/linker settings
 # specify flags and libraries needed for your compiler
-# Note that these flags were based on those in cx1 at /apps/lammps/2010-01-15/src/MAKE
+# This makefile is essentially the one at /apps/lammps/1Feb13/src/MAKE
 
-CC =		mpiicpc
-CCFLAGS =	-O -unroll -ipo
+CC =		mpiicc
+CCFLAGS =	-O -I/apps/voro++/0.4.5/include -I/apps/voro++/0.4.5/include/voro++ #-I$(FFTW_HOME)/include
+SHFLAGS =	-fPIC
 DEPFLAGS =	-M
-LINK =		icpc
-LINKFLAGS =	-O -unroll -ipo
-LIB =           -lstdc++
+
+LINK =		mpiicc -L/apps/voro++/0.4.5/lib #-L$(FFTW_HOME)/lib
+LINKFLAGS =	-O
+LIB =           
+SIZE =		size
+
 ARCHIVE =	ar
 ARFLAGS =	-rc
-SIZE =		size
+SHLIBFLAGS =	-shared
 
 # ---------------------------------------------------------------------
 # LAMMPS-specific settings
@@ -25,7 +29,7 @@ SIZE =		size
 # LAMMPS ifdef settings, OPTIONAL
 # see possible settings in doc/Section_start.html#2_2 (step 4)
 
-LMP_INC =	-DLAMMPS_GZIP
+LMP_INC =	-DLAMMPS_GZIP -DLAMMPS_JPEG
 
 # MPI library, REQUIRED
 # see discussion in doc/Section_start.html#2_2 (step 5)
@@ -34,9 +38,9 @@ LMP_INC =	-DLAMMPS_GZIP
 # PATH = path for MPI library
 # LIB = name of MPI library
 
-MPI_INC =       -DMPICH_IGNORE_CXX_SEEK
+MPI_INC =       -DMPICH_SKIP_MPICXX 
 MPI_PATH = 
-MPI_LIB =	$(MPI_LIBS)
+MPI_LIB =	
 
 # FFT library, OPTIONAL
 # see discussion in doc/Section_start.html#2_2 (step 6)
@@ -47,7 +51,7 @@ MPI_LIB =	$(MPI_LIBS)
 
 FFT_INC =       #-DFFT_FFTW
 FFT_PATH = 
-FFT_LIB =	#L$(FFTW_HOME)/lib -lfftw
+FFT_LIB =	#-lfftw
 
 # JPEG library, OPTIONAL
 # see discussion in doc/Section_start.html#2_2 (step 7)
@@ -56,9 +60,9 @@ FFT_LIB =	#L$(FFTW_HOME)/lib -lfftw
 # PATH = path for JPEG library
 # LIB = name of JPEG library
 
-#JPG_INC =       
-#JPG_PATH = 	
-#JPG_LIB =	-ljpeg
+JPG_INC =       
+JPG_PATH = 	
+JPG_LIB =	-ljpeg
 
 # ---------------------------------------------------------------------
 # build rules and dependencies
@@ -67,9 +71,14 @@ FFT_LIB =	#L$(FFTW_HOME)/lib -lfftw
 include	Makefile.package.settings
 include	Makefile.package
 
-EXTRA_INC = $(LMP_INC) $(PKG_INC) $(MPI_INC) $(FFT_INC) $(PKG_SYSINC)
-EXTRA_PATH = $(PKG_PATH) $(MPI_PATH) $(FFT_PATH) $(PKG_SYSPATH)
-EXTRA_LIB = $(PKG_LIB) $(MPI_LIB) $(FFT_LIB) $(PKG_SYSLIB)
+EXTRA_INC = $(LMP_INC) $(PKG_INC) $(MPI_INC) $(FFT_INC) $(JPG_INC) $(PKG_SYSINC)
+EXTRA_PATH = $(PKG_PATH) $(MPI_PATH) $(FFT_PATH) $(JPG_PATH) $(PKG_SYSPATH)
+EXTRA_LIB = $(PKG_LIB) $(MPI_LIB) $(FFT_LIB) $(JPG_LIB) $(PKG_SYSLIB)
+
+# Path to src files
+
+vpath %.cpp ..
+vpath %.h ..
 
 # Link target
 
@@ -77,15 +86,19 @@ $(EXE):	$(OBJ)
 	$(LINK) $(LINKFLAGS) $(EXTRA_PATH) $(OBJ) $(EXTRA_LIB) $(LIB) -o $(EXE)
 	$(SIZE) $(EXE)
 
-# Library target
+# Library targets
 
 lib:	$(OBJ)
 	$(ARCHIVE) $(ARFLAGS) $(EXE) $(OBJ)
 
+shlib:	$(OBJ)
+	$(CC) $(CCFLAGS) $(SHFLAGS) $(SHLIBFLAGS) $(EXTRA_PATH) -o $(EXE) \
+        $(OBJ) $(EXTRA_LIB) $(LIB)
+
 # Compilation rules
 
 %.o:%.cpp
-	$(CC) $(CCFLAGS) $(EXTRA_INC) -c $<
+	$(CC) $(CCFLAGS) $(SHFLAGS) $(EXTRA_INC) -c $<
 
 %.d:%.cpp
 	$(CC) $(CCFLAGS) $(EXTRA_INC) $(DEPFLAGS) $< > $@
