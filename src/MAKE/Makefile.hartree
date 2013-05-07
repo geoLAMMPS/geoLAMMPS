@@ -15,6 +15,11 @@ USRLIB = -lm -lfftw
 SYSLIB =
 SIZE = size
 
+# Path to src files
+
+vpath %.cpp ..
+vpath %.h ..
+
 # Link rule
 
 $(EXE): $(OBJ)
