@@ -31,6 +31,7 @@
 #include "force.h"
 #include "pair.h"
 #include "integrate.h"
+#include "fix_crushing.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -132,6 +133,7 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
 
   lvstressflag = 0; //~ A flag to indicate whether linkvolstress is active
   constpflag = 0; //~ A flag to indicate whether constantp is active
+  constanteflag = 0; //~ A flag used for maintaining a constant e with fix crushing
 
   tolerance = atof(arg[3]); //~ Read in as a double
   if (tolerance <= 0 || tolerance >= 100) error->all(FLERR,"The tolerance must be a positive percentage");
@@ -623,21 +625,25 @@ void FixMultistress::init()
       instability[i][2] = instability[i][0];
     }
 
+  /*~ Set constanteflag to 1 if fix crushing is active and the option to
+    maintain a constant void ratio is enabled*/
+  for (int q = 0; q < modify->nfix; q++)
+    if (strcmp(modify->fix[q]->style,"crushing") == 0)
+      constanteflag = ((FixCrushing *) modify->fix[q])->constante;
+
   /*~ Calculate the volume enclosed by the periodic boundries initially. This is
     done only once even if fix multistress is redefined while linkvolstress
     continues to be active*/
-  if (lvstressflag == 1 && initialvolume == 0.0)
-    initialvolume = domain->initialvolume;
-
-  //~ If it is still equal to zero...
-  if (lvstressflag == 1 && initialvolume == 0.0)
-    initialvolume = (domain->boxhi[0]-domain->boxlo[0])*(domain->boxhi[1]-domain->boxlo[1])*(domain->boxhi[2]-domain->boxlo[2]);
-
-  //~ Reset initialvolume to 0 if linkvolstress is disabled
-  if (lvstressflag == 0) {
+  if (lvstressflag) {
+    if (initialvolume == 0.0) initialvolume = domain->initialvolume;
+    if (initialvolume == 0.0) //~ If it is still equal to zero...
+      initialvolume = (domain->boxhi[0]-domain->boxlo[0])*(domain->boxhi[1]-domain->boxlo[1])*(domain->boxhi[2]-domain->boxlo[2]);
+  } else { //~ Reset initialvolume to 0 if linkvolstress is disabled
     initialvolume = 0.0;
-    domain->initialvolume = 0.0;
-  } else domain->initialvolume = initialvolume;
+  }
+
+  //~ Always keep correspondence between these values
+  domain->initialvolume = initialvolume;
 
   //~ Restore the number of steps of cyclic loading
   if (cstressflag == 1 && ncyclicsteps == 0)
@@ -1062,11 +1068,9 @@ void FixMultistress::eval_fix_deform_params_linkvolstress()
 
   double denominator;
 
-  //########## ADDED TEMPORARILY FOR CONSTANT VOID RATIO
-  //  if (domain->initialvolume < initialvolume) {
-  // if (me == 0) fprintf(screen,"domain-initialvolume is %1.8e; initialvolume is %1.8e for core %i on timestep %i\n",domain->initialvolume,initialvolume,me,update->ntimestep);
-  //  initialvolume = domain->initialvolume;
-  // }
+  //~ Fix crushing has an option to maintain a constant void ratio
+  if (constanteflag && domain->initialvolume < initialvolume)
+    initialvolume = domain->initialvolume;
 
   //~ Note that linkvolstress will be zero only for one index
   for (int i = 0; i < 3; i++) {

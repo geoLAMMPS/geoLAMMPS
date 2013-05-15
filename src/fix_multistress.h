@@ -25,6 +25,8 @@ FixStyle(multistress,FixMultistress)
 namespace LAMMPS_NS {
 
   class FixMultistress : public Fix {
+    friend class FixCrushing;
+
   public:
     FixMultistress(class LAMMPS *, int, char **);
     ~FixMultistress();
@@ -59,6 +61,7 @@ namespace LAMMPS_NS {
     int instabcheck; //~ 1 to run the check for instability, otherwise 0
     int scaleflag; //~ 0 for box units, 1 (the default) for lattice units
     int lvstressflag; //~ 1 if linkvolstress is active, otherwise 0
+    int constanteflag; //~ Added for constant void ratio with fix crushing
     int constpflag; //~ 1 if constantp is active, otherwise 0
     int maxrateflag; //~ 1 if a maximum strain rate is defined, otherwise 0
     int extrasteps; //~ The number of additional steps to run
