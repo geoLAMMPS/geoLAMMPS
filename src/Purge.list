@@ -13,6 +13,11 @@ style_kspace.h
 style_minimize.h
 style_pair.h
 style_region.h
+# deleted on Wed May 8 15:24:36 2013 +0000
+compute_spec_atom.cpp
+compute_spec_atom.h
+fix_species.cpp
+fix_species.h
 # deleted on Fri Oct 19 15:27:15 2012 +0000
 pair_lj_charmm_coul_long_proxy_omp.cpp
 pair_lj_charmm_coul_long_proxy_omp.h
@@ -112,9 +117,6 @@ pair_cg_cmm_coul_long_cuda.cpp
 pair_cg_cmm_coul_long_cuda.h
 pair_cg_cmm_cuda.cpp
 pair_cg_cmm_cuda.h
-# deleted on Fri Jan 6 20:58:15 2012 +0000
-fix_reaxc_species.cpp
-fix_reaxc_species.h
 # deleted on Sat Dec 31 20:27:05 2011 -0500
 ewald_cg.cpp
 ewald_cg.h
