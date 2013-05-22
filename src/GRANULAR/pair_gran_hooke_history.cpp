@@ -838,5 +838,7 @@ void *PairGranHookeHistory::extract(const char *str, int &dim)
 {
   dim = 0;
   if (strcmp(str,"computeflag") == 0) return (void *) &computeflag;
+  else if (strcmp(str,"list") == 0) return (void *) list;
+  else if (strcmp(str,"listgranhistory") == 0) return (void *) listgranhistory;
   return NULL;
 }
