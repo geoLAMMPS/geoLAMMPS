@@ -11,6 +11,7 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
+#include "mpi.h"
 #include "math.h"
 #include "stdlib.h"
 #include "stdio.h"
@@ -47,6 +48,11 @@ int FixWriteInsuranceShearHistory::setmask() {return 0;}
 void FixWriteInsuranceShearHistory::setup(int vflag)
 {
   //~ In here, the data is written out for shear
+
+  //~ Confirm that this is a serial implementation
+  int nprocs;
+  MPI_Comm_size(world,&nprocs);
+  if (nprocs > 1) error->all(FLERR,"One core must be used with fix_write_insurance_shear_history");
 
   int i,j,ii,jj,inum,jnum;
   double delx,dely,delz,fx,fy,fz,rsq;
