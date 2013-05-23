@@ -7,6 +7,7 @@ if (test $1 = 1) then
   cp -p fix_freeze.cpp ..
   cp -p fix_pour.cpp ..
   cp -p fix_wall_gran.cpp ..
+  cp -p fix_write_insurance_shear_history.cpp ..
   cp -p pair_gran_hertz_history.cpp ..
   cp -p pair_gran_hooke.cpp ..
   cp -p pair_gran_hooke_history.cpp ..
@@ -17,6 +18,7 @@ if (test $1 = 1) then
   cp -p fix_freeze.h ..
   cp -p fix_pour.h ..
   cp -p fix_wall_gran.h ..
+  cp -p fix_write_insurance_shear_history.h ..
   cp -p pair_gran_hertz_history.h ..
   cp -p pair_gran_hooke.h ..
   cp -p pair_gran_hooke_history.h ..
@@ -29,6 +31,7 @@ elif (test $1 = 0) then
   rm -f ../fix_freeze.cpp
   rm -f ../fix_pour.cpp
   rm -f ../fix_wall_gran.cpp
+  rm -f ../fix_write_insurance_shear_history.cpp
   rm -f ../pair_gran_hertz_history.cpp
   rm -f ../pair_gran_hooke.cpp
   rm -f ../pair_gran_hooke_history.cpp
@@ -39,6 +42,7 @@ elif (test $1 = 0) then
   rm -f ../fix_freeze.h
   rm -f ../fix_pour.h
   rm -f ../fix_wall_gran.h
+  rm -f ../fix_write_insurance_shear_history.h
   rm -f ../pair_gran_hertz_history.h
   rm -f ../pair_gran_hooke.h
   rm -f ../pair_gran_hooke_history.h
