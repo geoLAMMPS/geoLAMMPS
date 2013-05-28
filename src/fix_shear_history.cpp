@@ -168,8 +168,10 @@ void FixShearHistory::pre_exchange()
           if (npartner[j] < MAXTOUCH) {
             m = npartner[j];
             partner[j][m] = tag[i];
-	    for (int kk = 0; kk < num_quants; kk++)
-	      shearpartner[j][m][kk] = -shear[kk]; // put the loop in, modified GM
+	    for (int kk = 0; kk < num_quants; kk++) {
+	      if (num_quants < 4) shearpartner[j][m][kk] = -shear[kk]; // put the loop in, modified GM
+	      else shearpartner[j][m][kk] = shear[kk]; //~ polyhertz is always positive [KH - 24 May 2013]
+	    }
           }
           npartner[j]++;
         }
