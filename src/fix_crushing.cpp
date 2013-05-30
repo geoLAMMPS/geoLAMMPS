@@ -71,6 +71,7 @@ FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
   peratom_flag = 1;
   size_peratom_cols = 3; //~ m, sigma0, d0
   peratom_freq = 1;
+  create_attribute = 1;
 
   if (narg < 11 || narg > 16)
     error->all(FLERR,"Illegal fix crushing command");
