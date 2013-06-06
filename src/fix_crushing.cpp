@@ -34,6 +34,7 @@
 #include "integrate.h"
 #include "modify.h"
 #include "fix.h"
+#include "comm.h"
 #include "compute.h"
 #include "fix_multistress.h"
 
@@ -46,7 +47,7 @@ using namespace FixConst;
 /* ----------------------------------------------------------------------
 The syntax of the input command is as follows:
 
-fix ID group crushing outputflag seed m sigma0 d0 chi redtype {reduction} constante {commlimit} {m2} {sigma02} {d02}
+fix ID group crushing outputflag seed m sigma0 d0 chi redtype {reduction} constante {commlimit} {m2} {sigma02} {d02} {reallocate}
 
    outputflag Set this at 1 to display detailed crushing output; 0 to suppress this output
    seed       Seed of the random number generator
@@ -61,6 +62,7 @@ fix ID group crushing outputflag seed m sigma0 d0 chi redtype {reduction} consta
    m2         Optional: Weibull modulus for > 1 breakage
    sigma02    Optional: sigma0 for particles of diam. d02 after > 1 breakage
    d02        Optional: Nominal particle diameter in m for > 1 breakage
+   reallocate Optional: keyword meaning that strengths should be reallocated to particles
  ---------------------------------------------------------------------- */
 
 FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
@@ -72,8 +74,10 @@ FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
   size_peratom_cols = 3; //~ m, sigma0, d0
   peratom_freq = 1;
   create_attribute = 1;
+  force_reneighbor = 1; //~ This fix can induce neighbour list rebuilds
+  next_reneighbor = -1; //~ Initially ensure no rebuild is caused
 
-  if (narg < 11 || narg > 16)
+  if (narg < 11 || narg > 17)
     error->all(FLERR,"Illegal fix crushing command");
 
   if (strcmp(atom->atom_style,"sphere") != 0)
@@ -107,13 +111,22 @@ FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
 
   constante = atoi(arg[iarg]);
 
-  if (narg == iarg+1 || narg == iarg+4) commlimit = -1.0;
-  else if (narg == iarg+2 || narg == iarg+5) {
+  //~ Check if the reallocate keyword is present
+  reallocateflag = 0;
+  int numarg = narg;
+
+  if (strcmp(arg[narg-1],"reallocate") == 0) {
+    reallocateflag = 1;
+    numarg--;
+  }
+
+  if (numarg == iarg+1 || numarg == iarg+4) commlimit = -1.0;
+  else if (numarg == iarg+2 || numarg == iarg+5) {
     commlimit = atof(arg[iarg+1]);
     iarg++;
   } else error->all(FLERR,"Illegal number of arguments in fix crushing command");
   
-  if (narg == iarg+4) {
+  if (numarg == iarg+4) {
     weibullparams[0][1] = atof(arg[iarg+1]); //~ m for second and subsequent breakages
     weibullparams[1][1] = atof(arg[iarg+2]); //~ sigma0 for second and subsequent breakages
     weibullparams[2][1] = atof(arg[iarg+3]); //~ d0 for second and subsequent breakages
@@ -156,6 +169,44 @@ FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
     cparams[i][0] = cparams[i][1] = cparams[i][2] = 0.0;
 
   PI = 4.0*atan(1.0); //~ Calculate pi once as it is used often
+
+  /*~ Check that all relevant (masked) particles have non-zero radii
+    and if a comminution limit is specified, ensure that the initial
+    radii are greater than or equal to this limit*/
+  double *radius = atom->radius;
+  int *mask = atom->mask;
+  int nlocal = atom->nlocal;
+  double minrad = BIG; //~ minrad contains the radius of the smallest atom
+
+  for (int i = 0; i < nlocal; i++)
+    if ((mask[i] & groupbit) && radius[i] < minrad)
+      minrad = radius[i];
+
+  if (minrad <= SMALL)
+    error->all(FLERR,"Fix crushing requires extended particles");
+  else if (commlimit > 0.0 && minrad < commlimit)
+    error->all(FLERR,"Particles smaller than the comminution limit are in the system");
+  
+  /*~ Calculate the total volume of particles and the domain initially if the void
+    ratio is to be held constant*/
+  if (constante == 1) {
+    double pvolume = 0.0; //~ Volume of particles on a processor
+    double totalvolume = 1.0;
+    double fourpioverthree = 4.0*PI/3.0;
+
+    for (int i = 0; i < nlocal; i++)
+      if (mask[i] & groupbit)
+	pvolume += fourpioverthree*radius[i]*radius[i]*radius[i];
+  
+    //~ Gather pvolume from all processors in totalpvolume
+    MPI_Allreduce(&pvolume,&totalpvolume,1,MPI_DOUBLE,MPI_SUM,world);
+
+    //~ Find the current size of the simulation domain
+    for (int i = 0; i < domain->dimension; i++)
+      totalvolume *= (domain->boxhi[i]-domain->boxlo[i]);
+    
+    voidratio = (totalvolume - totalpvolume)/totalpvolume;
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -195,57 +246,22 @@ int FixCrushing::setmask()
 
 void FixCrushing::init()
 {
-  /*~ Check that all relevant (masked) particles have non-zero radii
-    and if a comminution limit is specified, ensure that the initial
-    radii are greater than or equal to this limit*/
+  /*~ Allocate initial strengths to all particles. This is run only
+    if the data are not read in from a restart file or reallocateflag = 1.
+    Note that the compressive strengths are negative, if present.*/
   double *radius = atom->radius;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
-  double minrad = BIG; //~ minrad contains the radius of the smallest atom
-
-  for (int i = 0; i < nlocal; i++)
-    if ((mask[i] & groupbit) && radius[i] < minrad)
-      minrad = radius[i];
-
-  if (minrad <= SMALL)
-    error->all(FLERR,"Fix crushing requires extended particles");
-  else if (commlimit > 0.0 && minrad < commlimit)
-    error->all(FLERR,"Particles smaller than the comminution limit are in the system");
-
-  /*~ Allocate initial strengths to all particles. This is run only
-    if the data are not read in from a restart file, noting that the 
-    compressive strengths are negative, if present.*/
 
   if (force->pair_match("gran/hertz",0) || force->pair_match("gran/shm",0)) {
     for (int i = 0; i < nlocal; i++)
       if (mask[i] & groupbit)
-	if (cparams[i][0] > -1.0*SMALL) {
+	if (cparams[i][0] > -1.0*SMALL || reallocateflag) {
 	  cparams[i][0] = strength_calculation(i,radius[i]);
 	  cparams[i][1] = -1.0*cparams[i][0]/chiplusone;
 	}
   } else
     error->all(FLERR,"Currently fix crushing requires a Hertzian pairstyle");
-  
-  /*~ Calculate the total volume of particles and the domain initially if the void
-    ratio is to be held constant*/
-  if (constante == 1) {
-    double pvolume = 0.0; //~ Volume of particles on a processor
-    double totalvolume = 1.0;
-    double fourpioverthree = 4.0*PI/3.0;
-
-    for (int i = 0; i < nlocal; i++)
-      if (mask[i] & groupbit)
-	pvolume += fourpioverthree*radius[i]*radius[i]*radius[i];
-  
-    //~ Gather pvolume from all processors in totalpvolume
-    MPI_Allreduce(&pvolume,&totalpvolume,1,MPI_DOUBLE,MPI_SUM,world);
-
-    //~ Find the current size of the simulation domain
-    for (int i = 0; i < domain->dimension; i++)
-      totalvolume *= (domain->boxhi[i]-domain->boxlo[i]);
-    
-    voidratio = (totalvolume - totalpvolume)/totalpvolume;
-  }
 
   //~ If redtype == 1, need to set up a mechanism for neighbour list updating
   if (redtype == 1) {
@@ -424,11 +440,39 @@ void FixCrushing::end_of_step()
   double redvolume = 0.0;
   MPI_Allreduce(&tempredvolume,&redvolume,1,MPI_DOUBLE,MPI_SUM,world);
 
-  /*~ Shrink the domain so that the void ratio is held constant if
-    constante == 1*/
-  if (redvolume > SMALL && constante == 1) {
-    totalpvolume -= redvolume;
-    domain->initialvolume = (voidratio+1)*totalpvolume;
+  if (redvolume > SMALL) {
+    /*~ If radii have been reduced, init entire system since
+      comm->borders and neighbor->build is done. comm::init 
+      needs neighbor::init needs pair::init needs kspace::init, etc*/
+
+    lmp->init();
+
+    // setup domain, communication and neighboring
+    // acquire ghosts
+    // build neighbor lists
+
+    atom->setup();
+    modify->setup_pre_exchange();
+    if (domain->triclinic) domain->x2lamda(atom->nlocal);
+    domain->pbc();
+    domain->reset_box();
+    comm->setup();
+    if (neighbor->style) neighbor->setup_bins();
+    comm->exchange();
+    if (atom->sortfreq > 0) atom->sort();
+    comm->borders();
+    if (domain->triclinic) domain->lamda2x(atom->nlocal+atom->nghost);
+    domain->image_check();
+    domain->box_too_small_check();
+    modify->setup_pre_neighbor();
+    neighbor->build();
+
+    /*~ Shrink the domain so that the void ratio is held constant
+      if constante == 1*/
+    if (constante == 1) {
+      totalpvolume -= redvolume;
+      domain->initialvolume = (voidratio+1)*totalpvolume;
+    }
   }
 }
 
@@ -440,10 +484,6 @@ double FixCrushing::failure_occurs(int i)
   if (atom->radius[i] > commlimit) {
     //~ Increment the number of particle failures
     cparams[i][2]++;
-
-    //~ Displaying an optional user message
-    if (displaymessages)
-      fprintf(screen,"\nFailure number %u of particle %u on timestep %u.\n",static_cast<int> (cparams[i][2]),atom->tag[i],update->ntimestep);
 
     //~ Reduce the radius of the particle
     double volred = reduce_radius(i);
@@ -513,6 +553,8 @@ double FixCrushing::reduce_radius(int i)
   
   /*~ Reduce the radius of particle i by mindist if the comminution
     limit has not been reached.*/
+  int comminutionflag = 0;
+
   if (radius[i]-mindist >= commlimit) {//~ Comminution limit inactive or not reached
     if (radius[i]-mindist <= 0.0)
       error->all(FLERR,"Check the simulation conditions: particles are inside of other particles");
@@ -520,18 +562,17 @@ double FixCrushing::reduce_radius(int i)
     radius[i] -= mindist;
   } else {
     radius[i] = commlimit; //~ Set equal to the comminution limit
-  
-    if (displaymessages)
-      fprintf(screen,"\tComminution limit reached for particle %u.\n",atom->tag[i]);
+    comminutionflag = 1;
   }
-
-  //~ Display optional messages for the user
-  if (displaymessages)
-    fprintf(screen,"\tRadius changed from %1.3e to %1.3e.\n",oldradius,radius[i]);
 
   /*~ Change the stored values of uniaxial tensile and compressive
     strength using the radius which has already been reduced*/
+  double oldczero = cparams[i][0];
+  double oldcone = cparams[i][1];
   change_strengths(i,radius[i]);
+
+  //~ Display optional messages for the user
+  if (displaymessages) print_optional_info(i,oldradius,comminutionflag,oldczero,oldcone);
 
   //~ Return the change in solid volume
   double volchange = (4.0*PI/3.0)*(oldradius*oldradius*oldradius-radius[i]*radius[i]*radius[i]);
@@ -543,12 +584,8 @@ double FixCrushing::reduce_radius(int i)
 
 void FixCrushing::change_strengths(int i, double radius)
 {
-  //~ Display first part of optional message for the user
-  if (displaymessages)
-    fprintf(screen,"\tStrengths reduced from \t%1.3e (compressive) and %1.3e (tensile)\n",cparams[i][0],cparams[i][1]);
-
   int counter = 0;
-  int counterlimit = 100;
+  int counterlimit = 1000;
   double newcstrength = 0.0;
 
   //~ Force the new compressive strength to be larger in magnitude than the old value
@@ -565,12 +602,18 @@ void FixCrushing::change_strengths(int i, double radius)
   cparams[i][0] = newcstrength;
   cparams[i][1] = -1.0*cparams[i][0]/chiplusone;
 
-  //~ Complete the optional user message
-  if (displaymessages)
-    fprintf(screen,"\t\t\tto\t%1.3e (compressive) and %1.3e (tensile).\n",cparams[i][0],cparams[i][1]);
-
   if (counter > counterlimit)
     error->message(FLERR,"Loop exit condition invoked in FixCrushing to prevent an infinite loop");
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixCrushing::print_optional_info(int i, double oldradius, int comminflag, double oldczero, double oldcone)
+{
+  if (comminflag)
+    fprintf(screen,"\nFailure number %u of particle %u on timestep %u.\n\tRadius changed from %1.3e to %1.3e (comminution limit).\n\tStrengths changed from \t%1.3e (compressive) and %1.3e (tensile)\n\t\t\tto\t%1.3e (compressive) and %1.3e (tensile).\n",static_cast<int> (cparams[i][2]),atom->tag[i],update->ntimestep,oldradius,atom->radius[i],oldczero,oldcone,cparams[i][0],cparams[i][1]);
+  else
+    fprintf(screen,"\nFailure number %u of particle %u on timestep %u.\n\tRadius changed from %1.3e to %1.3e.\n\tStrengths changed from \t%1.3e (compressive) and %1.3e (tensile)\n\t\t\tto\t%1.3e (compressive) and %1.3e (tensile).\n",static_cast<int> (cparams[i][2]),atom->tag[i],update->ntimestep,oldradius,atom->radius[i],oldczero,oldcone,cparams[i][0],cparams[i][1]);
 }
 
 /* ----------------------------------------------------------------------

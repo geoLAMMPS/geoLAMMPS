@@ -41,6 +41,7 @@ public:
   double failure_occurs(int);
   double reduce_radius(int);
   void change_strengths(int,double);
+  void print_optional_info(int,double,int,double,double);
 
   double memory_usage();
   void grow_arrays(int);
@@ -55,7 +56,7 @@ public:
 
  private:
   //~ Data specified by the user
-  int seed,redtype,constante;
+  int seed,redtype,constante,reallocateflag;
   double m,sigma0,d0,chiplusone,reduction,commlimit;
 
   int mstressid; //~ The ID of fix_multistress if active
@@ -70,7 +71,7 @@ public:
   class NeighList *list; //~ Allow access to standard neighbor list
   class Compute *tstress;
   class RanPark *random;
-
+ 
   char *id_stress;
   double **cparams; //~ For storing strengths and numbers of breakages
 };
