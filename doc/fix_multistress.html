@@ -13,8 +13,8 @@
 </H3>
 <P><B>Syntax:</B>
 </P>
-<P>fix ID group-ID multistress N M R keyword : pre
-</P>
+<PRE>fix ID group-ID multistress N M R keyword 
+</PRE>
 <UL><LI>ID, group-ID are documented in <A HREF = "fix.html">fix</A> command 
 
 <LI>multistress = style name of this fix command 
@@ -36,7 +36,8 @@
 	<I>vel</I> = velocity at which the boundaries approach each other (-ve) or move apart (+ve). Followed by ONE number: the velocity. See note 6.
 	<I>erate</I> = engineering strain rate at which the boundary moves. Followed by ONE number: the rate. See note 7. 
 	<I>cyclicmean</I> = used for cyclic loading of a stress-controlled boundary. Followed by THREE numbers: mean stress, amplitude of sinusoid and period. See note 10. 
-	<I>cyclicdeviator</I> = similar to <I>cyclicmean</I> except variation is in q rather than mean stress. See note 10. 
+	<I>cyclicdeviator</I> = similar to <I>cyclicmean</I> except variation is in q rather than mean stress. See note 10.
+	<I>constantb</I> = used to maintain a constant intermediate stress ratio. Followed by ONE number, b, and TWO characters: the boundaries. See note 12 for details. 
 </PRE>
 <PRE>keyword = <I>linkvolstress</I>
   <I>x y</I> or <I>x z</I> or <I>y z</I> or <I>y x</I> or <I>z x</I> or <I>z y</I> = used for volume control. See note 8. 
@@ -55,6 +56,7 @@
 fix 2 all multistress 1 40000 1.5 x stress 100000 y stress 100000 z erate -0.01 units box
 fix 1 all multistress 1 40000 x erate 0.01 y erate 0.04 z erate -0.03 units box
 fix 3 all multistress 0.5 100000 10 z vel -0.01 linkvolstress x y units box
+fix 3 all multistress 0.5 100000 10 x stress 100000 y constantb z x z erate -0.01 units box
 fix 3 all multistress 1 50000 1 z erate -0.01 constantp x y units box 
 </PRE>
 <P><B>Description:</B>
@@ -64,7 +66,8 @@ sample bounded by periodic boundaries, whether in an orthogonal or
 triclinic bounding box. Can also be used to simulate an undrained
 test by maintaining a constant volume. More on this in Note 7. This
 fix is now also capable of doing constant p' tests, if this is useful to
-you: details are given in Note 11.
+you: details are given in Note 11. The capability to maintain a constant
+intermediate stress ratio is also available.
 </P>
 <P>If you want only simple strain control of a few periodic boundaries,
 you would be better off choosing fix deform instead of fix multistress: it's more efficient
@@ -265,6 +268,19 @@ the following error message in fix_multistress.cpp:
 <P>...change the word 'all' to 'warning' and recompile. The <I>constantp</I> option will still be active though, so strange things
 might happen with the strain rates of the two controlled boundaries.
 </P>
+<P><I><B>Note 12:</B></I>
+</P>
+<P><I>constantb</I> has a similar syntax to <I>cyclicmean</I> or <I>cyclicdeviator</I> and allows the intermediate stress ratio to be maintained
+at a constant value. It takes three mandatory arguments. The first is the b value which must be >= 0.0 and <= 1.0. The second and third
+arguments are two of <I>x</I>, <I>y</I> and <I>z</I>. The idea is that the target stress for boundary i is calculated using the stresses for boundaries
+j and k:
+</P>
+<PRE>b*(stress for boundary j)+(1-b)*(stress for boundary k) 
+</PRE>
+<P>The second and third arguments give the order of j and k, i.e., <I>x constantb 0.5 y z</I> assigns the mean stress in the y direction to
+j in the equation above. Obviously having both of these arguments is unnecessary, but a total of three arguments is useful for 
+consistency with <I>cyclicmean</I> and <I>cyclicdeviator</I>.
+</P>
 <P><B>Restart, fix_modify, output, run start/stop, minimize info:</B>
 </P>
 <P>No information about this fix is written to <A HREF = "restart.html">binary restart
@@ -284,7 +300,7 @@ minimization</A>.
 </P>
 <P>* Boundaries that are controlled by fix multistress must be periodic.
 </P>
-<P>* The <I>linkvolstress</I> and <I>constantp</I> options are not defined for 2D simulations.
+<P>* The <I>linkvolstress</I>, <I>constantp</I> and <I>constantb</I> options are not defined for 2D simulations.
 </P>
 <P><B>Defaults:</B>
 </P>

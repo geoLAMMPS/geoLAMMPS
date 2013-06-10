@@ -10,7 +10,7 @@ fix multistress command :h3
 
 [Syntax:]
 
-fix ID group-ID multistress N M R keyword : pre
+fix ID group-ID multistress N M R keyword :pre
 
 ID, group-ID are documented in "fix"_fix.html command :ulb,l
 multistress = style name of this fix command :l
@@ -27,7 +27,8 @@ keyword = {x} or {xx} or {y} or {yy} or {z} or {zz} or {xy} or {yx} or {xz} or {
 	{vel} = velocity at which the boundaries approach each other (-ve) or move apart (+ve). Followed by ONE number: the velocity. See note 6.
 	{erate} = engineering strain rate at which the boundary moves. Followed by ONE number: the rate. See note 7. 
 	{cyclicmean} = used for cyclic loading of a stress-controlled boundary. Followed by THREE numbers: mean stress, amplitude of sinusoid and period. See note 10. 
-	{cyclicdeviator} = similar to {cyclicmean} except variation is in q rather than mean stress. See note 10. :pre
+	{cyclicdeviator} = similar to {cyclicmean} except variation is in q rather than mean stress. See note 10.
+	{constantb} = used to maintain a constant intermediate stress ratio. Followed by ONE number, b, and TWO characters: the boundaries. See note 12 for details. :pre
 keyword = {linkvolstress}
   {x y} or {x z} or {y z} or {y x} or {z x} or {z y} = used for volume control. See note 8. :pre
 keyword = {constantp}
@@ -42,6 +43,7 @@ fix 1 all multistress 0.5 1000 0.05 x stress 100000 y stress 50000 z stress 3000
 fix 2 all multistress 1 40000 1.5 x stress 100000 y stress 100000 z erate -0.01 units box
 fix 1 all multistress 1 40000 x erate 0.01 y erate 0.04 z erate -0.03 units box
 fix 3 all multistress 0.5 100000 10 z vel -0.01 linkvolstress x y units box
+fix 3 all multistress 0.5 100000 10 x stress 100000 y constantb z x z erate -0.01 units box
 fix 3 all multistress 1 50000 1 z erate -0.01 constantp x y units box :pre
 
 [Description:]
@@ -51,7 +53,8 @@ sample bounded by periodic boundaries, whether in an orthogonal or
 triclinic bounding box. Can also be used to simulate an undrained
 test by maintaining a constant volume. More on this in Note 7. This
 fix is now also capable of doing constant p' tests, if this is useful to
-you: details are given in Note 11.
+you: details are given in Note 11. The capability to maintain a constant
+intermediate stress ratio is also available.
 
 If you want only simple strain control of a few periodic boundaries,
 you would be better off choosing fix deform instead of fix multistress: it's more efficient
@@ -252,6 +255,19 @@ error->all(FLERR,"The stress on the strain-controlled boundary is too high to al
 ...change the word 'all' to 'warning' and recompile. The {constantp} option will still be active though, so strange things
 might happen with the strain rates of the two controlled boundaries.
 
+{[Note 12:]}
+
+{constantb} has a similar syntax to {cyclicmean} or {cyclicdeviator} and allows the intermediate stress ratio to be maintained
+at a constant value. It takes three mandatory arguments. The first is the b value which must be >= 0.0 and <= 1.0. The second and third
+arguments are two of {x}, {y} and {z}. The idea is that the target stress for boundary i is calculated using the stresses for boundaries
+j and k:
+
+b*(stress for boundary j)+(1-b)*(stress for boundary k) :pre
+
+The second and third arguments give the order of j and k, i.e., {x constantb 0.5 y z} assigns the mean stress in the y direction to
+j in the equation above. Obviously having both of these arguments is unnecessary, but a total of three arguments is useful for 
+consistency with {cyclicmean} and {cyclicdeviator}.
+
 [Restart, fix_modify, output, run start/stop, minimize info:]
 
 No information about this fix is written to "binary restart
@@ -265,14 +281,13 @@ No parameter of this fix can be used with the {start/stop} keywords of
 the "run"_run.html command.  This fix is not invoked during "energy
 minimization"_minimize.html.
 
-
 [Restrictions:]
 
 * Fix multistress requires the use of the sphere atom_style.
 
 * Boundaries that are controlled by fix multistress must be periodic.
 
-* The {linkvolstress} and {constantp} options are not defined for 2D simulations.
+* The {linkvolstress}, {constantp} and {constantb} options are not defined for 2D simulations.
 
 [Defaults:]
 

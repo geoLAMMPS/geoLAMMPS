@@ -54,7 +54,8 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
     {vel V}/
     {erate R}/
     {cyclicmean mean amplitude period}/
-    {cyclicdeviator mean amplitude period}}
+    {cyclicdeviator mean amplitude period}/
+    {constantb b boundary1 boundary2}}
     {linkvolstress {x y}/{y x}/{x z}/{z x}/{y z}/{z y}}
     {constantp {x y}/{y x}/{x z}/{z x}/{y z}/{z y}}
     {units lattice/box}
@@ -117,7 +118,7 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
 
   for (int i = 0; i < 6; i++) {
     starget[i] = 0.0; //~ Target stresses input by user
-    strflag[i] = defflag[i] = stabtestflag[i] 
+    strflag[i] = defflag[i] = stabtestflag[i]
       = deltflag[i] = ictrlflag[i] = cyclicflag[i] = 0; //~ Initialise as flags
     erates[i] = 0.0; //~ Initialise the rates of change of the box boundaries
     maxrate[i] = -1.0; //~ Initialise the maxrates at negative values
@@ -129,6 +130,7 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
   for (int i = 0; i < 3; i++) {
     linkvolstress[i] = 0; //~ Initialise as flags
     constantp[i] = 0;
+    constbflag[i] = 0;
   }
 
   lvstressflag = 0; //~ A flag to indicate whether linkvolstress is active
@@ -194,7 +196,7 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
 
   /*~ addextra is an integer which is used to increase iarg by 1 due to 
     the additional argument for both final and delta with orthogonal boxes,
-    and increase it by 2 if cyclicstress is used on a boundary*/
+    and increase it by 2 if cyclicstress or constantb is used on a boundary*/
   int addextra = 0;
 
   /*~ One issue is that suitable values for beginstep and endstep are
@@ -226,6 +228,14 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
 
 	if (strcmp(arg[iarg+1],"cyclicmean") == 0) cyclicflag[0] = 1;
 	else cyclicflag[0] = 2;
+      } else if (strcmp(arg[iarg+1],"constantb") == 0) {
+	cyclicparam[0][0] = atof(arg[iarg+2]); //~ Store the b value here
+	addextra = 2;
+	strflag[0] += 1;
+
+	if (strcmp(arg[iarg+3],"y") == 0 && strcmp(arg[iarg+4],"z") == 0) constbflag[0] = 1;
+	else if (strcmp(arg[iarg+3],"z") == 0 && strcmp(arg[iarg+4],"y") == 0) constbflag[0] = 2;
+	else error->all(FLERR,"Incorrect constantb specification in fix multistress");
       } else {
 	if (strcmp(arg[iarg+1],"erate") == 0) {
 	  erates[0] = atof(arg[iarg+2]);
@@ -270,6 +280,14 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
 
 	if (strcmp(arg[iarg+1],"cyclicmean") == 0) cyclicflag[1] = 1;
 	else cyclicflag[1] = 2;
+      } else if (strcmp(arg[iarg+1],"constantb") == 0) {
+	cyclicparam[0][1] = atof(arg[iarg+2]); //~ Store the b value here
+	addextra = 2;
+	strflag[1] += 1;
+
+	if (strcmp(arg[iarg+3],"x") == 0 && strcmp(arg[iarg+4],"z") == 0) constbflag[1] = 1;
+	else if (strcmp(arg[iarg+3],"z") == 0 && strcmp(arg[iarg+4],"x") == 0) constbflag[1] = 2;
+	else error->all(FLERR,"Incorrect constantb specification in fix multistress");
       } else {
 	if (strcmp(arg[iarg+1],"erate") == 0) {
 	  erates[1] = atof(arg[iarg+2]);
@@ -314,6 +332,14 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
 
 	if (strcmp(arg[iarg+1],"cyclicmean") == 0) cyclicflag[2] = 1;
 	else cyclicflag[2] = 2;
+      } else if (strcmp(arg[iarg+1],"constantb") == 0) {
+	cyclicparam[0][2] = atof(arg[iarg+2]); //~ Store the b value here
+	addextra = 2;
+	strflag[2] += 1;
+
+	if (strcmp(arg[iarg+3],"x") == 0 && strcmp(arg[iarg+4],"y") == 0) constbflag[2] = 1;
+	else if (strcmp(arg[iarg+3],"y") == 0 && strcmp(arg[iarg+4],"x") == 0) constbflag[2] = 2;
+	else error->all(FLERR,"Incorrect constantb specification in fix multistress");
       } else {
 	if (strcmp(arg[iarg+1],"erate") == 0) {
 	  erates[2] = atof(arg[iarg+2]);
@@ -466,6 +492,12 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
       cyclicflag[3] > 0 || cyclicflag[4] > 0 || cyclicflag[5] > 0) cstressflag = 1;
   else cstressflag = 0;
 
+  //~ Set constbctrl to indicate that the b value is being controlled
+  if (constbflag[0] + constbflag[1] + constbflag[2] > 1) 
+    error->all(FLERR,"Cannot use constantb on more than one boundary simultaneously");
+  else if (constbflag[0] + constbflag[1] + constbflag[2] == 1) constbctrl = 1;
+  else constbctrl = 0;
+
   for (int i = 0; i < 6; i++) {
     if ((strflag[i] + defflag[i]) > 1)
       error->all(FLERR,"Cannot repeat dimension specifiers in fix multistress");
@@ -483,6 +515,12 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
       error->warning(FLERR,"Using the cyclicdeviator option without linkvolstress is not generally a good idea");
   }
   
+  //~ Check values are sensible if constantb is active
+  if (constbctrl == 1 && ((constbflag[0] > 0 && (cyclicparam[0][0] < 0.0 || cyclicparam[0][0] > 1.0)) || 
+			  (constbflag[1] > 0 && (cyclicparam[0][1] < 0.0 || cyclicparam[0][1] > 1.0)) || 
+			  (constbflag[2] > 0 && (cyclicparam[0][2] < 0.0 || cyclicparam[0][2] > 1.0))))
+    error->all(FLERR,"b value must be <= 1.0 and >= 0.0 in fix multistress");
+
   //~ Warn the user if linkvolstress or constantp are active without maxrateflag
   if (maxrateflag == 0 && (lvstressflag == 1 || constpflag == 1))
     error->warning(FLERR,"It is strongly recommended that a maxrate restriction is set when linkvolstress or constantp are active");
@@ -514,11 +552,11 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
       ((strflag[2] == 1 || defflag[2] == 1) && (linkvolstress[2] == 1 || constantp[2] == 1)))
     error->all(FLERR,"Cannot use linkvolstress or constantp and also control the periodic boundary positions by other methods");
 
-  if (dimension == 2 && (lvstressflag == 1 || constpflag == 1))
-    error->all(FLERR,"Cannot use linkvolstress or constantp for 2D simulations");
+  if (dimension == 2 && (lvstressflag == 1 || constpflag == 1 || constbctrl == 1))
+    error->all(FLERR,"Cannot use linkvolstress, constantp or constantb for 2D simulations");
 
-  if (lvstressflag == 1 && constpflag == 1)
-    error->all(FLERR,"Cannot use linkvolstress and constantp together");    
+  if (lvstressflag + constpflag + constbctrl > 1)
+    error->all(FLERR,"Cannot use more than one of linkvolstress, constantp and constantb at the same time");    
     
   if (cyclicflag[0] == 2 && (cyclicflag[1] == 2 || cyclicflag[2] == 2) ||
       cyclicflag[1] == 2 && (cyclicflag[0] == 2 || cyclicflag[2] == 2))
@@ -963,6 +1001,56 @@ void FixMultistress::end_of_step()
     //~ Reset temprates to 0
     for (int i = 0; i < 6; i++)
       temprates[i] = 0.0;
+  }
+
+  //~ Update the target stresses if the stresses on the boundary are calculated using constantb
+  if (constbctrl) {
+    for (int i = 0; i < 3; i++) {
+      if (constbflag[i] == 1) {
+	//~ Predict stresses on the other two boundaries
+	double predstress[3] = {0.0};
+	int firstboundaryid = (i+1)%3;
+	int secondboundaryid = (i+2)%3;
+	
+	//~ Boundary 1
+	if ((update->ntimestep - update->beginstep) > 1 && erates[firstboundaryid] != 0.0) {
+	  if (strflag[firstboundaryid] == 1) {//~ If stress control
+	    temprates[firstboundaryid] = -Kp[firstboundaryid]*(starget[firstboundaryid] - tallymeans[firstboundaryid]);
+	    if (fabs(temprates[firstboundaryid]) > maxrate[firstboundaryid] && maxrate[firstboundaryid] > 0.0)
+	      temprates[firstboundaryid] < 0.0 ? temprates[firstboundaryid] = -maxrate[firstboundaryid] : temprates[firstboundaryid] = maxrate[firstboundaryid];
+	  } else temprates[firstboundaryid] = erates[firstboundaryid]; //~ Strain control
+
+	  predstress[firstboundaryid] = tallymeans[firstboundaryid] + (tallymeans[firstboundaryid]-oldmeans[firstboundaryid])*temprates[firstboundaryid]/erates[firstboundaryid];
+	} else predstress[firstboundaryid] = tallymeans[firstboundaryid];
+
+	//~ Boundary 2
+	if ((update->ntimestep - update->beginstep) > 1 && erates[secondboundaryid] != 0.0) {
+	  if (strflag[secondboundaryid] == 1) {//~ If stress control
+	    temprates[secondboundaryid] = -Kp[secondboundaryid]*(starget[secondboundaryid] - tallymeans[secondboundaryid]);
+	    if (fabs(temprates[secondboundaryid]) > maxrate[secondboundaryid] && maxrate[secondboundaryid] > 0.0)
+	      temprates[secondboundaryid] < 0.0 ? temprates[secondboundaryid] = -maxrate[secondboundaryid] : temprates[secondboundaryid] = maxrate[secondboundaryid];
+	  } else temprates[secondboundaryid] = erates[secondboundaryid]; //~ Strain control
+
+	  predstress[secondboundaryid] = tallymeans[secondboundaryid] + (tallymeans[secondboundaryid]-oldmeans[secondboundaryid])*temprates[secondboundaryid]/erates[secondboundaryid];
+	} else predstress[secondboundaryid] = tallymeans[secondboundaryid];
+
+	//~ Now calculate the target stress for boundary i using the user-defined b value
+	//~ constbflag[i] == 1: {y,z}, {x,z} or {x,y}; constbflag[i] == 2: {z,y}, {z,x} or {y,x}; 
+	if (constbflag[i] == 1) {
+	  if (firstboundaryid > secondboundaryid)
+	    starget[i] = cyclicparam[0][i]*predstress[secondboundaryid] + (1-cyclicparam[0][i])*predstress[firstboundaryid];
+	  else
+	    starget[i] = cyclicparam[0][i]*predstress[firstboundaryid] + (1-cyclicparam[0][i])*predstress[secondboundaryid];
+	} else {
+	  if (firstboundaryid > secondboundaryid)
+	    starget[i] = cyclicparam[0][i]*predstress[firstboundaryid] + (1-cyclicparam[0][i])*predstress[secondboundaryid];
+	  else
+	    starget[i] = cyclicparam[0][i]*predstress[secondboundaryid] + (1-cyclicparam[0][i])*predstress[firstboundaryid];
+	}
+	
+	break; //~ Only one boundary can be controlled in a simulation with constantb
+      }
+    }
   }
 
   //~ Now increment currstep and calculate the updated parameters for fix_deform

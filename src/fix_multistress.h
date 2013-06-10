@@ -86,8 +86,10 @@ namespace LAMMPS_NS {
     int cyclicflag[6]; //~ Flags to indicate whether or not cyclic stress control is active on a boundary: 0 if not active; 1 if cyclicmean; 2 if cyclicdeviator
     int linkvolstress[3]; //~ Flags to indicate that the volume is maintained constant and the stresses in two specified directions are kept equal
     int constantp[3]; //~ Flags to indicate that the mean effective stress is maintained constant and the stresses in two specified directions are kept equal
+    int constbflag[3]; //~ Flags to indicate that the b value is maintained constant for a boundary
     int constructorflag; //~ Flag to denote whether the constructor has been run on this timestep (1) or not (0)
     int cstressflag; //~ Flag defined for convenience to indicate whether cyclic stress loading is active
+    int constbctrl; //~ Flag indicating whether constantb is active (1) or not (0)
 
     double erates[6]; //~ Engineering strain rates
     double Kp[6]; //~ The proportional gains
