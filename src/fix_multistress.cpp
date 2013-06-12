@@ -493,9 +493,11 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
   else cstressflag = 0;
 
   //~ Set constbctrl to indicate that the b value is being controlled
-  if (constbflag[0] + constbflag[1] + constbflag[2] > 1) 
+  if ((constbflag[0] != 0 && (constbflag[1] + constbflag[2] > 0)) ||
+      (constbflag[1] != 0 && (constbflag[0] + constbflag[2] > 0)) ||
+      (constbflag[2] != 0 && (constbflag[0] + constbflag[1] > 0))) 
     error->all(FLERR,"Cannot use constantb on more than one boundary simultaneously");
-  else if (constbflag[0] + constbflag[1] + constbflag[2] == 1) constbctrl = 1;
+  else if (constbflag[0] + constbflag[1] + constbflag[2] > 0) constbctrl = 1;
   else constbctrl = 0;
 
   for (int i = 0; i < 6; i++) {
