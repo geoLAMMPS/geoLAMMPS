@@ -611,9 +611,9 @@ void FixCrushing::change_strengths(int i, double radius)
 void FixCrushing::print_optional_info(int i, double oldradius, int comminflag, double oldczero, double oldcone)
 {
   if (comminflag)
-    fprintf(screen,"\nFailure number %u of particle %u on timestep %u.\n\tRadius changed from %1.3e to %1.3e (comminution limit).\n\tStrengths changed from \t%1.3e (compressive) and %1.3e (tensile)\n\t\t\tto\t%1.3e (compressive) and %1.3e (tensile).\n",static_cast<int> (cparams[i][2]),atom->tag[i],update->ntimestep,oldradius,atom->radius[i],oldczero,oldcone,cparams[i][0],cparams[i][1]);
+    fprintf(screen,"\nFailure number %u of particle %u on timestep "BIGINT_FORMAT".\n\tRadius changed from %1.3e to %1.3e (comminution limit).\n\tStrengths changed from \t%1.3e (compressive) and %1.3e (tensile)\n\t\t\tto\t%1.3e (compressive) and %1.3e (tensile).\n",static_cast<int> (cparams[i][2]),atom->tag[i],update->ntimestep,oldradius,atom->radius[i],oldczero,oldcone,cparams[i][0],cparams[i][1]);
   else
-    fprintf(screen,"\nFailure number %u of particle %u on timestep %u.\n\tRadius changed from %1.3e to %1.3e.\n\tStrengths changed from \t%1.3e (compressive) and %1.3e (tensile)\n\t\t\tto\t%1.3e (compressive) and %1.3e (tensile).\n",static_cast<int> (cparams[i][2]),atom->tag[i],update->ntimestep,oldradius,atom->radius[i],oldczero,oldcone,cparams[i][0],cparams[i][1]);
+    fprintf(screen,"\nFailure number %u of particle %u on timestep "BIGINT_FORMAT".\n\tRadius changed from %1.3e to %1.3e.\n\tStrengths changed from \t%1.3e (compressive) and %1.3e (tensile)\n\t\t\tto\t%1.3e (compressive) and %1.3e (tensile).\n",static_cast<int> (cparams[i][2]),atom->tag[i],update->ntimestep,oldradius,atom->radius[i],oldczero,oldcone,cparams[i][0],cparams[i][1]);
 }
 
 /* ----------------------------------------------------------------------
