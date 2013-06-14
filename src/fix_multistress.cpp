@@ -908,6 +908,12 @@ void FixMultistress::end_of_step()
       meaneffectivestress = 0.0;
       domain->meaneffectivestress = 0.0;
     } else domain->meaneffectivestress = meaneffectivestress;
+
+    //~ Need to specify initial values for starget on the first timestep if constbctrl active
+    if (constbctrl) {
+      for (int i = 0; i < 6; i++)
+	if (constbflag[i] > 0) starget[i] = tallymeans[i];
+    }
   }
 
   /*~ Calculate updated maxrates so that the velocities of the boundaries
@@ -1001,14 +1007,14 @@ void FixMultistress::end_of_step()
     }
 
     //~ Reset temprates to 0
-    for (int i = 0; i < 6; i++)
-      temprates[i] = 0.0;
+    for (int j = 0; j < 6; j++)
+      temprates[j] = 0.0;
   }
 
   //~ Update the target stresses if the stresses on the boundary are calculated using constantb
   if (constbctrl) {
     for (int i = 0; i < 3; i++) {
-      if (constbflag[i] == 1) {
+      if (constbflag[i] > 0) {
 	//~ Predict stresses on the other two boundaries
 	double predstress[3] = {0.0};
 	int firstboundaryid = (i+1)%3;
@@ -1050,6 +1056,10 @@ void FixMultistress::end_of_step()
 	    starget[i] = cyclicparam[0][i]*predstress[secondboundaryid] + (1-cyclicparam[0][i])*predstress[firstboundaryid];
 	}
 	
+	//~ Reset temprates to 0
+	for (int j = 0; j < 3; j++)
+	  temprates[j] = 0.0;
+
 	break; //~ Only one boundary can be controlled in a simulation with constantb
       }
     }
