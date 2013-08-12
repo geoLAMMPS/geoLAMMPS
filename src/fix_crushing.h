@@ -38,10 +38,14 @@ public:
   void setup(int);
   void pre_force(int);
   void end_of_step();
-  double failure_occurs(int);
-  double reduce_radius(int);
+  double failure_occurs(int, double **, int);
+  double reduce_radius(int, double **, int);
   void change_strengths(int,double);
-  void print_optional_info(int,double,int,double,double);
+  double insert_particles(int);
+  void xyz_random(double *);
+  double minimise_overlap(double *,double **,int,double);
+  int adjust_position(double *,double **,int,double,double,double,double &);
+  void print_optional_info(double **, int);
 
   double memory_usage();
   void grow_arrays(int);
@@ -53,10 +57,12 @@ public:
   void unpack_restart(int, int);
   int maxsize_restart();
   int size_restart(int);
+  void write_restart(FILE *);
+  void restart(char *);
 
  private:
   //~ Data specified by the user
-  int seed,redtype,constante,reallocateflag;
+  int seed,redtype,constante,reallocateflag,me,nprocs;
   double m,sigma0,d0,chiplusone,reduction,commlimit;
 
   int mstressid; //~ The ID of fix_multistress if active
@@ -64,6 +70,8 @@ public:
   double voidratio;
   double totalpvolume; //~ The total volume of particles
   double PI;
+  double cumulredvolume; //~ The accumulated solid volume change
+  double radiusparticletoinsert,volumeparticletoinsert;
 
   //~ m, sigma0 and d0 for first and (optionally) subsequent breakages
   double weibullparams[3][2];
