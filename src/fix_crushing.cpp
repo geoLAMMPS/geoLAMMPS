@@ -263,6 +263,7 @@ void FixCrushing::init()
   /*~ Allocate initial strengths to all particles. This is relevant only
     if the data are not read in from a restart file or reallocateflag = 1.
     Note that the compressive strengths are negative, if present.*/
+  int weibullparamflag = 0;
   double *radius = atom->radius;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
@@ -271,7 +272,7 @@ void FixCrushing::init()
     for (int i = 0; i < nlocal; i++)
       if (mask[i] & groupbit)
 	if (cparams[i][0] > -1.0*SMALL || reallocateflag) {
-	  cparams[i][0] = strength_calculation(i,radius[i]);
+	  cparams[i][0] = strength_calculation(i,radius[i],weibullparamflag);
 	  cparams[i][1] = -1.0*cparams[i][0]/chiplusone;
 	}
   } else
@@ -300,13 +301,13 @@ void FixCrushing::init_list(int id, NeighList *ptr)
 void FixCrushing::set_weibull_parameters(int numbreaks)
 {
   m = weibullparams[0][numbreaks];
-  sigma0 = weibullparams[0][numbreaks];
+  sigma0 = weibullparams[1][numbreaks];
   d0 = weibullparams[2][numbreaks];
 }
 
 /* ---------------------------------------------------------------------- */
 
-double FixCrushing::strength_calculation(int i, double radius)
+double FixCrushing::strength_calculation(int i, double radius, int weibullparamflag)
 {
   /*~ Assign a suitable uniaxial tensile and compressive strength to 
     particle i*/
@@ -320,8 +321,7 @@ double FixCrushing::strength_calculation(int i, double radius)
   pr = (3.0*kn-2.0*kt)/(3.0*kn-kt);
 
   //~ Pick appropriate values for m, sigma0 and d0 from weibullparams
-  if (static_cast<int> (cparams[i][2]) == 0) set_weibull_parameters(0);
-  else set_weibull_parameters(1);
+  set_weibull_parameters(weibullparamflag);
 
   double firstfixedterm = pow(sigma0,m);
   double secondfixedterm = 3.0*(3.0/32.0 + sqrt(2.0)/24.0 + xmu*(sqrt(2.0)/12.0 - 0.25) + xmu*xmu*(0.5 - sqrt(2.0)/3.0))/((2.0-sqrt(2.0))*(1.0+xmu)); //~ Russell & Muir-Wood, 2009, Eq. 19
@@ -567,7 +567,7 @@ double FixCrushing::failure_occurs(int i, double **localdata, int nrows)
   //~ Check whether the comminution limit has been reached, if present
   if (atom->radius[i] > commlimit) {
     //~ Increment the number of particle failures
-    cparams[i][2]++;
+    cparams[i][2] += 1.0;
 
     //~ Reduce the radius of the particle
     double volred = reduce_radius(i,localdata,nrows);
@@ -678,25 +678,21 @@ double FixCrushing::reduce_radius(int i, double **localdata, int nrows)
 void FixCrushing::change_strengths(int i, double radius)
 {
   int counter = 0;
+  int weibullparamflag = 1;
   int counterlimit = 1000;
   double newcstrength = 0.0;
 
   //~ Force the new compressive strength to be larger in magnitude than the old value
   while (-1.0*newcstrength <= -1.0*cparams[i][0]) {//~ cparams[i][0] is negative
-    newcstrength = strength_calculation(i,radius);
+    newcstrength = strength_calculation(i,radius,weibullparamflag);
   
     counter++;
     if (counter > counterlimit) {
-      newcstrength = cparams[i][0]; //~ Retain the old value
+      error->warning(FLERR,"Loop exit condition invoked in FixCrushing to prevent an infinite loop");
+
       break; //~ To prevent an infinite loop
-    } 
+    }
   }
-
-  cparams[i][0] = newcstrength;
-  cparams[i][1] = -1.0*cparams[i][0]/chiplusone;
-
-  if (counter > counterlimit)
-    error->warning(FLERR,"Loop exit condition invoked in FixCrushing to prevent an infinite loop");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1206,7 +1202,12 @@ void FixCrushing::copy_arrays(int i, int j, int delflag)
 
 void FixCrushing::set_arrays(int i)
 {
-  cparams[i][0] = strength_calculation(i,atom->radius[i]);
+  /*~ This is used for setting the parameters for daughter particles.
+    Since the size of these is usually the comminution limit, there is
+    no point in using weibullparamflag == 1. Use the first set of
+    Weibull parameters, in case a larger particle is added to the system.*/
+  int weibullparamflag = 0;
+  cparams[i][0] = strength_calculation(i,atom->radius[i],weibullparamflag);
   cparams[i][1] = -1.0*cparams[i][0]/chiplusone;
   cparams[i][2] = 0.0; //~ The number of breakage events
 }

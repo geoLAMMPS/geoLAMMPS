@@ -34,7 +34,7 @@ public:
   void init();
   void init_list(int, class NeighList *);
   void set_weibull_parameters(int);
-  double strength_calculation(int,double);
+  double strength_calculation(int,double,int);
   void setup(int);
   void pre_force(int);
   void end_of_step();
