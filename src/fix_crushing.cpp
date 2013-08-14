@@ -278,6 +278,11 @@ void FixCrushing::init()
   } else
     error->all(FLERR,"Currently fix crushing requires a Hertzian pairstyle");
 
+  /*~ If the particle strengths have been reallocated, need to reset
+    reallocateflag so that they are not reallocated again later when init
+    is rerun.*/
+  reallocateflag = 0;
+
   //~ If redtype == 1, need to set up a mechanism for neighbour list updating
   if (redtype == 1) {
     // need a full neighbor list, built whenever re-neighboring occurs
@@ -688,11 +693,15 @@ void FixCrushing::change_strengths(int i, double radius)
   
     counter++;
     if (counter > counterlimit) {
+      newcstrength = cparams[i][0];
       error->warning(FLERR,"Loop exit condition invoked in FixCrushing to prevent an infinite loop");
 
       break; //~ To prevent an infinite loop
     }
   }
+
+  cparams[i][0] = newcstrength;
+  cparams[i][1] = -1.0*cparams[i][0]/chiplusone;
 }
 
 /* ---------------------------------------------------------------------- */
