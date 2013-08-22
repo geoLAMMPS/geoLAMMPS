@@ -48,14 +48,17 @@ using namespace FixConst;
 /* ----------------------------------------------------------------------
 The syntax of the input command is as follows:
 
-fix ID group crushing outputflag seed m sigma0 d0 chi redtype {reduction} constante {commlimit} {m2} {sigma02} {d02} {reallocate}
+fix ID group crushing outputflag seed m sigma0 d0 a b chi alpha redtype {reduction} constante {commlimit} {m2} {sigma02} {d02} {a2} {b2} {reallocate}
 
    outputflag Set this at 1 to display detailed crushing output; 0 to suppress this output
    seed       Seed of the random number generator
    m          Weibull modulus
    sigma0     Characteristic strength at which 37% of particles of diameter d0 survive
    d0         Nominal particle diameter in m
+   a          Slope of linear trendline of Ps vs. normalised characteristic stress
+   b          y-intercept of linear trendline of Ps vs. normalised characteristic stress
    chi        Parameter in brittle failure criterion of Christensen
+   alpha      Multiplicative factor by which to reduce compressive stress
    redtype    Flag = 1 if diameter reduced to just give touching contact; else 0
    reduction  If redtype = 0, the fractional reduction in radius between 0 and 1
    constante  Flag = 1 if void ratio is held constant; else 0
@@ -63,6 +66,8 @@ fix ID group crushing outputflag seed m sigma0 d0 chi redtype {reduction} consta
    m2         Optional: Weibull modulus for > 1 breakage
    sigma02    Optional: sigma0 for particles of diam. d02 after > 1 breakage
    d02        Optional: Nominal particle diameter in m for > 1 breakage
+   a2         Optional: a for > 1 breakage
+   b2         Optional: b for > 1 breakage
    reallocate Optional: keyword meaning that strengths should be reallocated to particles
  ---------------------------------------------------------------------- */
 
@@ -73,13 +78,13 @@ FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
   restart_peratom = 1; //~ As is per-atom information
   nevery = 1; //~ Set how often to run the end_of_step function
   peratom_flag = 1;
-  size_peratom_cols = 3; //~ m, sigma0, d0
+  size_peratom_cols = 3; //~ sigma_c, sigma_t, number of failures
   peratom_freq = 1;
   create_attribute = 1;
   force_reneighbor = 1; //~ This fix can induce neighbour list rebuilds
   next_reneighbor = -1; //~ Initially ensure no rebuild is caused
 
-  if (narg < 11 || narg > 17)
+  if (narg < 14 || narg > 22)
     error->all(FLERR,"Illegal fix crushing command");
 
   if (strcmp(atom->atom_style,"sphere") != 0)
@@ -95,13 +100,15 @@ FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
   //~ Read in all user-specified data
   displaymessages = atoi(arg[3]); //~ Write information to the screen (1) or not (0)
   seed = atoi(arg[4]);
-  weibullparams[0][0] = atof(arg[5]); //~ m for first breakage
-  weibullparams[1][0] = atof(arg[6]); //~ sigma0 for first breakage
-  weibullparams[2][0] = atof(arg[7]); //~ d0 for first breakage
-  chiplusone = atof(arg[8])+1.0;
-  redtype = atoi(arg[9]);
 
-  int iarg = 10;
+  for (int i = 0; i < 5; i++)
+    weibullparams[i][0] = atof(arg[5+i]);
+
+  chiplusone = atof(arg[10])+1.0;
+  alphafactor = atof(arg[11]);
+  redtype = atoi(arg[12]);
+
+  int iarg = 13;
   if (redtype == 0) {
     reduction = atof(arg[iarg]);
 
@@ -122,20 +129,19 @@ FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
     numarg--;
   }
 
-  if (numarg == iarg+1 || numarg == iarg+4) commlimit = -1.0;
-  else if (numarg == iarg+2 || numarg == iarg+5) {
+  if (numarg == iarg+1 || numarg == iarg+6) commlimit = -1.0;
+  else if (numarg == iarg+2 || numarg == iarg+7) {
     commlimit = atof(arg[iarg+1]);
     iarg++;
   } else error->all(FLERR,"Illegal number of arguments in fix crushing command");
   
-  if (numarg == iarg+4) {
-    weibullparams[0][1] = atof(arg[iarg+1]); //~ m for second and subsequent breakages
-    weibullparams[1][1] = atof(arg[iarg+2]); //~ sigma0 for second and subsequent breakages
-    weibullparams[2][1] = atof(arg[iarg+3]); //~ d0 for second and subsequent breakages
+  if (numarg == iarg+6) {
+    //~ Read in m, sigma0, d0, a and b for second and subsequent breakages
+    for (int i = 0; i < 5; i++)
+      weibullparams[i][1] = atof(arg[iarg+1+i]);
   } else { //~ Use the same values for the first, second... breakages
-    weibullparams[0][1] = weibullparams[0][0];
-    weibullparams[1][1] = weibullparams[1][0];
-    weibullparams[2][1] = weibullparams[2][0];
+    for (int i = 0; i < 5; i++)
+      weibullparams[i][1] = weibullparams[i][0];
   }
 
   //~ Now check that these inputs are sensible
@@ -308,6 +314,8 @@ void FixCrushing::set_weibull_parameters(int numbreaks)
   m = weibullparams[0][numbreaks];
   sigma0 = weibullparams[1][numbreaks];
   d0 = weibullparams[2][numbreaks];
+  slopea = weibullparams[3][numbreaks];
+  interceptb = weibullparams[4][numbreaks];
 }
 
 /* ---------------------------------------------------------------------- */
@@ -325,23 +333,25 @@ double FixCrushing::strength_calculation(int i, double radius, int weibullparamf
   smod = 0.75*kn*kt/(3.0*kn-kt);
   pr = (3.0*kn-2.0*kt)/(3.0*kn-kt);
 
-  //~ Pick appropriate values for m, sigma0 and d0 from weibullparams
+  //~ Pick appropriate values for m, sigma0, d0, a and b from weibullparams
   set_weibull_parameters(weibullparamflag);
 
-  double firstfixedterm = pow(sigma0,m);
+  double firstfixedterm = pow(2.0*radius/d0,-3.0/m);
   double secondfixedterm = 3.0*(3.0/32.0 + sqrt(2.0)/24.0 + xmu*(sqrt(2.0)/12.0 - 0.25) + xmu*xmu*(0.5 - sqrt(2.0)/3.0))/((2.0-sqrt(2.0))*(1.0+xmu)); //~ Russell & Muir-Wood, 2009, Eq. 19
-  double sigmaf = fabs(pow(-1.0*firstfixedterm*log(random->uniform())*pow(0.5*d0/radius,3.0),(1.0/m)));
-  double forcef = 4.0*sigmaf*radius*radius;
+  double sigmaf = sigma0*firstfixedterm*(random->uniform()-interceptb)/slopea;
+  double forcef = fabs(4.0*sigmaf*radius*radius); //~ abs in case sigmaf < 0
 
   double estar,contactarea,compressivestrength;
 
   /*~ Assume contact with a sphere of infinite radius and stiffness. Recall
     that Young's modulus is 2*smod*(1+pr).*/
-  estar = 2.0*smod*(1+pr)/(1-pr*pr);
+  estar = 2.0*smod*(1.0+pr)/(1.0-pr*pr);
   contactarea = PI*pow(0.75*forcef*radius/estar,(2.0/3.0));
   
-  //~ The -abs operation below is used to yield negative compressive strengths
-  compressivestrength = -1.0*fabs(secondfixedterm*forcef/contactarea); //~ Russell & Muir-Wood, 2009, Eq. 19
+  /*~ The -abs operation below is used to yield negative compressive strengths,
+    while the alphafactor multiplication serves to reduce the compressive
+    strengths to more reasonable values.*/
+  compressivestrength = -alphafactor*fabs(secondfixedterm*forcef/contactarea); //~ Russell & Muir-Wood, 2009, Eq. 19
 
   return compressivestrength;
 }
@@ -694,7 +704,7 @@ void FixCrushing::change_strengths(int i, double radius)
     counter++;
     if (counter > counterlimit) {
       newcstrength = cparams[i][0];
-      error->warning(FLERR,"Loop exit condition invoked in FixCrushing to prevent an infinite loop");
+      fprintf(screen,"Loop exit condition invoked in FixCrushing to prevent an infinite loop");
 
       break; //~ To prevent an infinite loop
     }

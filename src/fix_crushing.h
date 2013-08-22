@@ -63,7 +63,8 @@ public:
  private:
   //~ Data specified by the user
   int seed,redtype,constante,reallocateflag,me,nprocs;
-  double m,sigma0,d0,chiplusone,reduction,commlimit;
+  double m,sigma0,d0,slopea,interceptb;
+  double chiplusone,reduction,commlimit,alphafactor;
 
   int mstressid; //~ The ID of fix_multistress if active
   int displaymessages; //~ Whether or not to display user output
@@ -73,8 +74,8 @@ public:
   double cumulredvolume; //~ The accumulated solid volume change
   double radiusparticletoinsert,volumeparticletoinsert;
 
-  //~ m, sigma0 and d0 for first and (optionally) subsequent breakages
-  double weibullparams[3][2];
+  //~ m, sigma0, d0, a and b for first and (optionally) subsequent breakages
+  double weibullparams[5][2];
 
   class NeighList *list; //~ Allow access to standard neighbor list
   class Compute *tstress;
