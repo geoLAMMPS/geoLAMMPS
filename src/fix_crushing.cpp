@@ -704,7 +704,7 @@ void FixCrushing::change_strengths(int i, double radius)
     counter++;
     if (counter > counterlimit) {
       newcstrength = cparams[i][0];
-      fprintf(screen,"Loop exit condition invoked in FixCrushing to prevent an infinite loop");
+      fprintf(screen,"Loop exit condition invoked in FixCrushing on timestep "BIGINT_FORMAT" to prevent an infinite loop.\n",update->ntimestep);
 
       break; //~ To prevent an infinite loop
     }
