@@ -50,7 +50,7 @@ class FixFluidDrag : public Fix {
   void post_force_respa(int, int, int);
   void end_of_step();
   void grow_arrays(int);
-  void copy_arrays(int, int);
+  void copy_arrays(int, int, int);
   int pack_exchange(int, double *);
   int unpack_exchange(int, double *);
 
