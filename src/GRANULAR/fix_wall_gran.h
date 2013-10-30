@@ -63,6 +63,7 @@ class FixWallGran : public Fix {
   int ftvarying; // 1 if ftarget set through a variable
   int nlevels_respa;
   int time_origin;
+  int numshearquants; //~ The number of shear quantities [KH - 30 October 2013]
 
   int *touch;
   double **shear;
@@ -76,6 +77,9 @@ class FixWallGran : public Fix {
   void hertz_history(double, double, double, double, double *,
                      double *, double *, double *, double *, double, double,
                      double *, int);
+  void shm_history(double, double, double, double, double *,
+		   double *, double *, double *, double *, double, double,
+		   double *, int); //~ [KH - 30 October 2013]
   void move_wall();
   void velscontrol();
   void ev_tally_wall(int, double, double, double, double, double, double, double);

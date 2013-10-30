@@ -37,7 +37,7 @@ using namespace FixConst;
 using namespace MathConst;
 
 enum{XPLANE,YPLANE,ZPLANE,ZCYLINDER};    // XYZ PLANE need to be 0,1,2
-enum{HOOKE,HOOKE_HISTORY,HERTZ_HISTORY};
+enum{HOOKE,HOOKE_HISTORY,HERTZ_HISTORY,SHM_HISTORY}; //~ Added SHM_HISTORY option [KH - 30 October 2013]
 
 #define BIG 1.0e20
 
@@ -47,7 +47,8 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg)
 {
   virial_flag = 1; // this fix can contribute to compute stress/atom
-  if (narg < 10) error->all(FLERR,"Illegal fix wall/gran command");
+  //~ Reduced from 10 for shm pairstyle [KH - 30 October 2013]
+  if (narg < 7) error->all(FLERR,"Illegal fix wall/gran command");
 
   if (!atom->sphere_flag)
     error->all(FLERR,"Fix wall/gran requires atom style sphere");
@@ -61,32 +62,47 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
 
   // wall/particle coefficients
 
-  kn = atof(arg[3]);
-  if (strcmp(arg[4],"NULL") == 0) kt = kn * 2.0/7.0;
-  else kt = atof(arg[4]);
+  //~ Make special allowances for shm pairstyle [KH - 30 October 2013]
+  double Geq, Poiseq;
+  if (force->pair_match("gran/shm/history",1)) {
+    Geq = atof(arg[3]);
+    Poiseq = atof(arg[4]);
+    xmu = atof(arg[5]);
 
-  gamman = atof(arg[5]);
-  if (strcmp(arg[6],"NULL") == 0) gammat = 0.5 * gamman;
-  else gammat = atof(arg[6]);
+    if (Geq < 0.0 || Poiseq < 0.0 || xmu < 0.0 || Poiseq > 0.5) error->all(FLERR,"Illegal shm pair parameter values in fix wall gran");
 
-  xmu = atof(arg[7]);
-  dampflag = atoi(arg[8]);
-  if (dampflag == 0) gammat = 0.0;
+    kn = 4.0*Geq / (3.0*(1.0-Poiseq));
+    kt = 4.0*Geq / (2.0-Poiseq);
+  } else {
+    kn = atof(arg[3]);
+    if (strcmp(arg[4],"NULL") == 0) kt = kn * 2.0/7.0;
+    else kt = atof(arg[4]);
+    
+    gamman = atof(arg[5]);
+    if (strcmp(arg[6],"NULL") == 0) gammat = 0.5 * gamman;
+    else gammat = atof(arg[6]);
+    
+    xmu = atof(arg[7]);
+    dampflag = atoi(arg[8]);
+    if (dampflag == 0) gammat = 0.0;
 
-  if (kn < 0.0 || kt < 0.0 || gamman < 0.0 || gammat < 0.0 ||
-      xmu < 0.0 || dampflag < 0 || dampflag > 1)
-    error->all(FLERR,"Illegal fix wall/gran command");
+    if (kn < 0.0 || kt < 0.0 || gamman < 0.0 || gammat < 0.0 ||
+	xmu < 0.0 || dampflag < 0 || dampflag > 1)
+      error->all(FLERR,"Illegal fix wall/gran command");
+  }
 
   // convert Kn and Kt from pressure units to force/distance^2 if Hertzian
 
-  if (force->pair_match("gran/hertz/history",1)) {
+  if (force->pair_match("gran/hertz/history",1) || force->pair_match("gran/shm/history",1)) {
     kn /= force->nktv2p;
     kt /= force->nktv2p;
   }
-
+  
   // wallstyle args
 
   int iarg = 9;
+  if (force->pair_match("gran/shm/history",1)) iarg = 6; //~ [KH - 30 October 2013]
+
   if (strcmp(arg[iarg],"xplane") == 0) {
     if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/gran command");
     wallstyle = XPLANE;
@@ -211,11 +227,18 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   atom->add_callback(0);
   atom->add_callback(1);
 
+  //~ Find the number of shear quantities required [KH - 30 October 2013]
+  numshearquants = 3;
+
+  //~ pair/gran/shm/history has 4 shear quantities
+  if (force->pair_match("shm",0)) numshearquants++;
+
   // initialize as if particle is not touching wall
 
   int nlocal = atom->nlocal;
   for (int i = 0; i < nlocal; i++)
-    shear[i][0] = shear[i][1] = shear[i][2] = 0.0;
+    for (int q = 0; q < numshearquants; q++)
+      shear[i][q] = 0.0; //~ [KH - 30 October 2013]
 
   time_origin = update->ntimestep;
 }
@@ -275,6 +298,8 @@ void FixWallGran::init()
     pairstyle = HERTZ_HISTORY;
   else if (force->pair_match("gran/hertz/history/omp",1))
     pairstyle = HERTZ_HISTORY;
+  else if (force->pair_match("gran/shm/history",1))
+    pairstyle = SHM_HISTORY; //~ Extra entry added [KH - 30 October 2013]
   else error->all(FLERR,"Fix wall/gran is incompatible with Pair style");
 }
 
@@ -381,6 +406,8 @@ void FixWallGran::post_force(int vflag)
           shear[i][0] = 0.0;
           shear[i][1] = 0.0;
           shear[i][2] = 0.0;
+	  //~ Add entry for shm history [KH - 30 October 2013]
+	  if (pairstyle == SHM_HISTORY) shear[i][3] = 0.0;
         }
       } else {
         if (pairstyle == HOOKE)
@@ -391,6 +418,9 @@ void FixWallGran::post_force(int vflag)
                         radius[i],rmass[i],shear[i],i);
         else if (pairstyle == HERTZ_HISTORY)
           hertz_history(rsq,dx,dy,dz,velwall,v[i],f[i],omega[i],torque[i],
+                        radius[i],rmass[i],shear[i],i);
+	else if (pairstyle == SHM_HISTORY) //~ [KH - 30 October 2013]
+          shm_history(rsq,dx,dy,dz,velwall,v[i],f[i],omega[i],torque[i],
                         radius[i],rmass[i],shear[i],i);
       }
     }
@@ -724,6 +754,152 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
 
 }
 
+/* ---------------------------------------------------------------------- */
+
+void FixWallGran::shm_history(double rsq, double dx, double dy, double dz,
+			      double *vwall, double *v,
+			      double *f, double *omega, double *torque,
+			      double radius, double mass, double *shear, int i)
+{
+  //~ Added this function for shm history [KH - 30 October 2013]
+
+  double r,vr1,vr2,vr3,vnnr,vn1,vn2,vn3,vt1,vt2,vt3;
+  double meff,damp,ccel,vtr1,vtr2,vtr3,vrel;
+  double fs,fslim,fx,fy,fz;
+  double shsqmag,shsqnew,rsht,shratio,polyhertz,rinv,rsqinv;
+  double wspinx,wspiny,wspinz,shint0,shint1,shint2,omdel;
+
+  r = sqrt(rsq);
+  rinv = 1.0/r;
+  rsqinv = 1.0/rsq;
+
+  // relative translational velocity
+
+  vr1 = v[0] - vwall[0];
+  vr2 = v[1] - vwall[1];
+  vr3 = v[2] - vwall[2];
+
+  // normal component
+
+  vnnr = vr1*dx + vr2*dy + vr3*dz;
+  vn1 = dx*vnnr / rsq;
+  vn2 = dy*vnnr / rsq;
+  vn3 = dz*vnnr / rsq;
+
+  // tangential component
+
+  vt1 = vr1 - vn1;
+  vt2 = vr2 - vn2;
+  vt3 = vr3 - vn3;
+
+  // normal forces = Hertzian contact
+  //~ Damping is not present in the shm pairstyle
+
+  ccel = kn*(radius-r)*rinv;
+  polyhertz = sqrt((radius-r)*radius);
+  ccel *= polyhertz;
+
+  // relative velocities
+
+  vtr1 = vt1 - dz*omega[1]+dy*omega[2];
+  vtr2 = vt2 - dx*omega[2]+dz*omega[0];
+  vtr3 = vt3 - dy*omega[0]+dx*omega[1];
+  vrel = vtr1*vtr1 + vtr2*vtr2 + vtr3*vtr3;
+  vrel = sqrt(vrel);
+
+  // shear history effects
+  //~ Note that shear now refers to shear force, not shear displacement
+
+  shsqmag = shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2];
+
+  // rotate shear forces onto new contact plane conserving length
+
+  rsht = shear[0]*dx + shear[1]*dy + shear[2]*dz;
+  rsht = rsht*rsqinv;
+  if (shearupdate) {
+    shear[0] -= rsht*dx;
+    shear[1] -= rsht*dy;
+    shear[2] -= rsht*dz;
+    shsqnew = shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2];
+    if (shsqnew!=0.0) {
+      shratio=sqrt(shsqmag/shsqnew);
+      shear[0] *= shratio; // conserve shear force length
+      shear[1] *= shratio;
+      shear[2] *= shratio;
+    }
+  }
+
+  // then perform rotation for rigid-body SPIN
+  omdel=omega[0]*dx+omega[1]*dy+omega[2]*dz;
+  wspinx=0.5*rsqinv*dx*omdel;
+  wspiny=0.5*rsqinv*dy*omdel;
+  wspinz=0.5*rsqinv*dz*omdel;
+  shint0 = shear[0];
+  shint1 = shear[1];
+  shint2 = shear[2];
+
+  if (shearupdate) {
+    shear[0]=shint0+shint1*(-wspinz*dt)+shint2*wspiny*dt;
+    shear[1]=shint0*wspinz*dt+shint1+shint2*(-wspinx*dt);
+    shear[2]=shint0*(-wspiny*dt)+shint1*wspinx*dt+shint2;
+  }
+
+  // tangential forces done incrementally
+
+  if (shearupdate) {
+    /*~ Apply Colin Thornton's suggested correction (see
+      Eq. 18 of 2013 P. Tech. paper) [KH - 30 October 2013]*/
+    if (shear[3] > polyhertz) {
+      /*~ Note that as polyhertz is >= 0, there is no need to
+	check for shear[3] == 0 in the expressions below*/
+      shear[0] *= polyhertz/shear[3];
+      shear[1] *= polyhertz/shear[3];
+      shear[2] *= polyhertz/shear[3];
+    }
+
+    shear[0] -= polyhertz*kt*vtr1*dt;//shear displacement =vtr*dt
+    shear[1] -= polyhertz*kt*vtr2*dt;
+    shear[2] -= polyhertz*kt*vtr3*dt;
+  }
+
+  // rescale frictional forces if needed
+
+  fs = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
+  fslim = xmu * fabs(ccel*r);
+
+  if (fs > fslim) {
+    if (fs != 0.0) {
+      if (shearupdate) {
+	shear[0] *= fslim/fs;
+	shear[1] *= fslim/fs;
+	shear[2] *= fslim/fs;
+      }
+    } else shear[0] = shear[1] = shear[2] = 0.0;
+  }
+
+  //~ Assign current polyhertz value to shear[3] [KH - 30 October 2013]
+  shear[3] = polyhertz;
+
+  // forces & torques
+
+  fx = dx*ccel + shear[0];
+  fy = dy*ccel + shear[1];
+  fz = dz*ccel + shear[2];
+
+  f[0] += fx;
+  f[1] += fy;
+  f[2] += fz;
+
+  torque[0] -= dy*shear[2] - dz*shear[1];
+  torque[1] -= dz*shear[0] - dx*shear[2];
+  torque[2] -= dx*shear[1] - dy*shear[0];
+
+  fwall[0] += fx;
+  fwall[1] += fy;
+  fwall[2] += fz;
+  if (evflag) ev_tally_wall(i,fx,fy,fz,dx,dy,dz,radius);
+}
+
 /* ----------------------------------------------------------------------
    memory usage of local atom-based arrays
 ------------------------------------------------------------------------- */
@@ -733,6 +909,10 @@ double FixWallGran::memory_usage()
   int nmax = atom->nmax;
   double bytes = nmax * sizeof(int);
   bytes += 3*nmax * sizeof(double);
+
+  //~ Have additional shear parameter for shm history [KH - 30 October 2013]
+  if (pairstyle == SHM_HISTORY) bytes += nmax * sizeof(double);
+
   //add vatom memory!
   return bytes;
 }
@@ -743,7 +923,7 @@ double FixWallGran::memory_usage()
 
 void FixWallGran::grow_arrays(int nmax)
 {
-  memory->grow(shear,nmax,3,"fix_wall_gran:shear");
+  memory->grow(shear,nmax,numshearquants,"fix_wall_gran:shear"); //~ [KH - 30 October 2013]
 }
 
 /* ----------------------------------------------------------------------
@@ -752,9 +932,8 @@ void FixWallGran::grow_arrays(int nmax)
 
 void FixWallGran::copy_arrays(int i, int j, int delflag)
 {
-  shear[j][0] = shear[i][0];
-  shear[j][1] = shear[i][1];
-  shear[j][2] = shear[i][2];
+  for (int q = 0; q < numshearquants; q++)
+    shear[j][q] = shear[i][q]; //~ [KH - 30 October 2013]
 }
 
 /* ----------------------------------------------------------------------
@@ -763,7 +942,8 @@ void FixWallGran::copy_arrays(int i, int j, int delflag)
 
 void FixWallGran::set_arrays(int i)
 {
-  shear[i][0] = shear[i][1] = shear[i][2] = 0.0;
+  for (int q = 0; q < numshearquants; q++)
+    shear[i][q] = 0.0; //~ [KH - 30 October 2013]
 }
 
 /* ----------------------------------------------------------------------
@@ -772,10 +952,10 @@ void FixWallGran::set_arrays(int i)
 
 int FixWallGran::pack_exchange(int i, double *buf)
 {
-  buf[0] = shear[i][0];
-  buf[1] = shear[i][1];
-  buf[2] = shear[i][2];
-  return 3;
+  for (int q = 0; q < numshearquants; q++)
+    buf[q] = shear[i][q]; //~ [KH - 30 October 2013]
+
+  return numshearquants;
 }
 
 /* ----------------------------------------------------------------------
@@ -784,10 +964,10 @@ int FixWallGran::pack_exchange(int i, double *buf)
 
 int FixWallGran::unpack_exchange(int nlocal, double *buf)
 {
-  shear[nlocal][0] = buf[0];
-  shear[nlocal][1] = buf[1];
-  shear[nlocal][2] = buf[2];
-  return 3;
+  for (int q = 0; q < numshearquants; q++)
+    shear[nlocal][q] = buf[q]; //~ [KH - 30 October 2013]
+  
+  return numshearquants;
 }
 
 /* ----------------------------------------------------------------------
@@ -797,10 +977,11 @@ int FixWallGran::unpack_exchange(int nlocal, double *buf)
 int FixWallGran::pack_restart(int i, double *buf)
 {
   int m = 0;
-  buf[m++] = 4;
+  buf[m++] = numshearquants + 1; //~ [KH - 30 October 2013]
   buf[m++] = shear[i][0];
   buf[m++] = shear[i][1];
   buf[m++] = shear[i][2];
+  if (force->pair_match("gran/shm/history",1)) buf[m++] = shear[i][3];
   return m;
 }
 
@@ -821,6 +1002,8 @@ void FixWallGran::unpack_restart(int nlocal, int nth)
   shear[nlocal][0] = extra[nlocal][m++];
   shear[nlocal][1] = extra[nlocal][m++];
   shear[nlocal][2] = extra[nlocal][m++];
+  if (force->pair_match("gran/shm/history",1)) //~ [KH - 30 October 2013]
+    shear[nlocal][3] = extra[nlocal][m++];
 }
 
 /* ----------------------------------------------------------------------
@@ -829,7 +1012,8 @@ void FixWallGran::unpack_restart(int nlocal, int nth)
 
 int FixWallGran::maxsize_restart()
 {
-  return 4;
+  int y = numshearquants + 1;
+  return y;
 }
 
 /* ----------------------------------------------------------------------
@@ -838,7 +1022,8 @@ int FixWallGran::maxsize_restart()
 
 int FixWallGran::size_restart(int nlocal)
 {
-  return 4;
+  int y = numshearquants + 1;
+  return y;
 }
 
 /* ---------------------------------------------------------------------- */
