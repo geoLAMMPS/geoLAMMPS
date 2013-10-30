@@ -40,7 +40,8 @@ public:
   void end_of_step();
   double failure_occurs(int, double **, int);
   double reduce_radius(int, double **, int);
-  void change_strengths(int,double);
+  double increase_rattler_diameter(int, double);
+  void change_strengths(int,double,int=0); //~ Give default argument
   double insert_particles(int);
   void xyz_random(double *);
   double minimise_overlap(double *,double **,int,double);
@@ -79,6 +80,7 @@ public:
 
   class NeighList *list; //~ Allow access to standard neighbor list
   class Compute *tstress;
+  class Compute *tcompute;
   class RanPark *random;
  
   char *id_stress;

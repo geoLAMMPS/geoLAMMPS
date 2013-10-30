@@ -250,6 +250,9 @@ FixCrushing::~FixCrushing()
     delete [] id_stress;
   }
 
+  //~ Also delete the connectivity compute
+  modify->delete_compute("crush_coord");
+
   delete random;
 }
 
@@ -258,6 +261,7 @@ FixCrushing::~FixCrushing()
 int FixCrushing::setmask()
 {
   int mask = 0;
+  mask |= PRE_FORCE;
   mask |= END_OF_STEP;
   return mask;
 }
@@ -412,6 +416,22 @@ void FixCrushing::setup(int vflag)
   icompute = modify->find_compute(id_stress);
   if (icompute < 0) error->all(FLERR,"Stress ID does not exist in fix crushing");
   tstress = modify->compute[icompute];
+
+  //~ Also set up a compute coord/gran to identify rattlers
+  if (modify->find_compute("crush_coord") < 0) {;
+    char **tnewarg = new char*[3];
+    tnewarg[0] = (char *) "crush_coord";
+    tnewarg[1] = (char *) "all";
+    tnewarg[2] = (char *) "coord/gran";
+    
+    modify->add_compute(3,tnewarg);
+    delete [] tnewarg;
+    
+    //~ Confirm that the compute exists
+    icompute = modify->find_compute("crush_coord");
+    if (icompute < 0) error->all(FLERR,"Coordination number ID does not exist in fix crushing");
+    tcompute = modify->compute[icompute];
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -519,6 +539,11 @@ void FixCrushing::end_of_step()
   memory->destroy(localdata); //~ Destroy allocated memory as soon as possible
   memory->destroy(displaydata); //~ If null, this does nothing
  
+  //~ Next fetch the connectivities
+  if (tcompute->invoked_peratom != update->ntimestep)
+    tcompute->compute_peratom();
+  double *connectivities = tcompute->vector_atom;
+
   if (redvolume > SMALL) {
     cumulredvolume += redvolume; //~ Update the total cumulative volume loss
 
@@ -533,11 +558,40 @@ void FixCrushing::end_of_step()
 	nnew++;
       }
       
+      //~ Now not allowing inter-particle overlaps
       numinserted = insert_particles(nnew);
 
       //~ Correct cumulredvolume if all requested particles not added
       if (numinserted < nnew)
 	cumulredvolume += (nnew - numinserted)*volumeparticletoinsert;
+
+      //~ Compute the volume still to be added on each proc
+      double perprocvol = cumulredvolume/static_cast<double>(nprocs);
+
+      int countincreases = 0; //~ The numbers of radii increased
+      int overallcountincreases;
+
+      /*~ Identify and increase diameter of rattlers with no contacts.
+	Do this only if no new particles have been added to the
+	system as neighbour lists have not yet been rebuilt (done near
+	end of this function).*/
+      if (numinserted < nnew && numinserted == 0) {
+	for (int i = 0; i < nlocal; i++) {
+	  if (connectivities[i] == 0 && perprocvol > 0.0) {
+	    perprocvol -= increase_rattler_diameter(i,perprocvol);
+	    countincreases++;
+	  }
+	}
+      
+	double oldcumulredvolume = cumulredvolume;
+
+	//~ Gather perprocvol values from all procs and assign to cumulredvolume
+	MPI_Allreduce(&perprocvol,&cumulredvolume,1,MPI_DOUBLE,MPI_SUM,world);
+	MPI_Allreduce(&countincreases,&overallcountincreases,1,MPI_INT,MPI_SUM,world);
+
+	if (me == 0)
+	  fprintf(screen,"Volume to add: %1.6e | Volume remaining to add: %1.6e | Number of increased radii: %u.\n",oldcumulredvolume,cumulredvolume,overallcountincreases);
+      }
     }
     
     /*~ If radii have been reduced, init entire system since
@@ -690,23 +744,110 @@ double FixCrushing::reduce_radius(int i, double **localdata, int nrows)
 
 /* ---------------------------------------------------------------------- */
 
-void FixCrushing::change_strengths(int i, double radius)
+double FixCrushing::increase_rattler_diameter(int i, double perprocvol)
+{
+  //~ Increase the diameter to just avoid contacting neighbouring particles 
+  double *radius = atom->radius;
+  double oldradius = radius[i];
+  double maxdist = BIG; //~ The amount by which to increase the radius
+  double **x = atom->x;
+  int *mask = atom->mask;
+
+  //~ Check for contacts using the neighbor list
+  int i2,ii,j,jj,inum,jnum;
+  int *ilist,*jlist,*numneigh,**firstneigh;
+  double delx,dely,delz,r,rsq,radsum,rincrease;
+
+  inum = list->inum;
+  ilist = list->ilist;
+  numneigh = list->numneigh;
+  firstneigh = list->firstneigh;
+
+  for (ii = 0; ii < inum; ii++) {
+    i2 = ilist[ii];
+    jlist = firstneigh[i2];
+    jnum = numneigh[i2];
+
+    //~ Check whether i and i2 are the same particle
+    //~ If so, loop through its neighbours and break
+    if (radius[i] == radius[i2] && x[i][0] == x[i2][0]
+	&& x[i][1] == x[i2][1] && x[i][2] == x[i2][2]) {
+      for (jj = 0; jj < jnum; jj++) {
+	j = jlist[jj];
+	j &= NEIGHMASK;
+
+	delx = x[i][0] - x[j][0];
+	dely = x[i][1] - x[j][1];
+	delz = x[i][2] - x[j][2];
+	rsq = delx*delx + dely*dely + delz*delz;
+	r = sqrt(rsq);
+	radsum = radius[i] + radius[j];
+	
+	rincrease = r - radsum;
+	if (rincrease < maxdist) maxdist = rincrease;
+      }
+      //~ Include a small tolerance to ensure no contact
+      maxdist *= 0.9999;
+      
+      break;
+    }
+  }
+
+  /*~ Increase the radius of particle i by maxdist if the added volume
+    is less than perprocvol.*/
+  double newradius = oldradius + maxdist;
+  double volchange = (4.0*PI/3.0)*(newradius*newradius*newradius-oldradius*oldradius*oldradius);
+
+  if (volchange <= perprocvol)
+    radius[i] = newradius;
+  else
+    radius[i] = pow((0.75*perprocvol/PI + oldradius*oldradius*oldradius),(1.0/3.0));
+
+  //~ Change the stored values of uniaxial tensile and compressive strength
+  // change_strengths(i,radius[i],1); //~ Send a '1' as an optional parameter
+
+  //~ Return the change in solid volume
+  volchange = (4.0*PI/3.0)*(radius[i]*radius[i]*radius[i]-oldradius*oldradius*oldradius);
+
+  return volchange;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixCrushing::change_strengths(int i, double radius, int a)
 {
   int counter = 0;
   int weibullparamflag = 1;
   int counterlimit = 1000;
   double newcstrength = 0.0;
 
-  //~ Force the new compressive strength to be larger in magnitude than the old value
-  while (-1.0*newcstrength <= -1.0*cparams[i][0]) {//~ cparams[i][0] is negative
-    newcstrength = strength_calculation(i,radius,weibullparamflag);
-  
-    counter++;
-    if (counter > counterlimit) {
-      newcstrength = cparams[i][0];
-      fprintf(screen,"Loop exit condition invoked in FixCrushing on timestep "BIGINT_FORMAT" to prevent an infinite loop.\n",update->ntimestep);
+  if (a == 1) newcstrength = -BIG;
 
-      break; //~ To prevent an infinite loop
+  if (a == 0) {
+    //~ Force the new compressive strength to be larger in magnitude than the old value
+    while (-1.0*newcstrength <= -1.0*cparams[i][0]) {//~ cparams[i][0] is negative
+      newcstrength = strength_calculation(i,radius,weibullparamflag);
+      
+      counter++;
+      if (counter > counterlimit) {
+	newcstrength = cparams[i][0];
+	fprintf(screen,"Loop exit condition invoked in FixCrushing on timestep "BIGINT_FORMAT" to prevent an infinite loop.\n",update->ntimestep);
+      
+	break; //~ To prevent an infinite loop
+      }
+    } 
+  } else {
+    //~ Force the new compressive strength to be smaller in magnitude than the old value
+    while (-1.0*newcstrength >= -1.0*cparams[i][0]) {//~ cparams[i][0] is negative
+      newcstrength = strength_calculation(i,radius,weibullparamflag);
+  
+      counter++;
+      if (counter > counterlimit) {
+	newcstrength = cparams[i][0];
+	fprintf(screen,"Loop exit condition invoked in FixCrushing on timestep "BIGINT_FORMAT" to prevent an infinite loop.\n",update->ntimestep);
+	
+	break; //~ To prevent an infinite loop
+      }
     }
   }
 
@@ -721,52 +862,26 @@ double FixCrushing::insert_particles(int nnew)
   /*~ Function based loosely on pre_exchange function 
     in fix_pour [KH - 25 July 2013]*/
 
-  /*~ xmine is for atoms on this proc; xnear is for atoms 
-    from all procs + atoms to be inserted*/
-
-  int nnear = atom->natoms;
-  double **xmine,**xnear;
-  memory->create(xmine,atom->nlocal,4,"fix_crushing:xmine");
-  memory->create(xnear,nnear+nnew,4,"fix_crushing:xnear");
-  
-  // setup for allgatherv
-  int *recvcounts,*displs;
-  recvcounts = new int[nprocs];
-  displs = new int[nprocs];
-
-  int n = 4*atom->nlocal;
-  MPI_Allgather(&n,1,MPI_INT,recvcounts,1,MPI_INT,world);
-
-  displs[0] = 0;
-  for (int iproc = 1; iproc < nprocs; iproc++)
-    displs[iproc] = displs[iproc-1] + recvcounts[iproc-1];
-
-  //~ Populate the xmine array
+  //~ xmine is for atoms on this proc and ghosts
+  int nall = atom->nlocal + atom->nghost;
+  int ntotal = nall + nnew;
+  double **xmine;
   double **x = atom->x;
   double *radius = atom->radius;
 
-  for (int i = 0; i < atom->nlocal; i++) {
+  memory->create(xmine,ntotal,4,"fix_crushing:xmine");
+  
+  for (int i = 0; i < nall; i++) {
     xmine[i][0] = x[i][0];
     xmine[i][1] = x[i][1];
     xmine[i][2] = x[i][2];
     xmine[i][3] = radius[i];
   }
 
-  // perform allgatherv to acquire list of nearby particles on all procs
-
-  double *ptr = NULL;
-  if (atom->nlocal > 0) ptr = xmine[0];
-  MPI_Allgatherv(ptr,4*atom->nlocal,MPI_DOUBLE,
-                 xnear[0],recvcounts,displs,MPI_DOUBLE,world);
-
-  memory->destroy(xmine); //~ Free up memory as soon as possible
-  delete [] recvcounts;
-  delete [] displs;
-
-  // insert new atoms into xnear list, one by one
+  // insert new atoms into xmine list, one by one
   // check against all nearby atoms and previously inserted ones
   // if there is an overlap then retry using a new randomly-selected coord
-  // else insert by adding to xnear list
+  // else insert by adding to xmine list
  
   /*~ There are two user-defined options to set here. 'maxattempt' 
     attempts are made to place each individual particle without overlapping
@@ -782,8 +897,8 @@ double FixCrushing::insert_particles(int nnew)
     randomly-selected coordinates are adjusted slightly to find a local 
     minimum of inter-particle overlap.*/ 
 
-  int maxattempt = 1e3; //~ The maximum number of attempts to place an atom
-  int allowoverlaps = 1;
+  int maxattempt = 1e4; //~ The maximum number of attempts to place an atom
+  int allowoverlaps = 0;
 
   if (maxattempt < 1)
     error->all(FLERR,"maxattempt in fix crushing must be a positive integer");
@@ -792,20 +907,20 @@ double FixCrushing::insert_particles(int nnew)
     error->all(FLERR,"allowoverlaps flag must be either 0 or 1");
   
   int i,oneprocsuccess,success,successproc,sproc,attempt,numinserted,overlapflag,skipflag;
-  int ntotal = atom->natoms + nnew;
   double coord[3],bestcoord[3],delx,dely,delz,rsq,radsum;
   double overlapsq,minoverlapsq,tempmaxoverlapsq;
   double tempbiggestoverlap;
   double biggestoverlap = 0.0;
 
-  /*~ This part of the code is run on all procs (mostly), but the full
-    list of particle coordinates is always parsed, not just local. This is
+  /*~ This part of the code is run on all procs (mostly), but only the local
+    list of particle coordinates is parsed. This can potentially cause problems
     because if > 1 particle is placed, the ghosts of the first particle
     are not created until all particles have been placed. Hence an
     overlap between the first particle and subsequent particles may
-    not be detected as ghosts are not present. This is avoided by testing
-    for overlaps with all particles on one proc.*/
-  while (nnear < ntotal) {
+    not be detected as ghosts are not present. This is avoided by adding the
+    coordinates of newly-added particles to the xmine arrays on all procs.*/
+
+  while (nall < ntotal) {
     oneprocsuccess = success = attempt = 0;
     successproc = sproc = -1; //~ There is a proc '0' so initialise at negative value
     minoverlapsq = BIG;
@@ -817,11 +932,11 @@ double FixCrushing::insert_particles(int nnew)
       tempmaxoverlapsq = 0.0;
       xyz_random(coord);
 
-      for (i = 0; i < nnear; i++) {
+      for (i = 0; i < nall; i++) {
 	//~ Special allowances must be made here for periodic boundaries
-	delx = fabs(coord[0] - xnear[i][0]);
-	dely = fabs(coord[1] - xnear[i][1]);
-	delz = fabs(coord[2] - xnear[i][2]);
+	delx = fabs(coord[0] - xmine[i][0]);
+	dely = fabs(coord[1] - xmine[i][1]);
+	delz = fabs(coord[2] - xmine[i][2]);
 
 	if (delx > 0.5*(domain->boxhi[0]-domain->boxlo[0]))
 	  delx -= (domain->boxhi[0]-domain->boxlo[0]);
@@ -833,7 +948,7 @@ double FixCrushing::insert_particles(int nnew)
 	  delz -= (domain->boxhi[2]-domain->boxlo[2]);
 	
 	rsq = delx*delx + dely*dely + delz*delz;
-	radsum = radiusparticletoinsert + xnear[i][3];
+	radsum = radiusparticletoinsert + xmine[i][3];
 	overlapsq = radsum*radsum - rsq;
 
 	if (overlapsq > 0.0) {//~ There is an overlap
@@ -866,7 +981,7 @@ double FixCrushing::insert_particles(int nnew)
       if (success) MPI_Allreduce(&successproc,&sproc,1,MPI_INT,MPI_MAX,world);
     }
 
-    //~ Transfer the successful insertion points (on proc sproc) to all procs
+    //~ Transfer the successful insertion point (on proc sproc) to all procs
     if (success) MPI_Bcast(&coord[0],3,MPI_DOUBLE,sproc,world);
 
     /*~ If overlaps are allowed and present in all cases, success will
@@ -880,24 +995,27 @@ double FixCrushing::insert_particles(int nnew)
       //~ Find the corresponding bestcoord values. successproc == -1.
       if (fabs(overallmin-minoverlapsq) < tolerance) successproc = me;
       MPI_Allreduce(&successproc,&sproc,1,MPI_INT,MPI_MAX,world);
+
+      //~ Can run minimise_overlap function on sproc
+      if (me == sproc)
+	tempbiggestoverlap = minimise_overlap(bestcoord,xmine,nall,radiusparticletoinsert);
+
       MPI_Bcast(&bestcoord[0],3,MPI_DOUBLE,sproc,world);
-
-      //~ Can run minimise_overlap function on all procs without a problem
-      tempbiggestoverlap = minimise_overlap(bestcoord,xnear,nnear,radiusparticletoinsert);
-
+      MPI_Bcast(&tempbiggestoverlap,1,MPI_DOUBLE,sproc,world);
+      
       if (tempbiggestoverlap > biggestoverlap) biggestoverlap = tempbiggestoverlap;
       for (int j = 0; j < 3; j++) coord[j] = bestcoord[j];
       success = 1;	
     }
-
+    
     if (success) {
-      for (int j = 0; j < 3; j++) xnear[nnear][j] = coord[j];
-      xnear[nnear][3] = radiusparticletoinsert;
-      nnear++;
+      for (int j = 0; j < 3; j++) xmine[nall][j] = coord[j];
+      xmine[nall][3] = radiusparticletoinsert;
+      nall++;
     } else break;
   }
 
-  numinserted = nnear - atom->natoms;
+  numinserted = nall - (atom->nlocal + atom->nghost);
  
   //~ Write a message for the user
   if (me == 0 && displaymessages) {
@@ -931,9 +1049,10 @@ double FixCrushing::insert_particles(int nnew)
   // initialize info about the atom
   // set npartner for new atom to 0 (assume not touching any others)
 
-  for (i = atom->natoms; i < numinserted+atom->natoms; i++) {
-    for (int j = 0; j < 3; j++) coord[j] = xnear[i][j];
-    radtmp = xnear[i][3];
+  nall = atom->nlocal + atom->nghost; //~ Reset nall
+  for (i = nall; i < numinserted+nall; i++) {
+    for (int j = 0; j < 3; j++) coord[j] = xmine[i][j];
+    radtmp = xmine[i][3];
 
     /*~ When creating the atom, note that all velocities are 0.0 by
       default (in AtomVecSphere->create_atom) and the mask is 1*/
@@ -952,7 +1071,7 @@ double FixCrushing::insert_particles(int nnew)
     }
   }
 
-  memory->destroy(xnear); //~ Destroy locally-allocated memory
+  memory->destroy(xmine); //~ Destroy locally-allocated memory
 
   // reset global natoms
   // set tag # of new particles beyond all previous atoms
@@ -979,7 +1098,7 @@ double FixCrushing::insert_particles(int nnew)
 void FixCrushing::xyz_random(double *coord)
 {
   for (int i = 0; i < 3; i++)
-    coord[i] = domain->boxlo[i] + random->uniform()*(domain->boxhi[i]-domain->boxlo[i]);
+    coord[i] = domain->sublo[i] + random->uniform()*(domain->subhi[i]-domain->sublo[i]);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1185,8 +1304,7 @@ void FixCrushing::print_optional_info(double **data, int nrows)
 double FixCrushing::memory_usage()
 {
   double bytes = atom->nmax*3 * sizeof(double); //~ For cparams array
-  bytes += atom->nlocal*4 * sizeof(double); //~ For xmine array in insert_particles
-  bytes += atom->natoms*4 * sizeof(double); //~ For xnear array in insert_particles
+  bytes += (atom->nlocal+atom->nghost)*4 * sizeof(double); //~ For xmine array in insert_particles
 
   /*~ This is the most memory which is allocated concurrently. Other arrays
     (e.g., displaydata) are created and destroyed in another function,
