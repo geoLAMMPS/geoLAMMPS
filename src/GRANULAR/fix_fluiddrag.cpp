@@ -404,7 +404,7 @@ void FixFluidDrag::grow_arrays(int nmax)
    copy values within local atom-based array
 ------------------------------------------------------------------------- */
 
-void FixFluidDrag::copy_arrays(int i, int j)
+void FixFluidDrag::copy_arrays(int i, int j, int delflag)
 {
   for (int q = 0; q < numcols; q++)
     fddata[j][q] = fddata[i][q];
