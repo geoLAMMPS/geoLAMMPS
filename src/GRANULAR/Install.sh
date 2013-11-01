@@ -5,6 +5,7 @@ if (test $1 = 1) then
   cp -p compute_coord_gran.cpp ..
   cp -p fix_fluiddrag.cpp ..
   cp -p fix_freeze.cpp ..
+  cp -p fix_old_omega.cpp ..
   cp -p fix_pour.cpp ..
   cp -p fix_read_shear.cpp ..
   cp -p fix_wall_gran.cpp ..
@@ -17,6 +18,7 @@ if (test $1 = 1) then
   cp -p compute_coord_gran.h ..
   cp -p fix_fluiddrag.h ..
   cp -p fix_freeze.h ..
+  cp -p fix_old_omega.h ..
   cp -p fix_pour.h ..
   cp -p fix_read_shear.h ..
   cp -p fix_wall_gran.h ..
@@ -31,6 +33,7 @@ elif (test $1 = 0) then
   rm -f ../compute_coord_gran.cpp
   rm -f ../fix_fluiddrag.cpp
   rm -f ../fix_freeze.cpp
+  rm -f ../fix_old_omega.cpp
   rm -f ../fix_pour.cpp
   rm -f ../fix_read_shear.cpp
   rm -f ../fix_wall_gran.cpp
@@ -43,6 +46,7 @@ elif (test $1 = 0) then
   rm -f ../compute_coord_gran.h
   rm -f ../fix_fluiddrag.h
   rm -f ../fix_freeze.h
+  rm -f ../fix_old_omega.h
   rm -f ../fix_pour.h
   rm -f ../fix_read_shear.h
   rm -f ../fix_wall_gran.h

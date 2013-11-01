@@ -27,6 +27,7 @@
 #include "comm.h"
 #include "domain.h" //~ Two header files were added [KH - 9 November 2011]
 #include "modify.h"
+#include "error.h" //~ And another [KH - 23 October 2013]
 
 using namespace LAMMPS_NS;
 
@@ -36,6 +37,11 @@ PairGranHooke::PairGranHooke(LAMMPS *lmp) : PairGranHookeHistory(lmp)
 {
   no_virial_fdotr_compute = 0;
   history = 0;
+
+  /*~ Since the rolling resistance parameters are stored alongside
+    the shear history, give an error if rolling flag is active
+    without shear history [KH - 23 October 2013]*/
+  if (rolling) error->all(FLERR,"Must store shear history if rolling resistance model is active");
 }
 
 /* ---------------------------------------------------------------------- */

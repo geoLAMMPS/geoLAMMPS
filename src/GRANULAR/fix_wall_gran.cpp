@@ -31,6 +31,9 @@
 #include "input.h"
 #include "variable.h"
 #include "error.h"
+#include "math_extra.h" //~ These four header files needed for rolling resistance model [KH - 30 October 2013]
+#include "fix_old_omega.h"
+#include "math_special.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -219,6 +222,32 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
 
   if (wiggle) omega = 2.0*MY_PI / period;
 
+  //~ Find the number of shear quantities required [KH - 30 October 2013]
+  numshearquants = 3;
+
+  //~ pair/gran/shm/history has 4 shear quantities
+  if (force->pair_match("shm",0)) numshearquants++;
+
+  /*~ Finally, adding a rolling resistance model causes the number of
+    shear history quantities to be increased by 10 [KH - 30 October 2013]*/
+  int dim;
+  Pair *pair;
+  if (force->pair_match("gran/hooke/history",1)) 
+    pair = force->pair_match("gran/hooke/history",1);
+  else if (force->pair_match("gran/hertz/history",1))
+    pair = force->pair_match("gran/hertz/history",1);
+  else pair = force->pair_match("gran/shm/history",1);
+
+  rolling = (int *) pair->extract("rolling",dim);
+  if (*rolling) numshearquants += 10;
+
+  /*~ Use same method to obtain model_type and rolling_delta from 
+    pairstyles [KH - 30 October 2013]*/
+  if (*rolling) {
+     model_type = (int *) pair->extract("model_type",dim);
+     rolling_delta = (int *) pair->extract("rolling_delta",dim);
+  }
+
   // perform initial allocation of atom-based arrays
   // register with Atom class
 
@@ -227,11 +256,13 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   atom->add_callback(0);
   atom->add_callback(1);
 
-  //~ Find the number of shear quantities required [KH - 30 October 2013]
-  numshearquants = 3;
+  /*~ Note that there is no need to set up fix_old_omega as the pairstyle
+    will do this automatically*/
 
-  //~ pair/gran/shm/history has 4 shear quantities
-  if (force->pair_match("shm",0)) numshearquants++;
+  /*~ At present, not allowed to have cylindrical wall with rolling
+    resistance model*/
+  if (*rolling && wallstyle == ZCYLINDER)
+    error->all(FLERR,"Not permitted to use rolling resistance with cylindrical walls");
 
   // initialize as if particle is not touching wall
 
@@ -313,6 +344,14 @@ void FixWallGran::setup(int vflag)
     ((Respa *) update->integrate)->copy_flevel_f(nlevels_respa-1);
     post_force_respa(vflag,nlevels_respa-1,0);
     ((Respa *) update->integrate)->copy_f_flevel(nlevels_respa-1);
+  }
+
+  //~ Set pointers for fix old omega [KH - 30 October 2013]
+  int accfix;
+  if (*rolling) {
+     accfix = modify->find_fix("pair_oldomega");
+     if (accfix < 0) error->all(FLERR,"Fix ID for old_omega does not exist");
+     deffix = modify->fix[accfix];
   }
 }
 
@@ -532,6 +571,9 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
   double fn,fs,fs1,fs2,fs3,fx,fy,fz;
   double shrmag,rsht,rinv,rsqinv;
 
+  //~ Need to calculate for rolling resistance model [KH - 30 October 2013]
+  double oldsheardispsq = shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2];
+
   r = sqrt(rsq);
   rinv = 1.0/r;
   rsqinv = 1.0/rsq;
@@ -629,6 +671,17 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
   torque[1] -= dz*fs1 - dx*fs3;
   torque[2] -= dx*fs2 - dy*fs1;
 
+  //~ Call function for rolling resistance model [KH - 30 October 2013]
+  double newsheardisp,oldsheardisp,incsheardisp,incshearforce;
+  if (*rolling && shearupdate) {
+    newsheardisp = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
+    oldsheardisp = sqrt(oldsheardispsq);
+    incsheardisp = newsheardisp - oldsheardisp;
+    incshearforce = kt*incsheardisp;
+    rolling_resistance(i,numshearquants,dx,dy,dz,r,radius,ccel,fn,
+		       incshearforce,incsheardisp,torque,shear);
+  }
+
   fwall[0] += fx;
   fwall[1] += fy;
   fwall[2] += fz;
@@ -648,6 +701,9 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
   double fn,fs,fs1,fs2,fs3,fx,fy,fz;
   double shrmag,rsht,polyhertz,rinv,rsqinv;
 
+  //~ Need to calculate for rolling resistance model [KH - 30 October 2013]
+  double oldsheardispsq = shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2];
+  
   r = sqrt(rsq);
   rinv = 1.0/r;
   rsqinv = 1.0/rsq;
@@ -746,6 +802,17 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
   torque[0] -= dy*fs3 - dz*fs2;
   torque[1] -= dz*fs1 - dx*fs3;
   torque[2] -= dx*fs2 - dy*fs1;
+
+  //~ Call function for rolling resistance model [KH - 30 October 2013]
+  double newsheardisp,oldsheardisp,incsheardisp,incshearforce;
+  if (*rolling && shearupdate) {
+    newsheardisp = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
+    oldsheardisp = sqrt(oldsheardispsq);
+    incsheardisp = newsheardisp - oldsheardisp;
+    incshearforce = kt*polyhertz*incsheardisp;
+    rolling_resistance(i,numshearquants,dx,dy,dz,r,radius,ccel,fn,
+		       incshearforce,incsheardisp,torque,shear);
+  }
 
   fwall[0] += fx;
   fwall[1] += fy;
@@ -894,6 +961,17 @@ void FixWallGran::shm_history(double rsq, double dx, double dy, double dz,
   torque[1] -= dz*shear[0] - dx*shear[2];
   torque[2] -= dx*shear[1] - dy*shear[0];
 
+  //~ Call function for rolling resistance model [KH - 30 October 2013]
+  double newshearforce,oldshearforce,incsheardisp,incshearforce;
+  if (*rolling && shearupdate) {
+    newshearforce = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
+    oldshearforce = sqrt(shsqmag);
+    incshearforce = newshearforce - oldshearforce;
+    incsheardisp = vrel*dt;
+    rolling_resistance(i,numshearquants,dx,dy,dz,r,radius,ccel,fslim,
+		       incshearforce,incsheardisp,torque,shear);
+  }
+
   fwall[0] += fx;
   fwall[1] += fy;
   fwall[2] += fz;
@@ -908,10 +986,8 @@ double FixWallGran::memory_usage()
 {
   int nmax = atom->nmax;
   double bytes = nmax * sizeof(int);
-  bytes += 3*nmax * sizeof(double);
-
-  //~ Have additional shear parameter for shm history [KH - 30 October 2013]
-  if (pairstyle == SHM_HISTORY) bytes += nmax * sizeof(double);
+  //~ Now have additional shear parameters [KH - 30 October 2013]
+  bytes += numshearquants*nmax * sizeof(double);
 
   //add vatom memory!
   return bytes;
@@ -978,10 +1054,9 @@ int FixWallGran::pack_restart(int i, double *buf)
 {
   int m = 0;
   buf[m++] = numshearquants + 1; //~ [KH - 30 October 2013]
-  buf[m++] = shear[i][0];
-  buf[m++] = shear[i][1];
-  buf[m++] = shear[i][2];
-  if (force->pair_match("gran/shm/history",1)) buf[m++] = shear[i][3];
+  for (int q = 0; q < numshearquants; q++)
+    buf[m++] = shear[i][q];
+
   return m;
 }
 
@@ -999,11 +1074,8 @@ void FixWallGran::unpack_restart(int nlocal, int nth)
   for (int i = 0; i < nth; i++) m += static_cast<int> (extra[nlocal][m]);
   m++;
 
-  shear[nlocal][0] = extra[nlocal][m++];
-  shear[nlocal][1] = extra[nlocal][m++];
-  shear[nlocal][2] = extra[nlocal][m++];
-  if (force->pair_match("gran/shm/history",1)) //~ [KH - 30 October 2013]
-    shear[nlocal][3] = extra[nlocal][m++];
+  for (int q = 0; q < numshearquants; q++) //~ [KH - 30 October 2013]
+    shear[nlocal][q] = extra[nlocal][m++];
 }
 
 /* ----------------------------------------------------------------------
@@ -1210,4 +1282,172 @@ void FixWallGran::ev_tally_wall(int i, double fx, double fy, double fz,
         }
     //}
 
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy, double dz, double r, double radius, double ccel, double maxshear, double incshearforce, double incsheardisp, double *torque, double *shear)
+{
+  /*~ This rolling resistance model was developed by Xin Huang during
+    the summer and autumn of 2013. It is the companion function of
+    PairGranHookeHistory::rolling_resistance; more information about
+    the rolling resistance model can be obtained by looking at this
+    code [KH - 30 October 2013]*/
+
+  /*~ Since the walls are planar and axis-aligned, components of the 
+    unit vector along the contact normal are found by normalising
+    dx, dy and dz by particle radius*/
+  double nx = -dx/r;
+  double ny = -dy/r;
+  double nz = -dz/r;
+
+  /*~ Calculate the four components of the unit quaternion, q. Compare
+    with a tolerance to ensure no division by zero problems*/
+  double tolerance = 1.0e-20;
+  double sinthetaovertwo, recipmagnxny;
+  sinthetaovertwo = sqrt(0.5*(1.0 - nz));
+  if (nx < 0.0) sinthetaovertwo *= -1.0;
+
+  recipmagnxny = 1.0/sqrt(nx*nx + ny*ny); //~ Potential division by zero
+  if (nx*nx < tolerance && ny*ny < tolerance) recipmagnxny = tolerance;
+
+  double q[4];
+  q[0] = sqrt(0.5*(1.0 + nz)); //~ = cos(theta)/2
+  q[1] = -sinthetaovertwo*ny*recipmagnxny;
+  q[2] = sinthetaovertwo*nx*recipmagnxny;
+  q[3] = 0.0;
+
+  //~ Compute the rotation matrix, T, from this quaternion
+  double T[3][3];
+  MathExtra::quat_to_mat(q,T);
+
+  /*~ Calculate the common radius for which several options are 
+    available. The default common radius was defined by Ai et al.
+    (2012)*/
+  double commonradius = radius;
+  if (*model_type % 5 == 0) commonradius *= 2.0; //~ Jiang et al. (2005)
+  if (*model_type % 3 == 0) commonradius = 1.0e20; //~ Iwashita and Oda (1998, 2000) - 'infinite' common radius
+  
+  /*~ Find relative rotations, dtheta, in three directions. Firstly 
+    obtain the omega values from the previous timestep from FixOldOmega.
+    Note that beta will be 0 as the denominator is infinite for a
+    ball-wall contact. Hence dalpha will be 0.5*pi. Also all the 'db'
+    terms are zero as the walls have no angular velocity. 'dur' and 
+    'dus' will equal 'da'*/
+  double **oldomegas = ((FixOldOmega *) deffix)->oldomegas;
+  double **omega = atom->omega;
+  double PI, da[3], dtheta[3];
+  
+  PI = 4.0*atan(1.0);
+  da[0] = radius*(omega[i][0] - oldomegas[i][0] - 0.5*PI); //~ X-Z projection
+  da[1] = radius*(omega[i][1] - oldomegas[i][1] - 0.5*PI); //~ Y-Z projection
+
+  //~ For spin around z axis, dalpha == 0 
+  da[2] = radius*(omega[i][2] - oldomegas[i][2]);
+
+  for (int q = 0; q < 3; q++) dtheta[q] = da[q]/commonradius;
+
+  /*~ Now that the global dtheta values are available, transform to
+      rotation around local axes by multiplying T by dtheta to give
+      dthetar*/
+  double dthetar[3];
+  MathExtra::matvec(T,dtheta,dthetar);
+
+  /*~ The equivalent area normal contact stiffness is found by dividing
+    the magnitude of the normal contact force by the product of the normal 
+    contact overlap and contact area. If division by zero, issue an error.
+    Also calculate some necessary quantities for later use*/
+  double un, B, delbyb, recipcarea, recipA, knbar, ksbar;
+  un = radius - r; //~ Normal contact overlap
+
+  if (fabs(un) > tolerance) {
+    knbar = fabs(ccel*r*recipcarea/un);
+    B = sqrt(radius*radius - r*r); //~ Radius of contact plane
+    delbyb = *rolling_delta*B;
+    recipcarea = 1.0/(PI*B*B); //~ Reciprocal of contact area
+    recipA = 1.0/(PI*delbyb*delbyb); //~ Reciprocal of modified contact area
+  } else error->all(FLERR,"Cannot estimate normal contact stiffness in rolling resistance model");
+
+  /*~ The equivalent area tangential contact stiffness is equal to the
+    incremental shear force divided by the product of incremental shear
+    displacement and contact area. Potentially there could be a division
+    by zero problem here as incsheardisp has very small values, so use
+    values stored in the shear array from the preceding timestep if
+    problems occur*/
+  if (incsheardisp > tolerance) ksbar = fabs(incshearforce*recipcarea/incsheardisp);
+  else if (shear[numshearq-1] > tolerance) ksbar = shear[numshearq-1];
+  else {
+    if (update->ntimestep > 0) fprintf(screen,"Cannot estimate tangential contact stiffness in rolling resistance model on timestep "BIGINT_FORMAT"\n",update->ntimestep); //~ Suppress for first timestep
+    ksbar = tolerance; //~ Assume a tiny value so limit not reached
+  }
+  shear[numshearq-1] = ksbar; //~ Store the value regardless
+
+  /*~ Calculate the maximum allowable rolling and twisting resistances
+    and store these in thetalimit for convenience*/
+  double thetalimit[3], st[3], dM[3];
+  thetalimit[0] = thetalimit[1] = atan(un/delbyb);
+
+  /*~ Option B: The maximum shear stress (periphery) induced by 
+    twisting torque equals to the shear stress limit (default)*/
+  thetalimit[2] = maxshear*recipA/(ksbar*delbyb);
+
+  /*~ Option C: All the shear stresses induced by twisting torque
+    equal to the shear stress limit */
+  if (*model_type % 2 == 0) thetalimit[2] = 2.0*maxshear*delbyb/3.0;
+  
+  //~ Also create an 'st' array for convenience
+  double deltaBpow = MathSpecial::powint(delbyb,4);
+  st[0] = st[1] = -0.25*PI*deltaBpow*knbar;
+  st[2] = -0.5*PI*deltaBpow*ksbar;
+
+  /*~ Calculate increments of rolling resistance and ensure
+    that the increments don't exceed the limits*/
+  for (int q = 0; q < 2; q++) {
+    if (dthetar[q] < thetalimit[q]) dM[q] = st[q]*dthetar[q];
+    else dM[q] = st[q]*thetalimit[q];
+  }
+
+  /*~ Now find increments of twisting resistance for which
+    there are two cases*/
+  if (dthetar[3] < thetalimit[3]) dM[3] = st[3]*dthetar[3];
+  else dM[3] = st[3]*thetalimit[3];
+
+  if (*model_type % 2 == 0) {//~ Option C
+    dM[3] = st[3]*dthetar[3];
+    if (dM[3] > thetalimit[3]) dM[3] = thetalimit[3];
+  }
+
+  for (int q = 0; q < 3; q++) {
+    /*~ If the accumulated local resistances exceed the permissible
+      limits, set the increments to zero and scale the accumulated
+      resistances to equal the appropriate limit. The accumulated 
+      local rolling and twisting resistances are stored in the
+      fourth-last, third-last and second-last columns of the shear 
+      array*/
+    if (shear[numshearq-4+q]+dM[q] > thetalimit[q]) {
+      dM[q] = 0.0;
+      //~ OK to update regardless of issingle setting
+      shear[numshearq-4+q] = thetalimit[q];
+    }
+
+    /*~ Now add the local resistance increments to the fourth-last, 
+      third-last and second-last columns of the shear array. The 
+      accumulated values of dus are stored in the three columns 
+      immediately before, and the accumulated values of dur in the
+      three columns immediately before these. For consistency with
+      the ball-ball contacts, need to have duplication of da as both
+      dur and dus.*/
+    shear[numshearq-4+q] += dM[q];
+    shear[numshearq-7+q] += da[q];
+    shear[numshearq-10+q] += da[q];
+  }
+
+  /*~ Compute the global moment increments by multiplying the 
+    transpose of the rotation matrix, T, by the local resistance
+    increments*/
+  double globaldM[3];
+  MathExtra::transpose_matvec(T,dM,globaldM);
+
+  //~ Finally update the torque values
+  for (int q = 0; q < 3; q++) torque[q] -= globaldM[q];
 }

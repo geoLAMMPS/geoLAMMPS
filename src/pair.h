@@ -201,6 +201,14 @@ class Pair : protected Pointers {
   int maxeatom,maxvatom;
   double kn,kt,xmu; //~ Moved from pair/gran/hooke/history [KH - 14 December 2012]
 
+  /*~ rolling was added as an integer which specifies whether or not
+    rolling resistance is active, while rolling_delta gives the delta
+    value in Xin's model. model_type is an integer which can be used
+    to specify combinations of options for the rolling resistance model
+    using prime numbers [KH - 25 October 2013]*/
+  int rolling,model_type;
+  double rolling_delta;
+
   virtual void ev_setup(int, int);
   void ev_unset();
   void ev_tally_full(int, double, double, double, double, double, double);

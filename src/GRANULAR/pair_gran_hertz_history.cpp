@@ -83,6 +83,7 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
   double deltan,cri,crj;
+  double oldsheardispsq; //~ Need for rolling resistance [KH - 25 October 2013]
 
   inum = list->inum;
   ilist = list->ilist;
@@ -114,6 +115,10 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
       }
   }
 
+  /*~ The number of shear quantities is 13 if rolling resistance
+    is active [KH - 25 October 2013]*/
+  int numshearquants = 3 + 10*rolling;
+
   // loop over neighbors of my atoms
 
   for (ii = 0; ii < inum; ii++) {
@@ -143,10 +148,9 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
         // unset non-touching neighbors
 
         touch[jj] = 0;
-        shear = &allshear[3*jj];
-        shear[0] = 0.0;
-        shear[1] = 0.0;
-        shear[2] = 0.0;
+        shear = &allshear[numshearquants*jj];
+	for (int q = 0; q < numshearquants; q++)
+	  shear[q] = 0.0; //~ Added the 'for' loop [KH - 23 October 2013]
 
       } else {
         r = sqrt(rsq);
@@ -227,7 +231,11 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
         // shear history effects
 
         touch[jj] = 1;
-        shear = &allshear[3*jj];
+        shear = &allshear[numshearquants*jj];
+
+	//~ Need to calculate for rolling resistance model [KH - 25 October 2013]
+	oldsheardispsq = shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2];
+
         if (shearupdate) {
           shear[0] += vtr1*dt;
           shear[1] += vtr2*dt;
@@ -302,6 +310,22 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
 	  torque[j][2] -= crj*tor3;
         }
 
+	//~ Call function for rolling resistance model [KH - 25 October 2013]
+	double newsheardisp,oldsheardisp,incsheardisp,incshearforce;
+	double dur[3], dus[3], dM[3]; //~ Pass increments by reference
+	if (rolling && shearupdate) {
+	  newsheardisp = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
+	  oldsheardisp = sqrt(oldsheardispsq);
+	  incsheardisp = newsheardisp - oldsheardisp;
+	  incshearforce = kt*polyhertz*incsheardisp;
+
+	  /*~ The first '0' indicates that the rolling_resistance function is
+	    called by the compute rather than the single function*/
+	  rolling_resistance(0,i,j,numshearquants,delx,dely,delz,r,rinv,ccel,
+			     fn,incshearforce,incsheardisp,torque,shear,dur,
+			     dus,dM);
+	}
+
         if (evflag) ev_tally_gran(i,j,nlocal,fx,fy,fz,x[i][0],x[i][1],x[i][2],
                                  radius[i],x[j][0],x[j][1],x[j][2],radius[j]);
       }
@@ -374,6 +398,13 @@ double PairGranHertzHistory::single(int i, int j, int itype, int jtype,
     for (int q = 0; q < 3; q++)
       svector[q+10] = x[j][q];
     svector[13] = radj;
+
+    /*~ Add for the rolling resistance model [KH - 25 October 2013]
+      Order: dUr[*], accumulated dUr[*], dUs[*], accumulated dUs[*], 
+      dM[*], accumulated dM[*], ksbar*/
+    if (rolling)
+      for (int q = 0; q < 19; q++) svector[q+14] = 0.0;
+
     return 0.0;
   }
 
@@ -486,7 +517,10 @@ double PairGranHertzHistory::single(int i, int j, int itype, int jtype,
     if (touch[neighprev] == j) break;
   }
 
-  double *shear = &allshear[3*neighprev];
+ /*~ The number of shear quantities is 13 if rolling resistance
+    is active [KH - 25 October 2013]*/
+  int numshearquants = 3 + 10*rolling;
+  double *shear = &allshear[numshearquants*neighprev];
 
   // rotate shear displacements - not needed- shear already updated by compute!
 
@@ -510,7 +544,15 @@ double PairGranHertzHistory::single(int i, int j, int itype, int jtype,
     } else fs1 = fs2 = fs3 = fs = 0.0;
   }
 
-  // set all forces and return no energy
+  //~ Call function for rolling resistance model [KH - 30 October 2013]
+  double dur[3], dus[3], dM[3]; //~ Pass increments by reference
+  double **torque = atom->torque;
+  if (rolling) {
+    /*~ The first '1' indicates that the rolling_resistance function is
+      called by the single function rather than the compute*/
+    rolling_resistance(1,i,j,numshearquants,delx,dely,delz,r,rinv,ccel,
+		       fn,0.0,0.0,torque,shear,dur,dus,dM);
+  }
 
   /*~ Some of the following are included only for convenience as
     the data could instead be obtained from a dump of the sphere
@@ -528,5 +570,19 @@ double PairGranHertzHistory::single(int i, int j, int itype, int jtype,
   for (int q = 0; q < 3; q++)
     svector[q+10] = x[j][q];
   svector[13] = radj;
+
+  //~ Add for the rolling resistance model [KH - 30 October 2013]
+  if (rolling) {
+    for (int q = 0; q < 3; q++) {
+      svector[q+14] = dur[q];
+      svector[q+17] = shear[q+3];
+      svector[q+20] = dus[q];
+      svector[q+23] = shear[q+6];
+      svector[q+26] = dM[q];
+      svector[q+29] = shear[q+9];
+    }
+    svector[32] = shear[numshearquants-1];
+  }
+
   return 0.0;
 }

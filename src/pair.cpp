@@ -89,6 +89,13 @@ Pair::Pair(LAMMPS *lmp) : Pointers(lmp)
 
   datamask = ALL_MASK;
   datamask_ext = ALL_MASK;
+
+  /*~ Added to initialise the status of the rolling resistance
+    model as disabled [KH - 23 October 2013]*/
+  rolling = 0;
+
+  //~ Initialise at 1 [KH - 25 October 2013]
+  model_type = 1;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -117,6 +124,21 @@ void Pair::modify_params(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"sixthpower") == 0) mix_flag = SIXTHPOWER;
       else error->all(FLERR,"Illegal pair_modify command");
       iarg += 2;
+    } else if (strcmp(arg[iarg],"rolling") == 0) {
+      //~ This pair_modify option was added [KH - 23 October 2013]
+      if (iarg+2 > narg) error->all(FLERR,"Illegal pair_modify command");
+      rolling = 1;
+      model_type = atoi(arg[iarg+1]);
+      rolling_delta = atof(arg[iarg+2]);
+
+      //~ Check whether these are reasonable
+      if (rolling_delta < 1.0)
+	error->all(FLERR,"Delta value should be greater than or equal to one in rolling resistance model");
+
+      if (model_type < 1)
+	error->all(FLERR,"model_type must be a positive integer in rolling resistance model");
+
+      iarg += 3;
     } else if (strcmp(arg[iarg],"shift") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal pair_modify command");
       if (strcmp(arg[iarg+1],"yes") == 0) offset_flag = 1;

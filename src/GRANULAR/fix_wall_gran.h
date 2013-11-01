@@ -64,7 +64,12 @@ class FixWallGran : public Fix {
   int nlevels_respa;
   int time_origin;
   int numshearquants; //~ The number of shear quantities [KH - 30 October 2013]
+  int *rolling,*model_type,*rolling_delta; //~ Quantities for rolling resistance model [KH - 30 October 2013]
 
+  /*~ Used for accessing fix old_omega when rolling resistance model
+    is active [KH - 30 October 2013]*/
+  class Fix *deffix;
+  
   int *touch;
   double **shear;
   int shearupdate;
@@ -83,6 +88,7 @@ class FixWallGran : public Fix {
   void move_wall();
   void velscontrol();
   void ev_tally_wall(int, double, double, double, double, double, double, double);
+  void rolling_resistance(int, int, double, double, double, double, double, double, double, double, double, double *, double *); //~ Added this function [KH - 30 October 2013]
 };
 
 }
