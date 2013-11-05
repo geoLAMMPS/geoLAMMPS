@@ -255,12 +255,12 @@ void PairGranShmHistory::compute(int eflag, int vflag)
         if (shearupdate) {
 	  /*~ Apply Colin Thornton's suggested correction (see
 	    Eq. 18 of 2013 P. Tech. paper) [KH - 23 November 2012]*/
-	  if (shear[3] > polyhertz) {
+	  if (fabs(shear[3]) > polyhertz) {
 	    /*~ Note that as polyhertz is >= 0, there is no need to
 	      check for shear[3] == 0 in the expressions below*/
-	    shear[0] *= polyhertz/shear[3];
-	    shear[1] *= polyhertz/shear[3];
-	    shear[2] *= polyhertz/shear[3];
+	    shear[0] *= fabs(polyhertz/shear[3]);
+	    shear[1] *= fabs(polyhertz/shear[3]);
+	    shear[2] *= fabs(polyhertz/shear[3]);
 	  }
 
 	  shear[0] -= polyhertz*kt*vtr1*dt;//shear displacement =vtr*dt

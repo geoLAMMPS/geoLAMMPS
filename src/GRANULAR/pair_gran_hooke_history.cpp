@@ -1105,7 +1105,7 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
     deliberately set to zero which means that the value of ksbar which 
     is stored in the shear array is used.*/
   if (incsheardisp > tolerance) ksbar = fabs(incshearforce*recipcarea/incsheardisp);
-  else if (shear[numshearq-1] > tolerance) ksbar = shear[numshearq-1];
+  else if (shear[numshearq-1] > tolerance) ksbar = fabs(shear[numshearq-1]);
   else {
     if (comm->me == 0) {
       if (xmu > tolerance && update->ntimestep > update->beginstep && (update->ntimestep-lastwarning) >= warnfrequency) {//~ Suppress for zeroth timestep

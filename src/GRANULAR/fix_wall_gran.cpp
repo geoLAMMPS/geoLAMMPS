@@ -1386,7 +1386,7 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
     values stored in the shear array from the preceding timestep if
     problems occur*/
   if (incsheardisp > tolerance) ksbar = fabs(incshearforce*recipcarea/incsheardisp);
-  else if (shear[numshearq-1] > tolerance) ksbar = shear[numshearq-1];
+  else if (shear[numshearq-1] > tolerance) ksbar = fabs(shear[numshearq-1]);
   else {
     if (comm->me == 0) {
       if (xmu > tolerance && update->ntimestep > update->beginstep+1 && (update->ntimestep-lastwarning) >= warnfrequency) {//~ Suppress for first timestep
