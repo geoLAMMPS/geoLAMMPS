@@ -231,15 +231,17 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
 
   /*~ Finally, adding a rolling resistance model causes the number of
     shear history quantities to be increased by 13 [KH - 30 October 2013]*/
-  int dim;
+  int dim = 1;
   Pair *pair;
   if (force->pair_match("gran/hooke/history",1)) 
     pair = force->pair_match("gran/hooke/history",1);
   else if (force->pair_match("gran/hertz/history",1))
     pair = force->pair_match("gran/hertz/history",1);
-  else pair = force->pair_match("gran/shm/history",1);
+  else if (force->pair_match("gran/shm/history",1))
+    pair = force->pair_match("gran/shm/history",1);
+  else dim = 0; //~ Adding for other pairstyles [KH - 5 November 2013]
 
-  rolling = (int *) pair->extract("rolling",dim);
+  if (dim) rolling = (int *) pair->extract("rolling",dim);
   if (*rolling) numshearquants += 13;
 
   /*~ Use same method to obtain model_type and rolling_delta from 
