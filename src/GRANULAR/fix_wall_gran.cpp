@@ -250,7 +250,7 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     5 November 2013]*/
   if (*rolling) {
      model_type = (int *) pair->extract("model_type",dim);
-     rolling_delta = (int *) pair->extract("rolling_delta",dim);
+     rolling_delta = (double *) pair->extract("rolling_delta",dim);
      lastwarning = -1e10;
   }
 

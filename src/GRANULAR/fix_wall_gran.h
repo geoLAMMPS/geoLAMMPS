@@ -64,7 +64,8 @@ class FixWallGran : public Fix {
   int nlevels_respa;
   int time_origin;
   int numshearquants; //~ The number of shear quantities [KH - 30 October 2013]
-  int *rolling,*model_type,*rolling_delta; //~ Quantities for rolling resistance model [KH - 30 October 2013]
+  int *rolling,*model_type; //~ Quantities for rolling resistance model [KH - 30 October 2013]
+  double *rolling_delta;
   int lastwarning; //~ Used to modify frequency at which warning about failures to calculate tangential contact stiffnesses are output in the rolling resistance model [KH - 5 November 2013]
 
   /*~ Used for accessing fix old_omega when rolling resistance model
