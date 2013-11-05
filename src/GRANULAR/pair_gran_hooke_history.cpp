@@ -36,9 +36,8 @@
 #include "memory.h"
 #include "error.h"
 #include "math_extra.h" //~ For rolling resistance [KH - 23 October 2013]
-#include "fix_old_omega.h" //~ And these three too [KH - 5 November 2013]
+#include "fix_old_omega.h" //~ And these two too [KH - 5 November 2013]
 #include "math_special.h"
-#include "comm.h"
 
 using namespace LAMMPS_NS;
 
