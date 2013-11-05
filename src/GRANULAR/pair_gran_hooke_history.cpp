@@ -36,8 +36,9 @@
 #include "memory.h"
 #include "error.h"
 #include "math_extra.h" //~ For rolling resistance [KH - 23 October 2013]
-#include "fix_old_omega.h" //~ And these two too [KH - 25 October 2013]
+#include "fix_old_omega.h" //~ And these three too [KH - 5 November 2013]
 #include "math_special.h"
+#include "comm.h"
 
 using namespace LAMMPS_NS;
 
@@ -51,14 +52,19 @@ PairGranHookeHistory::PairGranHookeHistory(LAMMPS *lmp) : Pair(lmp)
   fix_history = NULL;
   suffix = NULL;
 
-  /*~ Modified for rolling resistance model. The last 19(!) entries 
+  /*~ Modified for rolling resistance model. The last 25(!) entries 
     in svector will be unused if rolling resistance model is inactive
     [KH - 30 October 2013]*/
-  single_extra = 33;
+  single_extra = 39;
   svector = new double[single_extra]; //~ Changed to single_extra [KH - 25 October 2013]
 
   computeflag = 0;
   neighprev = 0;
+
+  /*~ Initialise an integer used to suppress warnings about failures 
+    to calculate tangential contact stiffnesses in the rolling
+    resistance model [KH - 5 November 2013]*/
+  lastwarning = -1e10;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -161,9 +167,9 @@ void PairGranHookeHistory::compute(int eflag, int vflag)
       }
   }
 
-  /*~ The number of shear quantities is 13 if rolling resistance
+  /*~ The number of shear quantities is 16 if rolling resistance
     is active [KH - 24 October 2013]*/
-  int numshearquants = 3 + 10*rolling;
+  int numshearquants = 3 + 13*rolling;
 
   // loop over neighbors of my atoms
 
@@ -356,7 +362,7 @@ void PairGranHookeHistory::compute(int eflag, int vflag)
 
 	//~ Call function for rolling resistance model [KH - 25 October 2013]
 	double newsheardisp,oldsheardisp,incsheardisp,incshearforce;
-	double dur[3], dus[3], dM[3]; //~ Pass increments by reference
+	double dur[3], dus[3], localdM[3], globaldM[3]; //~ Pass by reference
 	if (rolling && shearupdate) {
 	  newsheardisp = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
 	  oldsheardisp = sqrt(oldsheardispsq);
@@ -367,7 +373,7 @@ void PairGranHookeHistory::compute(int eflag, int vflag)
 	    called by the compute rather than the single function*/
 	  rolling_resistance(0,i,j,numshearquants,delx,dely,delz,r,rinv,ccel,
 			     fn,incshearforce,incsheardisp,torque,shear,dur,
-			     dus,dM);
+			     dus,localdM,globaldM);
 	}
 
         if (evflag) ev_tally_gran(i,j,nlocal,fx,fy,fz,x[i][0],x[i][1],x[i][2],
@@ -474,9 +480,9 @@ void PairGranHookeHistory::init_style()
     neighbor->requests[irequest]->half = 0;
     neighbor->requests[irequest]->granhistory = 1;
 
-    /*~ Have 13 shear quantities if rolling resistance is included
+    /*~ Have 16 shear quantities if rolling resistance is included
       [KH - 24 October 2013]*/
-    if (rolling) neighbor->requests[irequest]->dnum = 13;
+    if (rolling) neighbor->requests[irequest]->dnum = 16;
     else neighbor->requests[irequest]->dnum = 3;
   }
 
@@ -499,7 +505,7 @@ void PairGranHookeHistory::init_style()
     fixarg[0] = (char *) "SHEAR_HISTORY";
     fixarg[1] = (char *) "all";
     fixarg[2] = (char *) "SHEAR_HISTORY";
-    if (rolling) fixarg[3] = (char *) "13"; //~ Added this condition
+    if (rolling) fixarg[3] = (char *) "16"; //~ Added this condition
     else fixarg[3] = (char *) "3";
     modify->add_fix(4,fixarg,suffix); //~ Increased to 4
     delete [] fixarg;
@@ -702,9 +708,10 @@ double PairGranHookeHistory::single(int i, int j, int itype, int jtype,
 
     /*~ Add for the rolling resistance model [KH - 25 October 2013]
       Order: dUr[*], accumulated dUr[*], dUs[*], accumulated dUs[*], 
-      dM[*], accumulated dM[*], ksbar*/
+      localdM[*], accumulated localdM[*], globaldM[*], accumulated 
+      globaldM[*],ksbar*/
     if (rolling)
-      for (int q = 0; q < 19; q++) svector[q+14] = 0.0;
+      for (int q = 0; q < 25; q++) svector[q+14] = 0.0;
 
     return 0.0;
   }
@@ -815,9 +822,9 @@ double PairGranHookeHistory::single(int i, int j, int itype, int jtype,
     if (touch[neighprev] == j) break;
   }
 
-  /*~ The number of shear quantities is 13 if rolling resistance
+  /*~ The number of shear quantities is 16 if rolling resistance
     is active [KH - 25 October 2013]*/
-  int numshearquants = 3 + 10*rolling;
+  int numshearquants = 3 + 13*rolling;
   double *shear = &allshear[numshearquants*neighprev];
 
   // rotate shear displacements - not needed- shear already updated by compute!
@@ -843,13 +850,13 @@ double PairGranHookeHistory::single(int i, int j, int itype, int jtype,
   }
 
   //~ Call function for rolling resistance model [KH - 30 October 2013]
-  double dur[3], dus[3], dM[3]; //~ Pass increments by reference
+  double dur[3], dus[3], localdM[3], globaldM[3]; //~ Pass by reference
   double **torque = atom->torque;
   if (rolling) {
     /*~ The first '1' indicates that the rolling_resistance function is
       called by the single function rather than the compute*/
     rolling_resistance(1,i,j,numshearquants,delx,dely,delz,r,rinv,ccel,
-		       fn,0.0,0.0,torque,shear,dur,dus,dM);
+		       fn,0.0,0.0,torque,shear,dur,dus,localdM,globaldM);
   }
 
   /*~ Some of the following are included only for convenience as
@@ -876,10 +883,12 @@ double PairGranHookeHistory::single(int i, int j, int itype, int jtype,
       svector[q+17] = shear[q+3];
       svector[q+20] = dus[q];
       svector[q+23] = shear[q+6];
-      svector[q+26] = dM[q];
+      svector[q+26] = localdM[q];
       svector[q+29] = shear[q+9];
+      svector[q+32] = globaldM[q];
+      svector[q+35] = shear[q+12];
     }
-    svector[32] = shear[numshearquants-1];
+    svector[38] = shear[numshearquants-1];
   }
 
   return 0.0;
@@ -928,14 +937,15 @@ void *PairGranHookeHistory::extract(const char *str, int &dim)
 
 /* ---------------------------------------------------------------------- */
 
-void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int numshearq, double delx, double dely, double delz, double r, double rinv, double ccel, double maxshear, double incshearforce, double incsheardisp, double **torque, double *shear, double *dur, double *dus, double *dM)
+void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int numshearq, double delx, double dely, double delz, double r, double rinv, double ccel, double maxshear, double incshearforce, double incsheardisp, double **torque, double *shear, double *dur, double *dus, double *localdM, double *globaldM)
 {
   /*~ This rolling resistance model was developed by Xin Huang during
     the summer and autumn of 2013. Note that the last slot in 'shear'
     stores the last non-zero value of equivalent area tangential
     contact stiffness; the three preceding slots store the
-    accumulated rolling and twisting resistances and the six slots
-    before those store the accumulated dur and dus values.
+    accumulated global rolling and twisting resistances; the three
+    before those store the local accumulated resistances and the six 
+    slots before those store the accumulated local dur and dus values.
 
     'issingle' indicates whether this function is called by the
     pairstyle compute or the single function. If the latter, don't
@@ -1012,46 +1022,69 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
     commonradius *= 2.0;
   }
 
-  /*~ Find relative rotations, dtheta, in three directions. Firstly 
-    obtain the omega values from the previous timestep from FixOldOmega. 
-    This array also contains the corresponding z positions of the
-    particle centroids (in column 4)*/
+  /*~ Obtain the omega values for the previous timestep from 
+    FixOldOmega. This array also contains the corresponding x,
+    y and z positions of the particle centroids (in columns 4
+    to 6)*/
   double **oldomegas = ((FixOldOmega *) deffix)->oldomegas;
   double **omega = atom->omega;
-  double PI, beta, dalpha, da[3], db[3], dtheta[3];
+  double globalomegai[3], globalomegaj[3];
+  double globaloldomegai[3], globaloldomegaj[3];
   
-  beta = asin(oneoverradsum*(oldomegas[j][3] - oldomegas[i][3]));
+  for (int q = 0; q < 3; q++) {
+    globalomegai[q] = omega[i][q];
+    globalomegaj[q] = omega[j][q];
+    globaloldomegai[q] = oldomegas[i][q];
+    globaloldomegaj[q] = oldomegas[j][q];
+  }
+  
+  /*~ Transfer the old and current omega values to the local coordinate
+    system using the rotation matrix T*/
+  double localomegai[3], localomegaj[3];
+  double localoldomegai[3], localoldomegaj[3];
+
+  MathExtra::matvec(T,globalomegai,localomegai);
+  MathExtra::matvec(T,globalomegaj,localomegaj);
+  MathExtra::matvec(T,globaloldomegai,localoldomegai);
+  MathExtra::matvec(T,globaloldomegaj,localoldomegaj);
+
+  //~ Use a similar procedure for the difference in coordinates
+  double globaldiffcoords[3], localdiffcoords[3];
+  for (int q = 0; q < 3; q++)
+    globaldiffcoords[q] = oldomegas[j][q+3] - oldomegas[i][q+3];
+  MathExtra::matvec(T,globaldiffcoords,localdiffcoords);
+
+  //~ Now find relative rotations, dthetar, in three directions 
+  double PI, beta, dalpha, da[3], db[3], dthetar[3];
+  
+  //~ beta is calculated using the difference of local z coordinates
+  beta = asin(oneoverradsum*localdiffcoords[2]);
   PI = 4.0*atan(1.0);
   dalpha = 0.5*PI - beta;
 
   //~ X-Z projection
-  da[0] = radius[i]*(omega[i][0] - oldomegas[i][0] - dalpha);
-  db[0] = radius[j]*(omega[j][0] - oldomegas[j][0] - dalpha);
+  da[0] = radius[i]*(localomegai[0] - localoldomegai[0] - dalpha);
+  db[0] = radius[j]*(localomegaj[0] - localoldomegaj[0] - dalpha);
 
   //~ Y-Z projection
-  da[1] = radius[i]*(omega[i][1] - oldomegas[i][1] - dalpha);
-  db[1] = radius[j]*(omega[j][1] - oldomegas[j][1] - dalpha);
+  da[1] = radius[i]*(localomegai[1] - localoldomegai[1] - dalpha);
+  db[1] = radius[j]*(localomegaj[1] - localoldomegaj[1] - dalpha);
 
-  //~ For spin around z axis, dalpha == 0 
-  da[2] = radius[i]*(omega[i][2] - oldomegas[i][2]);
-  db[2] = radius[j]*(omega[j][2] - oldomegas[j][2]);
+  //~ For spin around z axis, dalpha == 0
+  da[2] = radius[i]*(localomegai[2] - localoldomegai[2]);
+  db[2] = radius[j]*(localomegaj[2] - localoldomegaj[2]);
 
   for (int q = 0; q < 3; q++) {
     dur[q] = (radius[j]*da[q] - radius[i]*db[q])*oneoverradsum;
     dus[q] = da[q] + db[q];
-    dtheta[q] = dur[q]/commonradius;
+    dthetar[q] = dur[q]/commonradius;
   }
-
-  /*~ Now that the global dtheta values are available, transform to
-    rotation around local axes by multiplying T by dtheta to give
-    dthetar*/
-  double dthetar[3];
-  MathExtra::matvec(T,dtheta,dthetar);
 
   /*~ The equivalent area normal contact stiffness is found by dividing
     the magnitude of the normal contact force by the product of the normal 
     contact overlap and contact area. If division by zero, issue an error.
     Also calculate some necessary quantities for later use*/
+  int warnfrequency = 1000; //~ How often to warn about stiffness calcs
   double un, deltai, B, delbyb, recipcarea, recipA, knbar, ksbar;
   un = radsum - r; //~ Normal contact overlap
 
@@ -1075,8 +1108,15 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
   if (incsheardisp > tolerance) ksbar = fabs(incshearforce*recipcarea/incsheardisp);
   else if (shear[numshearq-1] > tolerance) ksbar = shear[numshearq-1];
   else {
-    if (update->ntimestep > 0) fprintf(screen,"Cannot estimate tangential contact stiffness in rolling resistance model on timestep "BIGINT_FORMAT"\n",update->ntimestep); //~ Suppress for first timestep
-    ksbar = tolerance; //~ Assume a tiny value so limit not reached
+    if (comm->me == 0) {
+      if (xmu > tolerance && update->ntimestep > update->beginstep && (update->ntimestep-lastwarning) >= warnfrequency) {//~ Suppress for zeroth timestep
+	fprintf(screen,"Cannot estimate tangential contact stiffness in rolling resistance model on timestep "BIGINT_FORMAT"\n",update->ntimestep);
+	lastwarning = update->ntimestep;
+      } else if (xmu < tolerance && update->beginstep == update->ntimestep)
+	error->warning(FLERR,"Using zero mu: tangential contact stiffness cannot be estimated in rolling resistance model");
+    }
+
+    ksbar = tolerance; //~ Assume a tiny value
   }
   shear[numshearq-1] = ksbar; //~ Store the value regardless
 
@@ -1098,21 +1138,21 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
   st[0] = st[1] = -0.25*PI*deltaBpow*knbar;
   st[2] = -0.5*PI*deltaBpow*ksbar;
 
-  /*~ Calculate increments of rolling resistance and ensure
+  /*~ Calculate local increments of rolling resistance and ensure
     that the increments don't exceed the limits*/
   for (int q = 0; q < 2; q++) {
-    if (dthetar[q] < thetalimit[q]) dM[q] = st[q]*dthetar[q];
-    else dM[q] = st[q]*thetalimit[q];
+    if (dthetar[q] < thetalimit[q]) localdM[q] = st[q]*dthetar[q];
+    else localdM[q] = st[q]*thetalimit[q];
   }
 
-  /*~ Now find increments of twisting resistance for which
+  /*~ Now find local increments of twisting resistance for which
     there are two cases*/
-  if (dthetar[3] < thetalimit[3]) dM[3] = st[3]*dthetar[3];
-  else dM[3] = st[3]*thetalimit[3];
+  if (dthetar[3] < thetalimit[3]) localdM[3] = st[3]*dthetar[3];
+  else localdM[3] = st[3]*thetalimit[3];
 
   if (model_type % 2 == 0) {//~ Option C
-    dM[3] = st[3]*dthetar[3];
-    if (dM[3] > thetalimit[3]) dM[3] = thetalimit[3];
+    localdM[3] = st[3]*dthetar[3];
+    if (localdM[3] > thetalimit[3]) localdM[3] = thetalimit[3];
   }
 
   for (int q = 0; q < 3; q++) {
@@ -1120,37 +1160,36 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
       limits, set the increments to zero and scale the accumulated
       resistances to equal the appropriate limit. The accumulated 
       local rolling and twisting resistances are stored in the
-      fourth-last, third-last and second-last columns of the shear 
+      seventh-last, sixth-last and fifth-last columns of the shear 
       array*/
-    if (shear[numshearq-4+q]+dM[q] > thetalimit[q]) {
-      dM[q] = 0.0;
+    if (shear[numshearq-7+q]+localdM[q] > thetalimit[q]) {
+      localdM[q] = 0.0;
       //~ OK to update regardless of issingle setting
-      shear[numshearq-4+q] = thetalimit[q];
-    }
-
-    /*~ Now add the local resistance increments to the fourth-last, 
-      third-last and second-last columns of the shear array. The 
-      accumulated values of dus are stored in the three columns 
-      immediately before, and the accumulated values of dur in the
-      three columns immediately before these.*/
-    if (!issingle) {
-      shear[numshearq-4+q] += dM[q];
-      shear[numshearq-7+q] += dus[q];
-      shear[numshearq-10+q] += dur[q];
+      shear[numshearq-7+q] = thetalimit[q];
     }
   }
 
+  /*~ Compute the global moment increments by multiplying the 
+    transpose of the rotation matrix, T, by the local resistance
+    increments*/
+  MathExtra::transpose_matvec(T,localdM,globaldM);
+  
   if (!issingle) {
-    /*~ Compute the global moment increments by multiplying the 
-      transpose of the rotation matrix, T, by the local resistance
-      increments*/
-    double globaldM[3];
-    MathExtra::transpose_matvec(T,dM,globaldM);
-
-    /*~ Finally update the torque values for both i and j. The increments
-      are subtracted from i and added to j*/
+    /*~ Now add the global resistance increments to the fourth-last, 
+      third-last and second-last columns of the shear array and the
+      local increments to the seventh-last, sixth-last and fifth-last. 
+      The accumulated values of dus are stored in the three columns 
+      immediately before, and the accumulated values of dur in the
+      three columns immediately before these.*/
     for (int q = 0; q < 3; q++) {
-      torque[i][q] -= globaldM[q];
+      shear[numshearq-4+q] += globaldM[q];
+      shear[numshearq-7+q] += localdM[q];
+      shear[numshearq-10+q] += dus[q];
+      shear[numshearq-13+q] += dur[q];
+
+      /*~ Finally update the torque values for both i and j. The 
+	increments are both additive*/
+      torque[i][q] += globaldM[q];
       torque[j][q] += globaldM[q];
     }
   }

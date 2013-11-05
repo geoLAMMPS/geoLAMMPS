@@ -31,9 +31,10 @@
 #include "input.h"
 #include "variable.h"
 #include "error.h"
-#include "math_extra.h" //~ These four header files needed for rolling resistance model [KH - 30 October 2013]
+#include "math_extra.h" //~ These four header files needed for rolling resistance model [KH - 5 November 2013]
 #include "fix_old_omega.h"
 #include "math_special.h"
+#include "comm.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -229,7 +230,7 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   if (force->pair_match("shm",0)) numshearquants++;
 
   /*~ Finally, adding a rolling resistance model causes the number of
-    shear history quantities to be increased by 10 [KH - 30 October 2013]*/
+    shear history quantities to be increased by 13 [KH - 30 October 2013]*/
   int dim;
   Pair *pair;
   if (force->pair_match("gran/hooke/history",1)) 
@@ -239,13 +240,16 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   else pair = force->pair_match("gran/shm/history",1);
 
   rolling = (int *) pair->extract("rolling",dim);
-  if (*rolling) numshearquants += 10;
+  if (*rolling) numshearquants += 13;
 
   /*~ Use same method to obtain model_type and rolling_delta from 
-    pairstyles [KH - 30 October 2013]*/
+    pairstyles. Also initialise an integer used to suppress warnings
+    about failures to calculate tangential contact stiffness [KH - 
+    5 November 2013]*/
   if (*rolling) {
      model_type = (int *) pair->extract("model_type",dim);
      rolling_delta = (int *) pair->extract("rolling_delta",dim);
+     lastwarning = -1e10;
   }
 
   // perform initial allocation of atom-based arrays
@@ -442,11 +446,8 @@ void FixWallGran::post_force(int vflag)
 
       if (rsq > radius[i]*radius[i]) {
         if (pairstyle != HOOKE) {
-          shear[i][0] = 0.0;
-          shear[i][1] = 0.0;
-          shear[i][2] = 0.0;
-	  //~ Add entry for shm history [KH - 30 October 2013]
-	  if (pairstyle == SHM_HISTORY) shear[i][3] = 0.0;
+	  for (int q = 0; q < numshearquants; q++)
+	    shear[i][q] = 0.0; //~ Added the 'for' loop [KH - 4 November 2013]
         }
       } else {
         if (pairstyle == HOOKE)
@@ -1326,37 +1327,47 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
     (2012)*/
   double commonradius = radius;
   if (*model_type % 5 == 0) commonradius *= 2.0; //~ Jiang et al. (2005)
-  if (*model_type % 3 == 0) commonradius = 1.0e20; //~ Iwashita and Oda (1998, 2000) - 'infinite' common radius
+  if (*model_type % 3 == 0) commonradius = BIG; //~ Iwashita and Oda (1998, 2000) - 'infinite' common radius
   
-  /*~ Find relative rotations, dtheta, in three directions. Firstly 
-    obtain the omega values from the previous timestep from FixOldOmega.
+  /*~ Obtain the omega values for the previous timestep from FixOldOmega.
     Note that beta will be 0 as the denominator is infinite for a
     ball-wall contact. Hence dalpha will be 0.5*pi. Also all the 'db'
     terms are zero as the walls have no angular velocity. 'dur' and 
     'dus' will equal 'da'*/
   double **oldomegas = ((FixOldOmega *) deffix)->oldomegas;
   double **omega = atom->omega;
-  double PI, da[3], dtheta[3];
+  double globalomegai[3], globaloldomegai[3];
   
-  PI = 4.0*atan(1.0);
-  da[0] = radius*(omega[i][0] - oldomegas[i][0] - 0.5*PI); //~ X-Z projection
-  da[1] = radius*(omega[i][1] - oldomegas[i][1] - 0.5*PI); //~ Y-Z projection
+  for (int q = 0; q < 3; q++) {
+    globalomegai[q] = omega[i][q];
+    globaloldomegai[q] = oldomegas[i][q];
+  }
+  
+  /*~ Transfer the old and current omega values to the local coordinate
+    system using the rotation matrix T*/
+  double localomegai[3], localoldomegai[3];
 
-  //~ For spin around z axis, dalpha == 0 
-  da[2] = radius*(omega[i][2] - oldomegas[i][2]);
+  MathExtra::matvec(T,globalomegai,localomegai);
+  MathExtra::matvec(T,globaloldomegai,localoldomegai);
 
-  for (int q = 0; q < 3; q++) dtheta[q] = da[q]/commonradius;
+  //~ Now find relative rotations, dthetar, in three directions 
+  double PI = 4.0*atan(1.0);
+  double da[3], dthetar[3];
 
-  /*~ Now that the global dtheta values are available, transform to
-      rotation around local axes by multiplying T by dtheta to give
-      dthetar*/
-  double dthetar[3];
-  MathExtra::matvec(T,dtheta,dthetar);
+  //~ X-Z projection
+  da[0] = radius*(localomegai[0] - localoldomegai[0] - 0.5*PI);
+  //~ X-Z projection
+  da[1] = radius*(localomegai[1] - localoldomegai[1] - 0.5*PI);
+  //~ For spin around z axis, dalpha == 0
+  da[2] = radius*(localomegai[2] - localoldomegai[2]);
+
+  for (int q = 0; q < 3; q++) dthetar[q] = da[q]/commonradius;
 
   /*~ The equivalent area normal contact stiffness is found by dividing
     the magnitude of the normal contact force by the product of the normal 
     contact overlap and contact area. If division by zero, issue an error.
     Also calculate some necessary quantities for later use*/
+  int warnfrequency = 1000; //~ How often to warn about stiffness calcs
   double un, B, delbyb, recipcarea, recipA, knbar, ksbar;
   un = radius - r; //~ Normal contact overlap
 
@@ -1377,14 +1388,21 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
   if (incsheardisp > tolerance) ksbar = fabs(incshearforce*recipcarea/incsheardisp);
   else if (shear[numshearq-1] > tolerance) ksbar = shear[numshearq-1];
   else {
-    if (update->ntimestep > 0) fprintf(screen,"Cannot estimate tangential contact stiffness in rolling resistance model on timestep "BIGINT_FORMAT"\n",update->ntimestep); //~ Suppress for first timestep
-    ksbar = tolerance; //~ Assume a tiny value so limit not reached
+    if (comm->me == 0) {
+      if (xmu > tolerance && update->ntimestep > update->beginstep+1 && (update->ntimestep-lastwarning) >= warnfrequency) {//~ Suppress for first timestep
+	fprintf(screen,"Cannot estimate tangential contact stiffness in rolling resistance model on timestep "BIGINT_FORMAT"\n",update->ntimestep);
+	lastwarning = update->ntimestep;
+      } else if (xmu < tolerance && update->beginstep == update->ntimestep-1)
+	error->warning(FLERR,"Using zero mu: tangential contact stiffness cannot be estimated in rolling resistance model");
+    }
+
+    ksbar = tolerance; //~ Assume a tiny value
   }
   shear[numshearq-1] = ksbar; //~ Store the value regardless
 
   /*~ Calculate the maximum allowable rolling and twisting resistances
     and store these in thetalimit for convenience*/
-  double thetalimit[3], st[3], dM[3];
+  double thetalimit[3], st[3], localdM[3];
   thetalimit[0] = thetalimit[1] = atan(un/delbyb);
 
   /*~ Option B: The maximum shear stress (periphery) induced by 
@@ -1400,21 +1418,21 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
   st[0] = st[1] = -0.25*PI*deltaBpow*knbar;
   st[2] = -0.5*PI*deltaBpow*ksbar;
 
-  /*~ Calculate increments of rolling resistance and ensure
+  /*~ Calculate local increments of rolling resistance and ensure
     that the increments don't exceed the limits*/
   for (int q = 0; q < 2; q++) {
-    if (dthetar[q] < thetalimit[q]) dM[q] = st[q]*dthetar[q];
-    else dM[q] = st[q]*thetalimit[q];
+    if (dthetar[q] < thetalimit[q]) localdM[q] = st[q]*dthetar[q];
+    else localdM[q] = st[q]*thetalimit[q];
   }
 
-  /*~ Now find increments of twisting resistance for which
+  /*~ Now find local increments of twisting resistance for which
     there are two cases*/
-  if (dthetar[3] < thetalimit[3]) dM[3] = st[3]*dthetar[3];
-  else dM[3] = st[3]*thetalimit[3];
+  if (dthetar[3] < thetalimit[3]) localdM[3] = st[3]*dthetar[3];
+  else localdM[3] = st[3]*thetalimit[3];
 
   if (*model_type % 2 == 0) {//~ Option C
-    dM[3] = st[3]*dthetar[3];
-    if (dM[3] > thetalimit[3]) dM[3] = thetalimit[3];
+    localdM[3] = st[3]*dthetar[3];
+    if (localdM[3] > thetalimit[3]) localdM[3] = thetalimit[3];
   }
 
   for (int q = 0; q < 3; q++) {
@@ -1422,32 +1440,35 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
       limits, set the increments to zero and scale the accumulated
       resistances to equal the appropriate limit. The accumulated 
       local rolling and twisting resistances are stored in the
-      fourth-last, third-last and second-last columns of the shear 
+      seventh-last, sixth-last and fifth-last columns of the shear 
       array*/
-    if (shear[numshearq-4+q]+dM[q] > thetalimit[q]) {
-      dM[q] = 0.0;
+    if (shear[numshearq-7+q]+localdM[q] > thetalimit[q]) {
+      localdM[q] = 0.0;
       //~ OK to update regardless of issingle setting
-      shear[numshearq-4+q] = thetalimit[q];
+      shear[numshearq-7+q] = thetalimit[q];
     }
-
-    /*~ Now add the local resistance increments to the fourth-last, 
-      third-last and second-last columns of the shear array. The 
-      accumulated values of dus are stored in the three columns 
-      immediately before, and the accumulated values of dur in the
-      three columns immediately before these. For consistency with
-      the ball-ball contacts, need to have duplication of da as both
-      dur and dus.*/
-    shear[numshearq-4+q] += dM[q];
-    shear[numshearq-7+q] += da[q];
-    shear[numshearq-10+q] += da[q];
   }
 
   /*~ Compute the global moment increments by multiplying the 
     transpose of the rotation matrix, T, by the local resistance
     increments*/
   double globaldM[3];
-  MathExtra::transpose_matvec(T,dM,globaldM);
+  MathExtra::transpose_matvec(T,localdM,globaldM);
 
-  //~ Finally update the torque values
-  for (int q = 0; q < 3; q++) torque[q] -= globaldM[q];
+  /*~ Now add the global resistance increments to the fourth-last, 
+    third-last and second-last columns of the shear array and the
+    local increments to the seventh-last, sixth-last and fifth-last. 
+    The accumulated values of dus are stored in the three columns 
+    immediately before, and the accumulated values of dur in the
+    three columns immediately before these. For consistency with
+    the ball-ball contacts, duplicate da as both dur and dus.*/
+  for (int q = 0; q < 3; q++) {
+    shear[numshearq-4+q] += globaldM[q];
+    shear[numshearq-7+q] += localdM[q];
+    shear[numshearq-10+q] += da[q];
+    shear[numshearq-13+q] += da[q];
+
+    //~ Finally update the torque values
+    torque[q] += globaldM[q];
+  }
 }

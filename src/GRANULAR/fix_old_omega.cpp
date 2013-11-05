@@ -45,7 +45,7 @@ FixOldOmega::FixOldOmega(LAMMPS *lmp, int narg, char **arg) :
 {
   restart_peratom = 1; //~ Per-atom information is saved to the restart file
   peratom_flag = 1;
-  size_peratom_cols = 4; //~ omega x/y/z and z positions of centroids
+  size_peratom_cols = 6; //~ omega x/y/z and positions of centroids
   peratom_freq = 1;
   create_attribute = 1;
 
@@ -65,8 +65,10 @@ FixOldOmega::FixOldOmega(LAMMPS *lmp, int narg, char **arg) :
     values (using the initialised omega and x values which are now
     available)*/
 
-  for (int i = 0; i < atom->nlocal; i++)
-    oldomegas[i][0] = oldomegas[i][1] = oldomegas[i][2] = oldomegas[i][3] = 1.0e20;
+  for (int i = 0; i < atom->nlocal; i++) {
+    oldomegas[i][0] = oldomegas[i][1] = oldomegas[i][2] = 1.0e20;
+    oldomegas[i][3] = oldomegas[i][4] = oldomegas[i][5] = 1.0e20;
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -97,7 +99,7 @@ void FixOldOmega::setup(int vflag)
 {
   /*~ Now initialise everything for the first timestep if the data are
     not read in from a restart file. Initialise the oldomega values at
-    the current omega values, and ditto for the z positions. This needs
+    the current omega values, and ditto for the x positions. This needs
     to be done in setup rather than init so that the ghosts are correct
     for the first timestep.*/
   int nall = atom->nlocal + atom->nghost;
@@ -105,7 +107,8 @@ void FixOldOmega::setup(int vflag)
   double **omega = atom->omega;
 
   if (oldomegas[0][0] > 9.9e19 && oldomegas[0][1] > 9.9e19 && 
-      oldomegas[0][2] > 9.9e19 && oldomegas[0][3] > 9.9e19) {
+      oldomegas[0][2] > 9.9e19 && oldomegas[0][3] > 9.9e19 &&
+      oldomegas[0][4] > 9.9e19 && oldomegas[0][5] > 9.9e19) {
     /*~ Since local atoms have smaller IDs than ghosts, checking only
       the first point is sufficient*/
 
@@ -113,7 +116,9 @@ void FixOldOmega::setup(int vflag)
       oldomegas[i][0] = omega[i][0];
       oldomegas[i][1] = omega[i][1];
       oldomegas[i][2] = omega[i][2];
-      oldomegas[i][3] = x[i][2]; //~ z position of centroid
+      oldomegas[i][3] = x[i][0]; //~ x position of centroid
+      oldomegas[i][4] = x[i][1]; //~ y position
+      oldomegas[i][5] = x[i][2]; //~ z position
     }
   }
 }
@@ -137,7 +142,9 @@ void FixOldOmega::post_force(int vflag)
     oldomegas[i][0] = omega[i][0];
     oldomegas[i][1] = omega[i][1];
     oldomegas[i][2] = omega[i][2];
-    oldomegas[i][3] = x[i][2]; //~ z position of centroid
+    oldomegas[i][3] = x[i][0]; //~ x position of centroid
+    oldomegas[i][4] = x[i][1];
+    oldomegas[i][5] = x[i][2];
   }
 }
 
@@ -147,7 +154,7 @@ void FixOldOmega::post_force(int vflag)
 
 double FixOldOmega::memory_usage()
 {
-  double bytes = atom->nmax*4 * sizeof(double); //~ For oldomegas array
+  double bytes = atom->nmax*6 * sizeof(double); //~ For oldomegas array
   return bytes;
 }
 
@@ -157,7 +164,7 @@ double FixOldOmega::memory_usage()
 
 void FixOldOmega::grow_arrays(int nmax)
 {
-  memory->grow(oldomegas,nmax,4,"old_omega:oldomegas");
+  memory->grow(oldomegas,nmax,6,"old_omega:oldomegas");
   array_atom = oldomegas;
 }
 
@@ -167,7 +174,7 @@ void FixOldOmega::grow_arrays(int nmax)
 
 void FixOldOmega::copy_arrays(int i, int j, int delflag)
 {
-  for (int q = 0; q < 4; q++)
+  for (int q = 0; q < 6; q++)
     oldomegas[j][q] = oldomegas[i][q];
 }
 
@@ -182,7 +189,9 @@ void FixOldOmega::set_arrays(int i)
   oldomegas[i][0] = omega[i][0];
   oldomegas[i][1] = omega[i][1];
   oldomegas[i][2] = omega[i][2];
-  oldomegas[i][3] = x[i][2];
+  oldomegas[i][3] = x[i][0];
+  oldomegas[i][4] = x[i][1];
+  oldomegas[i][5] = x[i][2];
 }
 
 /* ----------------------------------------------------------------------
@@ -191,10 +200,10 @@ void FixOldOmega::set_arrays(int i)
 
 int FixOldOmega::pack_exchange(int i, double *buf)
 {
-  for (int q = 0; q < 4; q++)
+  for (int q = 0; q < 6; q++)
     buf[q] = oldomegas[i][q];
  
-  return 4;
+  return 6;
 }
 
 /* ----------------------------------------------------------------------
@@ -203,10 +212,10 @@ int FixOldOmega::pack_exchange(int i, double *buf)
 
 int FixOldOmega::unpack_exchange(int nlocal, double *buf)
 {
-  for (int q = 0; q < 4; q++)
+  for (int q = 0; q < 6; q++)
     oldomegas[nlocal][q] = buf[q];
   
-  return 4;
+  return 6;
 }
 
 /* ----------------------------------------------------------------------
@@ -215,11 +224,11 @@ int FixOldOmega::unpack_exchange(int nlocal, double *buf)
 
 int FixOldOmega::pack_restart(int i, double *buf)
 {
-  buf[0] = 5;
-  for (int q = 0; q < 4; q++)
+  buf[0] = 7;
+  for (int q = 0; q < 6; q++)
     buf[q+1] = oldomegas[i][q];
 
-  return 5;
+  return 7;
 }
 
 /* ----------------------------------------------------------------------
@@ -236,7 +245,7 @@ void FixOldOmega::unpack_restart(int nlocal, int nth)
   for (int i = 0; i < nth; i++) m += static_cast<int> (extra[nlocal][m]);
   m++;
 
-  for (int q = 0; q < 4; q++)
+  for (int q = 0; q < 6; q++)
     oldomegas[nlocal][q] = extra[nlocal][m++];
 }
 
@@ -246,7 +255,7 @@ void FixOldOmega::unpack_restart(int nlocal, int nth)
 
 int FixOldOmega::maxsize_restart()
 {
-  return 5;
+  return 7;
 }
 
 /* ----------------------------------------------------------------------
@@ -255,5 +264,5 @@ int FixOldOmega::maxsize_restart()
 
 int FixOldOmega::size_restart(int nlocal)
 {
-  return 5;
+  return 7;
 }

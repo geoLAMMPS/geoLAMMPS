@@ -45,7 +45,7 @@ class PairGranHookeHistory : public Pair {
   int pack_comm(int, int *, double *, int, int *);
   void unpack_comm(int, int, double *);
   void *extract(const char *, int &);
-  void rolling_resistance(int, int, int, int, double, double, double, double, double, double, double, double, double, double **, double *, double *, double *, double *); //~ Added these two functions [KH - 24 October 2013]
+  void rolling_resistance(int, int, int, int, double, double, double, double, double, double, double, double, double, double **, double *, double *, double *, double *, double *); //~ Added these two functions [KH - 24 October 2013]
   void add_old_omega_fix();
 
  protected:
@@ -70,6 +70,8 @@ class PairGranHookeHistory : public Pair {
   /*~ Used for adding fix old_omega when rolling resistance model
     is active [KH - 24 October 2013]*/
   class Fix *deffix;
+
+  int lastwarning; //~ Used to modify frequency at which warning about failures to calculate tangential contact stiffnesses are output in the rolling resistance model [KH - 5 November 2013]
 };
 
 }

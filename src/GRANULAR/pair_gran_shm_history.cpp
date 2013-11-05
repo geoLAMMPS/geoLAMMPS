@@ -119,9 +119,9 @@ void PairGranShmHistory::compute(int eflag, int vflag)
       }
   }
 
-  /*~ The number of shear quantities is 14 if rolling resistance
+  /*~ The number of shear quantities is 17 if rolling resistance
     is active [KH - 25 October 2013]*/
-  int numshearquants = 4 + 10*rolling;
+  int numshearquants = 4 + 13*rolling;
 
   // loop over neighbors of my atoms
 
@@ -313,7 +313,7 @@ void PairGranShmHistory::compute(int eflag, int vflag)
 
 	//~ Call function for rolling resistance model [KH - 25 October 2013]
 	double newshearforce,oldshearforce,incsheardisp,incshearforce;
-	double dur[3], dus[3], dM[3]; //~ Pass increments by reference
+	double dur[3], dus[3], localdM[3], globaldM[3]; //~ Pass by reference
 	if (rolling && shearupdate) {
 	  newshearforce = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
 	  oldshearforce = sqrt(shsqmag);
@@ -324,7 +324,7 @@ void PairGranShmHistory::compute(int eflag, int vflag)
 	    called by the compute rather than the single function*/
 	  rolling_resistance(0,i,j,numshearquants,delx,dely,delz,r,rinv,ccel,
 			     fslim,incshearforce,incsheardisp,torque,shear,
-			     dur,dus,dM);
+			     dur,dus,localdM,globaldM);
 	}
 
         if (evflag) ev_tally_gran(i,j,nlocal,fx,fy,fz,x[i][0],x[i][1],x[i][2],
@@ -401,9 +401,10 @@ double PairGranShmHistory::single(int i, int j, int itype, int jtype,
 
     /*~ Add for the rolling resistance model [KH - 25 October 2013]
       Order: dUr[*], accumulated dUr[*], dUs[*], accumulated dUs[*], 
-      dM[*], accumulated dM[*], ksbar*/
+      localdM[*], accumulated localdM[*], globaldM[*], accumulated 
+      globaldM[*],ksbar*/
     if (rolling)
-      for (int q = 0; q < 19; q++) svector[q+14] = 0.0;
+      for (int q = 0; q < 25; q++) svector[q+14] = 0.0;
     
     return 0.0;
   }
@@ -434,13 +435,13 @@ double PairGranShmHistory::single(int i, int j, int itype, int jtype,
     if (touch[neighprev] == j) break;
   }
 
-  /*~ The number of shear quantities is 14 if rolling resistance
+  /*~ The number of shear quantities is 17 if rolling resistance
     is active [KH - 23 October 2013]*/
-  int numshearquants = 4 + 10*rolling;
+  int numshearquants = 4 + 13*rolling;
   double *shear = &allshear[numshearquants*neighprev];
 
   //~ Call function for rolling resistance model [KH - 30 October 2013]
-  double dur[3], dus[3], dM[3]; //~ Pass increments by reference
+  double dur[3], dus[3], localdM[3], globaldM[3]; //~ Pass by reference
   double **torque = atom->torque;
   double delx, dely, delz, fslim; //~ Calculate these to pass to function
   fslim = xmu * fabs(ccel*r);
@@ -452,7 +453,7 @@ double PairGranShmHistory::single(int i, int j, int itype, int jtype,
     /*~ The first '1' indicates that the rolling_resistance function is
       called by the single function rather than the compute*/
     rolling_resistance(1,i,j,numshearquants,delx,dely,delz,r,rinv,ccel,
-		       fslim,0.0,0.0,torque,shear,dur,dus,dM);
+		       fslim,0.0,0.0,torque,shear,dur,dus,localdM,globaldM);
   }
 
   /*~ Some of the following are included only for convenience as
@@ -479,10 +480,12 @@ double PairGranShmHistory::single(int i, int j, int itype, int jtype,
       svector[q+17] = shear[q+4]; //~ 4 rather than 3...
       svector[q+20] = dus[q];
       svector[q+23] = shear[q+7];
-      svector[q+26] = dM[q];
+      svector[q+26] = localdM[q];
       svector[q+29] = shear[q+10];
+      svector[q+32] = globaldM[q];
+      svector[q+35] = shear[q+13];
     }
-    svector[32] = shear[numshearquants-1];
+    svector[38] = shear[numshearquants-1];
   }
 
   return 0.0;
@@ -514,9 +517,9 @@ void PairGranShmHistory::init_style()
     neighbor->requests[irequest]->half = 0;
     neighbor->requests[irequest]->granhistory = 1;
 
-    /*~ Have 14 shear quantities if rolling resistance is included
+    /*~ Have 17 shear quantities if rolling resistance is included
       [KH - 25 October 2013]*/
-    if (rolling) neighbor->requests[irequest]->dnum = 14;
+    if (rolling) neighbor->requests[irequest]->dnum = 17;
     else neighbor->requests[irequest]->dnum = 4; //~ Increased to 4 to accommodate the extra shear quantity [KH - 23 November 2012]
   }
 
@@ -535,7 +538,7 @@ void PairGranShmHistory::init_style()
     fixarg[0] = (char *) "SHEAR_HISTORY";
     fixarg[1] = (char *) "all";
     fixarg[2] = (char *) "SHEAR_HISTORY";
-    if (rolling) fixarg[3] = (char *) "14";
+    if (rolling) fixarg[3] = (char *) "17";
     else fixarg[3] = (char *) "4"; //~ Added this line [KH - 23 November 2012]
     modify->add_fix(4,fixarg,suffix); //~ Increased to 4
     delete [] fixarg;
