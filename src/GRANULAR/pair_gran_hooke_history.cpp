@@ -928,9 +928,9 @@ void *PairGranHookeHistory::extract(const char *str, int &dim)
   if (strcmp(str,"computeflag") == 0) return (void *) &computeflag;
   else if (strcmp(str,"list") == 0) return (void *) list;
   else if (strcmp(str,"listgranhistory") == 0) return (void *) listgranhistory;
-  if (strcmp(str,"rolling") == 0) return (void *) &rolling;
-  if (strcmp(str,"model_type") == 0) return (void *) &model_type;
-  if (strcmp(str,"rolling_delta") == 0) return (void *) &rolling_delta;
+  else if (strcmp(str,"rolling") == 0) return (void *) &rolling;
+  else if (strcmp(str,"model_type") == 0) return (void *) &model_type;
+  else if (strcmp(str,"rolling_delta") == 0) return (void *) &rolling_delta;
   return NULL;
 }
 
