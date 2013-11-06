@@ -66,7 +66,7 @@ class FixWallGran : public Fix {
   int numshearquants; //~ The number of shear quantities [KH - 30 October 2013]
   int *rolling,*model_type; //~ Quantities for rolling resistance model [KH - 30 October 2013]
   double *rolling_delta;
-  int lastwarning; //~ Used to modify frequency at which warning about failures to calculate tangential contact stiffnesses are output in the rolling resistance model [KH - 5 November 2013]
+  int lastwarning[2]; //~ Used to control frequencies at which warnings about failures to calculate contact stiffnesses are output in the rolling resistance model [KH - 6 November 2013]
 
   /*~ Used for accessing fix old_omega when rolling resistance model
     is active [KH - 30 October 2013]*/
@@ -90,7 +90,7 @@ class FixWallGran : public Fix {
   void move_wall();
   void velscontrol();
   void ev_tally_wall(int, double, double, double, double, double, double, double);
-  void rolling_resistance(int, int, double, double, double, double, double, double, double, double, double, double *, double *); //~ Added this function [KH - 30 October 2013]
+  void rolling_resistance(int, int, double, double, double, double, double, double, double, double, double *, double *); //~ Added this function [KH - 30 October 2013]
 };
 
 }

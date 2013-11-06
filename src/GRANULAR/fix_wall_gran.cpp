@@ -31,10 +31,11 @@
 #include "input.h"
 #include "variable.h"
 #include "error.h"
-#include "math_extra.h" //~ These four header files needed for rolling resistance model [KH - 5 November 2013]
+#include "math_extra.h" //~ These five header files needed for rolling resistance model [KH - 5 November 2013]
 #include "fix_old_omega.h"
 #include "math_special.h"
 #include "comm.h"
+#include "mpi.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -245,13 +246,13 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   if (*rolling) numshearquants += 13;
 
   /*~ Use same method to obtain model_type and rolling_delta from 
-    pairstyles. Also initialise an integer used to suppress warnings
-    about failures to calculate tangential contact stiffness [KH - 
-    5 November 2013]*/
+    pairstyles. Also initialise two integers used to limit the 
+    numbers of warnings about failures to calculate contact stiffnesses
+    in the rolling resistance model [KH - 5 November 2013]*/
   if (*rolling) {
      model_type = (int *) pair->extract("model_type",dim);
      rolling_delta = (double *) pair->extract("rolling_delta",dim);
-     lastwarning = -1e10;
+     lastwarning[0] = lastwarning[1] = -1000000;
   }
 
   // perform initial allocation of atom-based arrays
@@ -574,9 +575,6 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
   double fn,fs,fs1,fs2,fs3,fx,fy,fz;
   double shrmag,rsht,rinv,rsqinv;
 
-  //~ Need to calculate for rolling resistance model [KH - 30 October 2013]
-  double oldsheardispsq = shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2];
-
   r = sqrt(rsq);
   rinv = 1.0/r;
   rsqinv = 1.0/rsq;
@@ -675,15 +673,9 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
   torque[2] -= dx*fs2 - dy*fs1;
 
   //~ Call function for rolling resistance model [KH - 30 October 2013]
-  double newsheardisp,oldsheardisp,incsheardisp,incshearforce;
-  if (*rolling && shearupdate) {
-    newsheardisp = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
-    oldsheardisp = sqrt(oldsheardispsq);
-    incsheardisp = newsheardisp - oldsheardisp;
-    incshearforce = kt*incsheardisp;
+  if (*rolling && shearupdate)
     rolling_resistance(i,numshearquants,dx,dy,dz,r,radius,ccel,fn,
-		       incshearforce,incsheardisp,torque,shear);
-  }
+		       kt,torque,shear);
 
   fwall[0] += fx;
   fwall[1] += fy;
@@ -704,9 +696,6 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
   double fn,fs,fs1,fs2,fs3,fx,fy,fz;
   double shrmag,rsht,polyhertz,rinv,rsqinv;
 
-  //~ Need to calculate for rolling resistance model [KH - 30 October 2013]
-  double oldsheardispsq = shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2];
-  
   r = sqrt(rsq);
   rinv = 1.0/r;
   rsqinv = 1.0/rsq;
@@ -807,15 +796,10 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
   torque[2] -= dx*fs2 - dy*fs1;
 
   //~ Call function for rolling resistance model [KH - 30 October 2013]
-  double newsheardisp,oldsheardisp,incsheardisp,incshearforce;
-  if (*rolling && shearupdate) {
-    newsheardisp = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
-    oldsheardisp = sqrt(oldsheardispsq);
-    incsheardisp = newsheardisp - oldsheardisp;
-    incshearforce = kt*polyhertz*incsheardisp;
+  double effectivekt = kt*polyhertz;
+  if (*rolling && shearupdate)
     rolling_resistance(i,numshearquants,dx,dy,dz,r,radius,ccel,fn,
-		       incshearforce,incsheardisp,torque,shear);
-  }
+		       effectivekt,torque,shear);
 
   fwall[0] += fx;
   fwall[1] += fy;
@@ -965,15 +949,10 @@ void FixWallGran::shm_history(double rsq, double dx, double dy, double dz,
   torque[2] -= dx*shear[1] - dy*shear[0];
 
   //~ Call function for rolling resistance model [KH - 30 October 2013]
-  double newshearforce,oldshearforce,incsheardisp,incshearforce;
-  if (*rolling && shearupdate) {
-    newshearforce = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
-    oldshearforce = sqrt(shsqmag);
-    incshearforce = newshearforce - oldshearforce;
-    incsheardisp = vrel*dt;
+  double effectivekt = kt*polyhertz;
+  if (*rolling && shearupdate)
     rolling_resistance(i,numshearquants,dx,dy,dz,r,radius,ccel,fslim,
-		       incshearforce,incsheardisp,torque,shear);
-  }
+		       effectivekt,torque,shear);
 
   fwall[0] += fx;
   fwall[1] += fy;
@@ -1289,7 +1268,7 @@ void FixWallGran::ev_tally_wall(int i, double fx, double fy, double fz,
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy, double dz, double r, double radius, double ccel, double maxshear, double incshearforce, double incsheardisp, double *torque, double *shear)
+void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy, double dz, double r, double radius, double ccel, double maxshear, double effectivekt, double *torque, double *shear)
 {
   /*~ This rolling resistance model was developed by Xin Huang during
     the summer and autumn of 2013. It is the companion function of
@@ -1367,40 +1346,50 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
 
   /*~ The equivalent area normal contact stiffness is found by dividing
     the magnitude of the normal contact force by the product of the normal 
-    contact overlap and contact area. If division by zero, issue an error.
+    contact overlap and contact area. If division by zero, issue a warning.
     Also calculate some necessary quantities for later use*/
-  int warnfrequency = 1000; //~ How often to warn about stiffness calcs
+  int warnfrequency = 100; //~ How often to warn about stiffness calcs
   double un, B, delbyb, recipcarea, recipA, knbar, ksbar;
-  un = radius - r; //~ Normal contact overlap
 
-  if (fabs(un) > tolerance) {
-    knbar = fabs(ccel*r*recipcarea/un);
-    B = sqrt(radius*radius - r*r); //~ Radius of contact plane
-    delbyb = *rolling_delta*B;
+  un = radius - r; //~ Normal contact overlap
+  B = sqrt(radius*radius - r*r); //~ Radius of contact plane
+
+  if (B > tolerance) {
     recipcarea = 1.0/(PI*B*B); //~ Reciprocal of contact area
-    recipA = 1.0/(PI*delbyb*delbyb); //~ Reciprocal of modified contact area
-  } else error->all(FLERR,"Cannot estimate normal contact stiffness in rolling resistance model");
+    delbyb = *rolling_delta*B;
+    knbar = fabs(ccel*r*recipcarea/un);
+  } else {
+    //~ Issue a warning and broadcast lastwarning int to all procs
+    if (update->ntimestep-lastwarning[0] >= warnfrequency) {
+      fprintf(screen,"Cannot estimate either contact stiffness in rolling resistance model on timestep "BIGINT_FORMAT"\n",update->ntimestep);
+      lastwarning[0] = lastwarning[1] = update->ntimestep;
+      MPI_Bcast(&lastwarning[0],2,MPI_INT,comm->me,world);
+    }
+    delbyb = tolerance; //~ Tiny value
+    knbar = BIG; //~ Huge stiffness value
+  }
+  recipA = 1.0/(PI*delbyb*delbyb); //~ Reciprocal of modified contact area
 
   /*~ The equivalent area tangential contact stiffness is equal to the
-    incremental shear force divided by the product of incremental shear
-    displacement and contact area. Potentially there could be a division
-    by zero problem here as incsheardisp has very small values, so use
-    values stored in the shear array from the preceding timestep if
-    problems occur*/
-  if (incsheardisp > tolerance) ksbar = fabs(incshearforce*recipcarea/incsheardisp);
+    effective tangential stiffness (kt for Hookean model; kt*polyhertz
+    for Hertzian model) divided by the contact area. If kt is zero or
+    if the contact area is very, very small, warn the user. Values of
+    ksbar are stored in the last column of the shear array.*/
+  if (kt < tolerance && update->beginstep == update->ntimestep-1 
+      && comm->me == 0)
+    error->warning(FLERR,"Using zero kt: tangential contact stiffness cannot be estimated in rolling resistance model");
+
+  if (B > tolerance && effectivekt > tolerance) ksbar = effectivekt*recipcarea;
   else if (shear[numshearq-1] > tolerance) ksbar = fabs(shear[numshearq-1]);
   else {
-    if (comm->me == 0) {
-      if (xmu > tolerance && update->ntimestep > update->beginstep+1 && (update->ntimestep-lastwarning) >= warnfrequency) {//~ Suppress for first timestep
-	fprintf(screen,"Cannot estimate tangential contact stiffness in rolling resistance model on timestep "BIGINT_FORMAT"\n",update->ntimestep);
-	lastwarning = update->ntimestep;
-      } else if (xmu < tolerance && update->beginstep == update->ntimestep-1)
-	error->warning(FLERR,"Using zero mu: tangential contact stiffness cannot be estimated in rolling resistance model");
+    if (kt >= tolerance && update->ntimestep-lastwarning[1] >= warnfrequency) {
+      fprintf(screen,"Cannot estimate tangential contact stiffness in rolling resistance model on timestep "BIGINT_FORMAT"\n",update->ntimestep);
+      lastwarning[1] = update->ntimestep;
+      MPI_Bcast(&lastwarning[1],1,MPI_INT,comm->me,world);
     }
-
     ksbar = tolerance; //~ Assume a tiny value
   }
-  shear[numshearq-1] = ksbar; //~ Store the value regardless
+  shear[numshearq-1] = ksbar; //~ Store ksbar in last column of shear array
 
   /*~ Calculate the maximum allowable rolling and twisting resistances
     and store these in thetalimit for convenience*/
@@ -1429,12 +1418,12 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
 
   /*~ Now find local increments of twisting resistance for which
     there are two cases*/
-  if (dthetar[3] < thetalimit[3]) localdM[3] = st[3]*dthetar[3];
-  else localdM[3] = st[3]*thetalimit[3];
+  if (dthetar[2] < thetalimit[2]) localdM[2] = st[2]*dthetar[2];
+  else localdM[2] = st[2]*thetalimit[2];
 
   if (*model_type % 2 == 0) {//~ Option C
-    localdM[3] = st[3]*dthetar[3];
-    if (localdM[3] > thetalimit[3]) localdM[3] = thetalimit[3];
+    localdM[2] = st[2]*dthetar[2];
+    if (localdM[2] > thetalimit[2]) localdM[2] = thetalimit[2];
   }
 
   for (int q = 0; q < 3; q++) {

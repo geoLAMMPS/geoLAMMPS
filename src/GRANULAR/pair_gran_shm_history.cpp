@@ -312,19 +312,14 @@ void PairGranShmHistory::compute(int eflag, int vflag)
         }
 
 	//~ Call function for rolling resistance model [KH - 25 October 2013]
-	double newshearforce,oldshearforce,incsheardisp,incshearforce;
 	double dur[3], dus[3], localdM[3], globaldM[3]; //~ Pass by reference
+	double effectivekt = kt*polyhertz;
 	if (rolling && shearupdate) {
-	  newshearforce = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
-	  oldshearforce = sqrt(shsqmag);
-	  incshearforce = newshearforce - oldshearforce;
-	  incsheardisp = vrel*dt;
-
 	  /*~ The first '0' indicates that the rolling_resistance function is
 	    called by the compute rather than the single function*/
 	  rolling_resistance(0,i,j,numshearquants,delx,dely,delz,r,rinv,ccel,
-			     fslim,incshearforce,incsheardisp,torque,shear,
-			     dur,dus,localdM,globaldM);
+			     fslim,effectivekt,torque,shear,dur,dus,localdM,
+			     globaldM);
 	}
 
         if (evflag) ev_tally_gran(i,j,nlocal,fx,fy,fz,x[i][0],x[i][1],x[i][2],
@@ -449,11 +444,12 @@ double PairGranShmHistory::single(int i, int j, int itype, int jtype,
   dely = x[i][1] - x[j][1];
   delz = x[i][2] - x[j][2];
 
+  double effectivekt = kt*polyhertz;
   if (rolling) {
     /*~ The first '1' indicates that the rolling_resistance function is
       called by the single function rather than the compute*/
     rolling_resistance(1,i,j,numshearquants,delx,dely,delz,r,rinv,ccel,
-		       fslim,0.0,0.0,torque,shear,dur,dus,localdM,globaldM);
+		       fslim,effectivekt,torque,shear,dur,dus,localdM,globaldM);
   }
 
   /*~ Some of the following are included only for convenience as

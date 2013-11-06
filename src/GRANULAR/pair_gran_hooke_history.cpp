@@ -36,8 +36,9 @@
 #include "memory.h"
 #include "error.h"
 #include "math_extra.h" //~ For rolling resistance [KH - 23 October 2013]
-#include "fix_old_omega.h" //~ And these two too [KH - 5 November 2013]
+#include "fix_old_omega.h" //~ And these three too [KH - 6 November 2013]
 #include "math_special.h"
+#include "mpi.h"
 
 using namespace LAMMPS_NS;
 
@@ -60,10 +61,10 @@ PairGranHookeHistory::PairGranHookeHistory(LAMMPS *lmp) : Pair(lmp)
   computeflag = 0;
   neighprev = 0;
 
-  /*~ Initialise an integer used to suppress warnings about failures 
-    to calculate tangential contact stiffnesses in the rolling
+  /*~ Initialise two integers used to limit the numbers of warnings 
+    about failures to calculate contact stiffnesses in the rolling 
     resistance model [KH - 5 November 2013]*/
-  lastwarning = -1e10;
+  lastwarning[0] = lastwarning[1] = -1000000;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -134,8 +135,7 @@ void PairGranHookeHistory::compute(int eflag, int vflag)
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
   double deltan,cri,crj;
-  double oldsheardispsq; //~ For rolling resistance [KH - 25 October 2013]
-  
+
   inum = list->inum;
   ilist = list->ilist;
   numneigh = list->numneigh;
@@ -282,9 +282,6 @@ void PairGranHookeHistory::compute(int eflag, int vflag)
         touch[jj] = 1;
         shear = &allshear[numshearquants*jj];
 
-	//~ Need to calculate for rolling resistance model [KH - 25 October 2013]
-	oldsheardispsq = shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2];
-
         if (shearupdate) {
           shear[0] += vtr1*dt;
           shear[1] += vtr2*dt;
@@ -360,19 +357,12 @@ void PairGranHookeHistory::compute(int eflag, int vflag)
         }
 
 	//~ Call function for rolling resistance model [KH - 25 October 2013]
-	double newsheardisp,oldsheardisp,incsheardisp,incshearforce;
 	double dur[3], dus[3], localdM[3], globaldM[3]; //~ Pass by reference
 	if (rolling && shearupdate) {
-	  newsheardisp = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
-	  oldsheardisp = sqrt(oldsheardispsq);
-	  incsheardisp = newsheardisp - oldsheardisp;
-	  incshearforce = kt*incsheardisp;
-
 	  /*~ The first '0' indicates that the rolling_resistance function is
 	    called by the compute rather than the single function*/
 	  rolling_resistance(0,i,j,numshearquants,delx,dely,delz,r,rinv,ccel,
-			     fn,incshearforce,incsheardisp,torque,shear,dur,
-			     dus,localdM,globaldM);
+			     fn,kt,torque,shear,dur,dus,localdM,globaldM);
 	}
 
         if (evflag) ev_tally_gran(i,j,nlocal,fx,fy,fz,x[i][0],x[i][1],x[i][2],
@@ -855,7 +845,7 @@ double PairGranHookeHistory::single(int i, int j, int itype, int jtype,
     /*~ The first '1' indicates that the rolling_resistance function is
       called by the single function rather than the compute*/
     rolling_resistance(1,i,j,numshearquants,delx,dely,delz,r,rinv,ccel,
-		       fn,0.0,0.0,torque,shear,dur,dus,localdM,globaldM);
+		       fn,kt,torque,shear,dur,dus,localdM,globaldM);
   }
 
   /*~ Some of the following are included only for convenience as
@@ -936,7 +926,7 @@ void *PairGranHookeHistory::extract(const char *str, int &dim)
 
 /* ---------------------------------------------------------------------- */
 
-void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int numshearq, double delx, double dely, double delz, double r, double rinv, double ccel, double maxshear, double incshearforce, double incsheardisp, double **torque, double *shear, double *dur, double *dus, double *localdM, double *globaldM)
+void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int numshearq, double delx, double dely, double delz, double r, double rinv, double ccel, double maxshear, double effectivekt, double **torque, double *shear, double *dur, double *dus, double *localdM, double *globaldM)
 {
   /*~ This rolling resistance model was developed by Xin Huang during
     the summer and autumn of 2013. Note that the last slot in 'shear'
@@ -1056,8 +1046,13 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
   //~ Now find relative rotations, dthetar, in three directions 
   double PI, beta, dalpha, da[3], db[3], dthetar[3];
   
-  //~ beta is calculated using the difference of local z coordinates
+  /*~ beta is calculated using the difference of local z coordinates.
+    Note that beta is evaluated as 'nan' if the argument is outside
+    the range +/- 1, so check for this and round if necessary*/
   beta = asin(oneoverradsum*localdiffcoords[2]);
+  if (fabs(localdiffcoords[2]) > radsum)
+    beta = asin(localdiffcoords[2]/fabs(localdiffcoords[2])); //~ Retain sign
+
   PI = 4.0*atan(1.0);
   dalpha = 0.5*PI - beta;
 
@@ -1081,43 +1076,51 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
 
   /*~ The equivalent area normal contact stiffness is found by dividing
     the magnitude of the normal contact force by the product of the normal 
-    contact overlap and contact area. If division by zero, issue an error.
+    contact overlap and contact area. If division by zero, issue a warning.
     Also calculate some necessary quantities for later use*/
-  int warnfrequency = 1000; //~ How often to warn about stiffness calcs
+  int warnfrequency = 100; //~ How often to warn about stiffness calcs
   double un, deltai, B, delbyb, recipcarea, recipA, knbar, ksbar;
+  
   un = radsum - r; //~ Normal contact overlap
-
-  if (fabs(un) > tolerance) {
-    knbar = fabs(ccel*r*recipcarea/un);
-    deltai = 0.5*un*rinv*(2.0*radius[j] - un);
-    B = sqrt(deltai*(2.0*radius[i] - deltai)); //~ Radius of contact plane
-    delbyb = rolling_delta*B;
+  deltai = 0.5*un*rinv*(2.0*radius[j] - un);
+  B = sqrt(deltai*(2.0*radius[i] - deltai)); //~ Radius of contact plane
+  
+  if (B > tolerance) {
     recipcarea = 1.0/(PI*B*B); //~ Reciprocal of contact area
-    recipA = 1.0/(PI*delbyb*delbyb); //~ Reciprocal of modified contact area
-  } else error->all(FLERR,"Cannot estimate normal contact stiffness in rolling resistance model");
+    delbyb = rolling_delta*B;
+    knbar = fabs(ccel*r*recipcarea/un);
+  } else {
+    //~ Issue a warning and broadcast lastwarning int to all procs
+    if (update->ntimestep-lastwarning[0] >= warnfrequency) {
+      fprintf(screen,"Cannot estimate either contact stiffness in rolling resistance model on timestep "BIGINT_FORMAT"\n",update->ntimestep);
+      lastwarning[0] = lastwarning[1] = update->ntimestep;
+      MPI_Bcast(&lastwarning[0],2,MPI_INT,comm->me,world);
+    }
+    delbyb = tolerance; //~ Tiny value
+    knbar = 1.0/tolerance; //~ Huge stiffness value
+  }
+  recipA = 1.0/(PI*delbyb*delbyb); //~ Reciprocal of modified contact area
 
   /*~ The equivalent area tangential contact stiffness is equal to the
-    incremental shear force divided by the product of incremental shear
-    displacement and contact area. Potentially there could be a division
-    by zero problem here as incsheardisp has very small values, so use
-    values stored in the shear array from the preceding timestep if
-    problems occur. If called by a single function, incsheardisp is
-    deliberately set to zero which means that the value of ksbar which 
-    is stored in the shear array is used.*/
-  if (incsheardisp > tolerance) ksbar = fabs(incshearforce*recipcarea/incsheardisp);
+    effective tangential stiffness (kt for Hookean model; kt*polyhertz
+    for Hertzian model) divided by the contact area. If kt is zero or
+    if the contact area is very, very small, warn the user. Values of
+    ksbar are stored in the last column of the shear array.*/
+  if (kt < tolerance && update->beginstep == update->ntimestep 
+      && comm->me == 0)
+    error->warning(FLERR,"Using zero kt: tangential contact stiffness cannot be estimated in rolling resistance model");
+
+  if (B > tolerance && effectivekt > tolerance) ksbar = effectivekt*recipcarea;
   else if (shear[numshearq-1] > tolerance) ksbar = fabs(shear[numshearq-1]);
   else {
-    if (comm->me == 0) {
-      if (xmu > tolerance && update->ntimestep > update->beginstep && (update->ntimestep-lastwarning) >= warnfrequency) {//~ Suppress for zeroth timestep
-	fprintf(screen,"Cannot estimate tangential contact stiffness in rolling resistance model on timestep "BIGINT_FORMAT"\n",update->ntimestep);
-	lastwarning = update->ntimestep;
-      } else if (xmu < tolerance && update->beginstep == update->ntimestep)
-	error->warning(FLERR,"Using zero mu: tangential contact stiffness cannot be estimated in rolling resistance model");
+    if (kt >= tolerance && update->ntimestep-lastwarning[1] >= warnfrequency) {
+      fprintf(screen,"Cannot estimate tangential contact stiffness in rolling resistance model on timestep "BIGINT_FORMAT"\n",update->ntimestep);
+      lastwarning[1] = update->ntimestep;
+      MPI_Bcast(&lastwarning[1],1,MPI_INT,comm->me,world);
     }
-
     ksbar = tolerance; //~ Assume a tiny value
   }
-  shear[numshearq-1] = ksbar; //~ Store the value regardless
+  shear[numshearq-1] = ksbar; //~ Store ksbar in last column of shear array
 
   /*~ Calculate the maximum allowable rolling and twisting resistances
     and store these in thetalimit for convenience*/
@@ -1146,12 +1149,12 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
 
   /*~ Now find local increments of twisting resistance for which
     there are two cases*/
-  if (dthetar[3] < thetalimit[3]) localdM[3] = st[3]*dthetar[3];
-  else localdM[3] = st[3]*thetalimit[3];
+  if (dthetar[2] < thetalimit[2]) localdM[2] = st[2]*dthetar[2];
+  else localdM[2] = st[2]*thetalimit[2];
 
   if (model_type % 2 == 0) {//~ Option C
-    localdM[3] = st[3]*dthetar[3];
-    if (localdM[3] > thetalimit[3]) localdM[3] = thetalimit[3];
+    localdM[2] = st[2]*dthetar[2];
+    if (localdM[2] > thetalimit[2]) localdM[2] = thetalimit[2];
   }
 
   for (int q = 0; q < 3; q++) {

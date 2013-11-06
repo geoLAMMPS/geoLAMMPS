@@ -83,7 +83,6 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
   double deltan,cri,crj;
-  double oldsheardispsq; //~ Need for rolling resistance [KH - 25 October 2013]
 
   inum = list->inum;
   ilist = list->ilist;
@@ -233,9 +232,6 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
         touch[jj] = 1;
         shear = &allshear[numshearquants*jj];
 
-	//~ Need to calculate for rolling resistance model [KH - 25 October 2013]
-	oldsheardispsq = shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2];
-
         if (shearupdate) {
           shear[0] += vtr1*dt;
           shear[1] += vtr2*dt;
@@ -311,19 +307,14 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
         }
 
 	//~ Call function for rolling resistance model [KH - 25 October 2013]
-	double newsheardisp,oldsheardisp,incsheardisp,incshearforce;
 	double dur[3], dus[3], localdM[3], globaldM[3]; //~ Pass by reference
+	double effectivekt = kt*polyhertz;
 	if (rolling && shearupdate) {
-	  newsheardisp = sqrt(shear[0]*shear[0] + shear[1]*shear[1] + shear[2]*shear[2]);
-	  oldsheardisp = sqrt(oldsheardispsq);
-	  incsheardisp = newsheardisp - oldsheardisp;
-	  incshearforce = kt*polyhertz*incsheardisp;
-
 	  /*~ The first '0' indicates that the rolling_resistance function is
 	    called by the compute rather than the single function*/
 	  rolling_resistance(0,i,j,numshearquants,delx,dely,delz,r,rinv,ccel,
-			     fn,incshearforce,incsheardisp,torque,shear,dur,
-			     dus,localdM,globaldM);
+			     fn,effectivekt,torque,shear,dur,dus,localdM,
+			     globaldM);
 	}
 
         if (evflag) ev_tally_gran(i,j,nlocal,fx,fy,fz,x[i][0],x[i][1],x[i][2],
@@ -547,12 +538,13 @@ double PairGranHertzHistory::single(int i, int j, int itype, int jtype,
 
   //~ Call function for rolling resistance model [KH - 30 October 2013]
   double dur[3], dus[3], localdM[3], globaldM[3]; //~ Pass by reference
+  double effectivekt = kt*polyhertz;
   double **torque = atom->torque;
   if (rolling) {
     /*~ The first '1' indicates that the rolling_resistance function is
       called by the single function rather than the compute*/
     rolling_resistance(1,i,j,numshearquants,delx,dely,delz,r,rinv,ccel,
-		       fn,0.0,0.0,torque,shear,dur,dus,localdM,globaldM);
+		       fn,effectivekt,torque,shear,dur,dus,localdM,globaldM);
   }
 
   /*~ Some of the following are included only for convenience as
