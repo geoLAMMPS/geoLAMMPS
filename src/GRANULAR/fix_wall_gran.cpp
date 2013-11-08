@@ -1317,10 +1317,9 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
   if (*model_type % 3 == 0) commonradius = BIG; //~ Iwashita and Oda (1998, 2000) - 'infinite' common radius
   
   /*~ Obtain the omega values for the previous timestep from FixOldOmega.
-    Note that beta will be 0 as the denominator is infinite for a
-    ball-wall contact. Hence dalpha will be 0.5*pi. Also all the 'db'
-    terms are zero as the walls have no angular velocity. 'dur' and 
-    'dus' will equal 'da'*/
+    Note that dalpha will be 0 for the special case of a ball contacting
+    a planar wall. Also all the 'da' terms are zero as the walls have
+    no angular velocity. 'dur' and 'dus' equal 'db'*/
   double **oldomegas = ((FixOldOmega *) deffix)->oldomegas;
   double globaloldomegai[3], localoldomegai[3];
   for (int q = 0; q < 3; q++) globaloldomegai[q] = oldomegas[i][q];
@@ -1329,14 +1328,13 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
     using the rotation matrix T*/
   MathExtra::matvec(T,globaloldomegai,localoldomegai);
 
-  //~ Now find relative rotations, dthetar, in three directions 
-  double PI = 4.0*atan(1.0);
+  //~ Now find relative rotations, dthetar, in three directions
   double da[3], dthetar[3];
 
   //~ X-Z projection
-  da[0] = radius*(localoldomegai[0]*dt - 0.5*PI);
+  da[0] = radius*localoldomegai[0]*dt;
   //~ X-Z projection
-  da[1] = radius*(localoldomegai[1]*dt - 0.5*PI);
+  da[1] = radius*localoldomegai[1]*dt;
   //~ For spin around z axis, dalpha == 0
   da[2] = radius*localoldomegai[2]*dt;
 
@@ -1347,6 +1345,7 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
     contact overlap and contact area. If division by zero, issue a warning.
     Also calculate some necessary quantities for later use*/
   int warnfrequency = 100; //~ How often to warn about stiffness calcs
+  double PI = 4.0*atan(1.0);
   double un, B, delbyb, recipcarea, recipA, knbar, ksbar;
 
   un = radius - r; //~ Normal contact overlap
