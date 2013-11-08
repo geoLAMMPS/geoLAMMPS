@@ -1331,14 +1331,10 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
   //~ Now find relative rotations, dthetar, in three directions
   double da[3], dthetar[3];
 
-  //~ X-Z projection
-  da[0] = radius*localoldomegai[0]*dt;
-  //~ X-Z projection
-  da[1] = radius*localoldomegai[1]*dt;
-  //~ For spin around z axis, dalpha == 0
-  da[2] = radius*localoldomegai[2]*dt;
-
-  for (int q = 0; q < 3; q++) dthetar[q] = da[q]/commonradius;
+  for (int q = 0; q < 3; q++) {
+    da[q] = radius*localoldomegai[q]*dt;
+    dthetar[q] = da[q]/commonradius;
+  }
 
   /*~ The equivalent area normal contact stiffness is found by dividing
     the magnitude of the normal contact force by the product of the normal 
