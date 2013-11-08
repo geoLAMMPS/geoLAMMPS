@@ -1276,6 +1276,13 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
     the rolling resistance model can be obtained by looking at this
     code [KH - 30 October 2013]*/
 
+  //~ If *rolling_delta == 0, exit from this function prematurely
+  double tolerance = 1.0e-20;
+  if (*rolling_delta < tolerance) {
+    for (int q = 0; q < 13; q++) shear[numshearq-13+q] = 0.0;
+    return;
+  }
+
   /*~ Since the walls are planar and axis-aligned, components of the 
     unit vector along the contact normal are found by normalising
     dx, dy and dz by particle radius*/
@@ -1285,7 +1292,6 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
 
   /*~ Calculate the four components of the unit quaternion, q. Compare
     with a tolerance to ensure no division by zero problems*/
-  double tolerance = 1.0e-20;
   double sinthetaovertwo, recipmagnxny;
   sinthetaovertwo = sqrt(0.5*(1.0 - nz));
   if (nx < 0.0) sinthetaovertwo *= -1.0;
@@ -1316,19 +1322,11 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
     terms are zero as the walls have no angular velocity. 'dur' and 
     'dus' will equal 'da'*/
   double **oldomegas = ((FixOldOmega *) deffix)->oldomegas;
-  double **omega = atom->omega;
-  double globalomegai[3], globaloldomegai[3];
+  double globaloldomegai[3], localoldomegai[3];
+  for (int q = 0; q < 3; q++) globaloldomegai[q] = oldomegas[i][q];
   
-  for (int q = 0; q < 3; q++) {
-    globalomegai[q] = omega[i][q];
-    globaloldomegai[q] = oldomegas[i][q];
-  }
-  
-  /*~ Transfer the old and current omega values to the local coordinate
-    system using the rotation matrix T*/
-  double localomegai[3], localoldomegai[3];
-
-  MathExtra::matvec(T,globalomegai,localomegai);
+  /*~ Transfer the old omega values to the local coordinate system
+    using the rotation matrix T*/
   MathExtra::matvec(T,globaloldomegai,localoldomegai);
 
   //~ Now find relative rotations, dthetar, in three directions 
@@ -1336,11 +1334,11 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
   double da[3], dthetar[3];
 
   //~ X-Z projection
-  da[0] = radius*(localomegai[0] - localoldomegai[0] - 0.5*PI);
+  da[0] = radius*(localoldomegai[0]*dt - 0.5*PI);
   //~ X-Z projection
-  da[1] = radius*(localomegai[1] - localoldomegai[1] - 0.5*PI);
+  da[1] = radius*(localoldomegai[1]*dt - 0.5*PI);
   //~ For spin around z axis, dalpha == 0
-  da[2] = radius*(localomegai[2] - localoldomegai[2]);
+  da[2] = radius*localoldomegai[2]*dt;
 
   for (int q = 0; q < 3; q++) dthetar[q] = da[q]/commonradius;
 

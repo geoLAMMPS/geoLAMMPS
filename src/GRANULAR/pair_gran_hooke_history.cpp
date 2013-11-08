@@ -961,6 +961,21 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
     5 | Use common radius defined by Jiang et al. (2005)
   */
 
+  /*~ If rolling_delta == 0, the rolling resistance model does nothing.
+    For efficiency, set the relevant columns of the shear array to zero
+    and exit from this function prematurely. Also set the increments,
+    passed to this function by reference, to zero. As rolling_delta is a
+    double, not an integer, compare with a tolerance*/
+  double tolerance = 1.0e-20;
+  if (rolling_delta < tolerance) {
+    for (int q = 0; q < 13; q++) shear[numshearq-13+q] = 0.0;
+
+    for (int q = 0; q < 3; q++)
+      dur[q] = dus[q] = localdM[q] = globaldM[q] = 0.0;
+
+    return;
+  }
+
   /*~ Components of the unit vector along the contact normal. In the
     following, particle 1 is analogous to particle i and particle 2
     is taken as particle j. Hence since del* is calculated as (i-j),
@@ -972,7 +987,6 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
   //~ nz == cos(theta): the rotation angle
   /*~ Calculate the four components of the unit quaternion, q. Compare
     with a tolerance to ensure no division by zero problems*/
-  double tolerance = 1.0e-20;
   double sinthetaovertwo, recipmagnxny;
   sinthetaovertwo = sqrt(0.5*(1.0 - nz));
   if (nx < 0.0) sinthetaovertwo *= -1.0;
@@ -1016,24 +1030,17 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
     y and z positions of the particle centroids (in columns 4
     to 6)*/
   double **oldomegas = ((FixOldOmega *) deffix)->oldomegas;
-  double **omega = atom->omega;
-  double globalomegai[3], globalomegaj[3];
   double globaloldomegai[3], globaloldomegaj[3];
   
   for (int q = 0; q < 3; q++) {
-    globalomegai[q] = omega[i][q];
-    globalomegaj[q] = omega[j][q];
     globaloldomegai[q] = oldomegas[i][q];
     globaloldomegaj[q] = oldomegas[j][q];
   }
   
-  /*~ Transfer the old and current omega values to the local coordinate
-    system using the rotation matrix T*/
-  double localomegai[3], localomegaj[3];
+  /*~ Transfer the old omega values to the local coordinate system
+    using the rotation matrix T*/
   double localoldomegai[3], localoldomegaj[3];
 
-  MathExtra::matvec(T,globalomegai,localomegai);
-  MathExtra::matvec(T,globalomegaj,localomegaj);
   MathExtra::matvec(T,globaloldomegai,localoldomegai);
   MathExtra::matvec(T,globaloldomegaj,localoldomegaj);
 
@@ -1057,16 +1064,16 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
   dalpha = 0.5*PI - beta;
 
   //~ X-Z projection
-  da[0] = radius[i]*(localomegai[0] - localoldomegai[0] - dalpha);
-  db[0] = radius[j]*(localomegaj[0] - localoldomegaj[0] - dalpha);
+  da[0] = radius[i]*(localoldomegai[0]*dt - dalpha);
+  db[0] = radius[j]*(localoldomegaj[0]*dt - dalpha);
 
   //~ Y-Z projection
-  da[1] = radius[i]*(localomegai[1] - localoldomegai[1] - dalpha);
-  db[1] = radius[j]*(localomegaj[1] - localoldomegaj[1] - dalpha);
+  da[1] = radius[i]*(localoldomegai[1]*dt - dalpha);
+  db[1] = radius[j]*(localoldomegaj[1]*dt - dalpha);
 
   //~ For spin around z axis, dalpha == 0
-  da[2] = radius[i]*(localomegai[2] - localoldomegai[2]);
-  db[2] = radius[j]*(localomegaj[2] - localoldomegaj[2]);
+  da[2] = radius[i]*localoldomegai[2]*dt;
+  db[2] = radius[j]*localoldomegaj[2]*dt;
 
   for (int q = 0; q < 3; q++) {
     dur[q] = (radius[j]*da[q] - radius[i]*db[q])*oneoverradsum;
