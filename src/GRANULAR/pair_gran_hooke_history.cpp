@@ -954,11 +954,13 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
     * Common radius calculated from definition of Ai et al. (2012)
     
     List of available options:
-    2 | Option C for maximum twisting resistance (i.e., all the shear 
-        stresses induced by twisting torque equal to the shear stress 
-	limit 
-    3 | Use common radius defined by Iwashita and Oda (1998, 2000)
-    5 | Use common radius defined by Jiang et al. (2005)
+    2  | Option C for maximum twisting resistance (i.e., all the shear 
+         stresses induced by twisting torque equal to the shear stress 
+	 limit 
+    3  | Use common radius defined by Iwashita and Oda (1998, 2000)
+    5  | Use common radius defined by Jiang et al. (2005)
+    7  | Disable rolling resistance part of model
+    11 | Disable twisting resistance part of model
   */
 
   /*~ If rolling_delta == 0, the rolling resistance model does nothing.
@@ -1150,19 +1152,23 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
   /*~ Calculate local increments of rolling resistance and ensure
     that the increments don't exceed the limits*/
   for (int q = 0; q < 2; q++) {
-    if (dthetar[q] < thetalimit[q]) localdM[q] = st[q]*dthetar[q];
-    else localdM[q] = st[q]*thetalimit[q];
+    if (model_type % 7 > 0) {//~ Rolling resistance enabled
+      if (dthetar[q] < thetalimit[q]) localdM[q] = st[q]*dthetar[q];
+      else localdM[q] = st[q]*thetalimit[q];
+    } else localdM[q] = 0.0; //~ Rolling resistance disabled
   }
 
   /*~ Now find local increments of twisting resistance for which
     there are two cases*/
-  if (dthetar[2] < thetalimit[2]) localdM[2] = st[2]*dthetar[2];
-  else localdM[2] = st[2]*thetalimit[2];
+  if (model_type % 11 > 0) {//~ Twisting resistance enabled
+    if (dthetar[2] < thetalimit[2]) localdM[2] = st[2]*dthetar[2];
+    else localdM[2] = st[2]*thetalimit[2];
 
-  if (model_type % 2 == 0) {//~ Option C
-    localdM[2] = st[2]*dthetar[2];
-    if (localdM[2] > thetalimit[2]) localdM[2] = thetalimit[2];
-  }
+    if (model_type % 2 == 0) {//~ Option C
+      localdM[2] = st[2]*dthetar[2];
+      if (localdM[2] > thetalimit[2]) localdM[2] = thetalimit[2];
+    }
+  } else localdM[2] = 0.0; //~ Twisting resistance disabled
 
   for (int q = 0; q < 3; q++) {
     /*~ If the accumulated local resistances exceed the permissible
