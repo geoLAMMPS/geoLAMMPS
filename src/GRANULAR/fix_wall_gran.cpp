@@ -1286,9 +1286,9 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
   /*~ Since the walls are planar and axis-aligned, components of the 
     unit vector along the contact normal are found by normalising
     dx, dy and dz by particle radius*/
-  double nx = -dx/r;
-  double ny = -dy/r;
-  double nz = -dz/r;
+  double nx = dx/r;
+  double ny = dy/r;
+  double nz = dz/r;
 
   /*~ Calculate the four components of the unit quaternion, q. Compare
     with a tolerance to ensure no division by zero problems*/
@@ -1329,11 +1329,11 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
   MathExtra::matvec(T,globaloldomegai,localoldomegai);
 
   //~ Now find relative rotations, dthetar, in three directions
-  double da[3], dthetar[3];
+  double db[3], dthetar[3];
 
   for (int q = 0; q < 3; q++) {
-    da[q] = radius*localoldomegai[q]*dt;
-    dthetar[q] = da[q]/commonradius;
+    db[q] = radius*localoldomegai[q]*dt;
+    dthetar[q] = -db[q]/commonradius;
   }
 
   /*~ The equivalent area normal contact stiffness is found by dividing
@@ -1449,14 +1449,14 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
     The accumulated values of dus are stored in the three columns 
     immediately before, and the accumulated values of dur in the
     three columns immediately before these. For consistency with
-    the ball-ball contacts, duplicate da as both dur and dus.*/
+    the ball-ball contacts, duplicate db as both dur and dus.*/
   for (int q = 0; q < 3; q++) {
     shear[numshearq-4+q] += globaldM[q];
     shear[numshearq-7+q] += localdM[q];
-    shear[numshearq-10+q] += da[q];
-    shear[numshearq-13+q] += da[q];
+    shear[numshearq-10+q] += db[q];
+    shear[numshearq-13+q] += db[q];
 
     //~ Finally update the torque values
-    torque[q] += globaldM[q];
+    torque[q] -= globaldM[q];
   }
 }

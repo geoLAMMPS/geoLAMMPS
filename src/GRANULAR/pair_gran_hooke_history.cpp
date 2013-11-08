@@ -979,12 +979,12 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
   }
 
   /*~ Components of the unit vector along the contact normal. In the
-    following, particle 1 is analogous to particle i and particle 2
-    is taken as particle j. Hence since del* is calculated as (i-j),
-    minus signs are needed in the calculation of nx, ny and nz.*/
-  double nx = -delx*rinv;
-  double ny = -dely*rinv;
-  double nz = -delz*rinv;
+    following, particle 1 is analogous to particle j and particle 2
+    is taken as particle i. Hence since del* is calculated as (i-j),
+    the signs are correct in the calculation of nx, ny and nz.*/
+  double nx = delx*rinv;
+  double ny = dely*rinv;
+  double nz = delz*rinv;
 
   //~ nz == cos(theta): the rotation angle
   /*~ Calculate the four components of the unit quaternion, q. Compare
@@ -1049,7 +1049,7 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
   //~ Use a similar procedure for the difference in coordinates
   double globaldiffcoords[3], localdiffcoords[3];
   for (int q = 0; q < 3; q++)
-    globaldiffcoords[q] = oldomegas[j][q+3] - oldomegas[i][q+3];
+    globaldiffcoords[q] = oldomegas[i][q+3] - oldomegas[j][q+3];
   MathExtra::matvec(T,globaldiffcoords,localdiffcoords);
 
   //~ Now find relative rotations, dthetar, in three directions 
@@ -1066,19 +1066,19 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
   dalpha = 0.5*PI - beta;
 
   //~ X-Z projection
-  da[0] = radius[i]*(localoldomegai[0]*dt - dalpha);
-  db[0] = radius[j]*(localoldomegaj[0]*dt - dalpha);
+  da[0] = radius[j]*(localoldomegaj[0]*dt - dalpha);
+  db[0] = radius[i]*(localoldomegai[0]*dt - dalpha);
 
   //~ Y-Z projection
-  da[1] = radius[i]*(localoldomegai[1]*dt - dalpha);
-  db[1] = radius[j]*(localoldomegaj[1]*dt - dalpha);
+  da[1] = radius[j]*(localoldomegaj[1]*dt - dalpha);
+  db[1] = radius[i]*(localoldomegai[1]*dt - dalpha);
 
   //~ For spin around z axis, dalpha == 0
-  da[2] = radius[i]*localoldomegai[2]*dt;
-  db[2] = radius[j]*localoldomegaj[2]*dt;
+  da[2] = radius[j]*localoldomegaj[2]*dt;
+  db[2] = radius[i]*localoldomegai[2]*dt;
 
   for (int q = 0; q < 3; q++) {
-    dur[q] = (radius[j]*da[q] - radius[i]*db[q])*oneoverradsum;
+    dur[q] = (radius[i]*da[q] - radius[j]*db[q])*oneoverradsum;
     dus[q] = da[q] + db[q];
     dthetar[q] = dur[q]/commonradius;
   }
@@ -1203,8 +1203,8 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
       shear[numshearq-13+q] += dur[q];
 
       /*~ Finally update the torque values for both i and j. The 
-	increments are both additive*/
-      torque[i][q] += globaldM[q];
+	increments differ in sign*/
+      torque[i][q] -= globaldM[q];
       torque[j][q] += globaldM[q];
     }
   }
