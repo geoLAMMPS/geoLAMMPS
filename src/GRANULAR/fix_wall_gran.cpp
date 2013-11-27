@@ -370,6 +370,11 @@ void FixWallGran::post_force(int vflag)
   if (vflag) v_setup(vflag);
   else evflag = 0;
 
+  /*~ Must update shearupdate before using with move_wall function
+    [KH - 27 November 2013]*/
+  shearupdate = 1;
+  if (update->setupflag) shearupdate = 0;
+
   double dx,dy,dz,del1,del2,delxy,delr,rsq;
 
   // if wiggle or shear, set wall position and velocity accordingly
@@ -406,9 +411,6 @@ void FixWallGran::post_force(int vflag)
   double *rmass = atom->rmass;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
-
-  shearupdate = 1;
-  if (update->setupflag) shearupdate = 0;
 
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
@@ -1188,10 +1190,9 @@ A function that implements wall movement
 ------------------------------------------------------------------------- */
 
 void FixWallGran::move_wall() {
-
- lo+=velwall[wallstyle]*dt;
- hi+=velwall[wallstyle]*dt;
-
+  //~ Only update lo or hi if not NULL [KH - 27 November 2013]
+  if (lo != -BIG) lo+=velwall[wallstyle]*dt;
+  if (hi != BIG) hi+=velwall[wallstyle]*dt;
 }
 
 /* ---------------------------------------------------------------------- 
