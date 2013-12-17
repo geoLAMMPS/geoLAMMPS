@@ -58,6 +58,7 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
     {constantb b boundary1 boundary2}}
     {linkvolstress {x y}/{y x}/{x z}/{z x}/{y z}/{z y}}
     {constantp {x y}/{y x}/{x z}/{z x}/{y z}/{z y}}
+    {constantq {x y}/{y x}/{x z}/{z x}/{y z}/{z y}}
     {units lattice/box}
     
     If the final or delta options are used, your specifications
@@ -125,16 +126,19 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
     cyclicparam[0][i] = cyclicparam[1][i] = cyclicparam[2][i] = 0.0; //~ Cyclic loading parameters
   }
 
-  //~ Initialise linkvolstress - this exists if both the volume is maintained constant and if there is a link between the stresses in any two orthogonal directions
-  //~ Also initialise constantp - for maintaining a constant p' and linking two other stresses together
+  /*~ Initialise linkvolstress - this exists if both the volume is maintained
+    constant and if there is a link between the stresses in any two orthogonal
+    directions. Also initialise constantpq - for maintaining either a constant
+    p' or q and linking two other stresses together*/
   for (int i = 0; i < 3; i++) {
     linkvolstress[i] = 0; //~ Initialise as flags
-    constantp[i] = 0;
+    constantpq[i] = 0;
     constbflag[i] = 0;
   }
 
   lvstressflag = 0; //~ A flag to indicate whether linkvolstress is active
   constpflag = 0; //~ A flag to indicate whether constantp is active
+  constqflag = 0; //~ A flag to indicate whether constantq is active
   constanteflag = 0; //~ A flag used for maintaining a constant e with fix crushing
 
   tolerance = atof(arg[3]); //~ Read in as a double
@@ -174,9 +178,9 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
 
   /*~ Initialise the number of cyclic loading steps, which may be replaced by the
     restart file value, if present, along with the initial volume bounded by the
-    periodic boundaries and the initial mean effective stress*/
+    periodic boundaries and the initial mean effective and deviator stresses*/
   ncyclicsteps = 0;
-  initialvolume = meaneffectivestress = 0.0;
+  initialvolume = meaneffectivestress = deviatorstress = 0.0;
 
   /*~ Apply scaling if final, delta or vel are specified for strain control
     and box units are not specified explicitly.*/
@@ -476,12 +480,19 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
       if ((linkvolstress[0] + linkvolstress[1] + linkvolstress[2]) != 2)
 	error->all(FLERR,"Illegal fix multistress command: linkvolstress is defined incorrectly");
     } else if (strcmp(arg[iarg],"constantp") == 0) {
-      if (strcmp(arg[iarg+1],"x") == 0 || strcmp(arg[iarg+2],"x") == 0) constantp[0] = 1;
-      if (strcmp(arg[iarg+1],"y") == 0 || strcmp(arg[iarg+2],"y") == 0) constantp[1] = 1;
-      if (strcmp(arg[iarg+1],"z") == 0 || strcmp(arg[iarg+2],"z") == 0) constantp[2] = 1;
+      if (strcmp(arg[iarg+1],"x") == 0 || strcmp(arg[iarg+2],"x") == 0) constantpq[0] = 1;
+      if (strcmp(arg[iarg+1],"y") == 0 || strcmp(arg[iarg+2],"y") == 0) constantpq[1] = 1;
+      if (strcmp(arg[iarg+1],"z") == 0 || strcmp(arg[iarg+2],"z") == 0) constantpq[2] = 1;
       constpflag = 1;
-      if ((constantp[0] + constantp[1] + constantp[2]) != 2)
+      if ((constantpq[0] + constantpq[1] + constantpq[2]) != 2)
 	error->all(FLERR,"Illegal fix multistress command: constantp is defined incorrectly");
+    } else if (strcmp(arg[iarg],"constantq") == 0) {
+      if (strcmp(arg[iarg+1],"x") == 0 || strcmp(arg[iarg+2],"x") == 0) constantpq[0] = 1;
+      if (strcmp(arg[iarg+1],"y") == 0 || strcmp(arg[iarg+2],"y") == 0) constantpq[1] = 1;
+      if (strcmp(arg[iarg+1],"z") == 0 || strcmp(arg[iarg+2],"z") == 0) constantpq[2] = 1;
+      constqflag = 1;
+      if ((constantpq[0] + constantpq[1] + constantpq[2]) != 2)
+	error->all(FLERR,"Illegal fix multistress command: constantq is defined incorrectly");
     } else error->all(FLERR,"Illegal fix multistress command");
 
     iarg += (3 + addextra);
@@ -523,13 +534,13 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
 			  (constbflag[2] > 0 && (cyclicparam[0][2] < 0.0 || cyclicparam[0][2] > 1.0))))
     error->all(FLERR,"b value must be <= 1.0 and >= 0.0 in fix multistress");
 
-  //~ Warn the user if linkvolstress or constantp are active without maxrateflag
-  if (maxrateflag == 0 && (lvstressflag == 1 || constpflag == 1))
-    error->warning(FLERR,"It is strongly recommended that a maxrate restriction is set when linkvolstress or constantp are active");
+  //~ Warn the user if linkvolstress, constantp or constantq are active without maxrateflag
+  if (maxrateflag == 0 && (lvstressflag == 1 || constpflag == 1 || constqflag == 1))
+    error->warning(FLERR,"It is strongly recommended that a maxrate restriction is set when linkvolstress, constantp or constantq are active");
 
   //~ Set flags to indicate whether or not the box changes size/shape
   for (int i = 0; i < 3; i++)
-    if (strflag[i] == 1 || defflag[i] == 1 || linkvolstress[i] == 1 || constantp[i] == 1)
+    if (strflag[i] == 1 || defflag[i] == 1 || linkvolstress[i] == 1 || constantpq[i] == 1)
       box_change_size = 1;
 
   for (int i = 3; i < 6; i++)
@@ -549,16 +560,16 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
       ((strflag[2] == 1 || defflag[2] == 1) && domain->zperiodic == 0))
     error->all(FLERR,"Cannot use fix multistress on a non-periodic boundary");
 
-  if (((strflag[0] == 1 || defflag[0] == 1) && (linkvolstress[0] == 1 || constantp[0] == 1)) ||
-      ((strflag[1] == 1 || defflag[1] == 1) && (linkvolstress[1] == 1 || constantp[1] == 1)) ||
-      ((strflag[2] == 1 || defflag[2] == 1) && (linkvolstress[2] == 1 || constantp[2] == 1)))
-    error->all(FLERR,"Cannot use linkvolstress or constantp and also control the periodic boundary positions by other methods");
+  if (((strflag[0] == 1 || defflag[0] == 1) && (linkvolstress[0] == 1 || constantpq[0] == 1)) ||
+      ((strflag[1] == 1 || defflag[1] == 1) && (linkvolstress[1] == 1 || constantpq[1] == 1)) ||
+      ((strflag[2] == 1 || defflag[2] == 1) && (linkvolstress[2] == 1 || constantpq[2] == 1)))
+    error->all(FLERR,"Cannot use linkvolstress, constantp or constantq and also control the periodic boundary positions by other methods");
 
-  if (dimension == 2 && (lvstressflag == 1 || constpflag == 1 || constbctrl == 1))
-    error->all(FLERR,"Cannot use linkvolstress, constantp or constantb for 2D simulations");
+  if (dimension == 2 && (lvstressflag == 1 || constpflag == 1 || constqflag == 1 || constbctrl == 1))
+    error->all(FLERR,"Cannot use linkvolstress, constantp, constantq or constantb for 2D simulations");
 
-  if (lvstressflag + constpflag + constbctrl > 1)
-    error->all(FLERR,"Cannot use more than one of linkvolstress, constantp and constantb at the same time");    
+  if (lvstressflag + constpflag + constqflag + constbctrl > 1)
+    error->all(FLERR,"Cannot use more than one of linkvolstress, constantp, constantq and constantb at the same time");    
     
   if (cyclicflag[0] == 2 && (cyclicflag[1] == 2 || cyclicflag[2] == 2) ||
       cyclicflag[1] == 2 && (cyclicflag[0] == 2 || cyclicflag[2] == 2))
@@ -840,7 +851,7 @@ void FixMultistress::calc_ctrl_params()
     // ti[i] = Pu/2; //~ These times become irrelevant if the gain is 0
     // td[i] = Pu/8;
 
-    if (strflag[i] == 1 || (i < 3 && constantp[i] == 1)) {
+    if (strflag[i] == 1 || (i < 3 && constantpq[i] == 1)) {
       if (maxrateflag == 1) Kp[i] = 2.0*maxrate[i]/starget[i];
       else Kp[i] = 50.0/starget[i];
     } else Kp[i] = 0.0;
@@ -892,10 +903,11 @@ void FixMultistress::end_of_step()
     MPI_Allreduce(&means[i],&tallymeans[i],1,MPI_DOUBLE,MPI_SUM,world);
   }
 
-  /*~ Calculate the initial value of mean effective stress. This is
-    done only once even if fix multistress is redefined while constantp
-    continues to be active*/
+  /*~ Calculate the initial values of mean effective and deviator stress. 
+    This is done only once even if fix multistress is redefined while
+    constantp or constantq continues to be active*/
   if (currstep == 0) {
+    //~ Firstly the mean effective stress
     if (constpflag == 1 && meaneffectivestress == 0.0)
       meaneffectivestress = domain->meaneffectivestress;
 
@@ -908,6 +920,23 @@ void FixMultistress::end_of_step()
       meaneffectivestress = 0.0;
       domain->meaneffectivestress = 0.0;
     } else domain->meaneffectivestress = meaneffectivestress;
+
+    //~ Now the deviator stress
+    if (constqflag == 1 && deviatorstress == 0.0)
+      deviatorstress = domain->deviatorstress;
+
+    //~ If it is still equal to zero...
+    if (constqflag == 1 && deviatorstress == 0.0)
+      for (int i = 0; i < 3; i++) {
+	if (constantpq[i] == 0) deviatorstress += tallymeans[i];
+	else deviatorstress -= 0.5*tallymeans[i];
+      }
+
+    //~ Reset deviatorstress to 0 if constantq is disabled
+    if (constqflag == 0) {
+      deviatorstress = 0.0;
+      domain->deviatorstress = 0.0;
+    } else domain->deviatorstress = deviatorstress;
 
     //~ Need to specify initial values for starget on the first timestep if constbctrl active
     if (constbctrl) {
@@ -1067,7 +1096,7 @@ void FixMultistress::end_of_step()
 
   //~ Now increment currstep and calculate the updated parameters for fix_deform
   currstep++;
-  if (lvstressflag == 0 && constpflag == 0) eval_fix_deform_params_basic();
+  if (lvstressflag == 0 && constpflag == 0 && constqflag == 0) eval_fix_deform_params_basic();
   else eval_fix_deform_params_special();
   
   update_fix_deform_params(); //~ Fix_deform must be updated. 
@@ -1125,14 +1154,14 @@ void FixMultistress::eval_fix_deform_params_basic()
 
 void FixMultistress::eval_fix_deform_params_special()
 {
-  /*~ Used to choose between the linkvolstress and constantp functions which
+  /*~ Used to choose between the linkvolstress and constantpq functions which
     simply calculate an appropriate set of three strain rates for the special
-    cases of constant volume and constant p', respectively.*/
+    cases of constant volume and constant p' or q, respectively.*/
 
   iterateflag = 1; //~ May be needed for an iterative conditional code branch
 
   if (lvstressflag == 1) eval_fix_deform_params_linkvolstress();
-  else eval_fix_deform_params_constantp();
+  else eval_fix_deform_params_constantpq();
 
   //~ The three triclinic directions are controlled as normal.
   if (triclinic == 1) {
@@ -1151,7 +1180,7 @@ void FixMultistress::eval_fix_deform_params_special()
   }
 
   for (int i = 0; i < 6; i++)
-    if (strflag[i] == 1 || (i < 3 && (linkvolstress[i] == 1 || constantp[i] == 1)))
+    if (strflag[i] == 1 || (i < 3 && (linkvolstress[i] == 1 || constantpq[i] == 1)))
       erates[i] = temprates[i];
 }
 
@@ -1303,13 +1332,14 @@ void FixMultistress::eval_fix_deform_params_linkvolstress()
 
 /* ---------------------------------------------------------------------- */
 
-void FixMultistress::eval_fix_deform_params_constantp()
+void FixMultistress::eval_fix_deform_params_constantpq()
 {
-  //~ This version of eval_fix_deform_params is invoked only if constantp is active.
+  /*~ This version of eval_fix_deform_params is invoked only if either 
+    constantp or constantq are active.*/
 
-  //~ Note that constantp will be zero only for one index
+  //~ Note that constantpq will be zero only for one index
   for (int i = 0; i < 3; i++) {
-    if (constantp[i] == 0) {
+    if (constantpq[i] == 0) {
       //~ The i direction may be controlled independently or uncontrolled.
       //~ Sort out the rates for this direction firstly.
       if (strflag[i] == 1) {
@@ -1352,12 +1382,20 @@ void FixMultistress::eval_fix_deform_params_constantp()
 	  predstress[i] = tallymeans[i] + temprates[i]*(tallymeans[i]-oldmeans[i])/erates[i];
 	else predstress[i] = tallymeans[i];
 
-	//~ Check whether it will be possible to maintain p' at its initial value
-	if (predstress[i] > 3.0*meaneffectivestress)
-	  error->all(FLERR,"The stress on the strain-controlled boundary is too high to allow p' to be maintained at its desired value");
+	if (constpflag) {
+	  //~ Check whether it will be possible to maintain p' at its initial value
+	  if (predstress[i] > 3.0*meaneffectivestress)
+	    error->all(FLERR,"p' cannot be maintained at its desired value");
 
-	//~ Calculate the predicted stresses on the other two boundaries
-	predstress[firstboundaryid] = predstress[secondboundaryid] = 0.5*(3.0*meaneffectivestress-predstress[i]);
+	  //~ Calculate the predicted stresses on the other two boundaries
+	  predstress[firstboundaryid] = predstress[secondboundaryid] = 0.5*(3.0*meaneffectivestress-predstress[i]);
+	} else {//~ constqflag active
+	  if (predstress[i] < deviatorstress)
+	    error->all(FLERR,"q cannot be maintained at its desired value");
+
+	  //~ Calculate the predicted stresses on the other two boundaries
+	  predstress[firstboundaryid] = predstress[secondboundaryid] = predstress[i]-deviatorstress;
+	}
 
 	//~ Calculate the required movements of the lateral boundaries
 	if (tallymeans[firstboundaryid] != oldmeans[firstboundaryid] && erates[firstboundaryid] != 0.0)
@@ -1392,23 +1430,23 @@ void FixMultistress::eval_fix_deform_params_constantp()
       if ((maxrate[firstboundaryid] > 0.0 && fabs(temprates[firstboundaryid]) > maxrate[firstboundaryid]) || (maxrate[secondboundaryid] > 0.0 && fabs(temprates[secondboundaryid]) > maxrate[secondboundaryid])) {
 	if (fabs(temprates[firstboundaryid]) > maxrate[firstboundaryid] && fabs(temprates[secondboundaryid]) > maxrate[secondboundaryid]) {
 	  if (temprates[firstboundaryid]*temprates[secondboundaryid] < 0.0) {
-	    if (temprates[firstboundaryid]*temprates[i] < 0.0) constantp_loop(temprates,firstboundaryid,secondboundaryid);
-	    else constantp_loop(temprates,secondboundaryid,firstboundaryid);
+	    if (temprates[firstboundaryid]*temprates[i] < 0.0) constantpq_loop(temprates,firstboundaryid,secondboundaryid);
+	    else constantpq_loop(temprates,secondboundaryid,firstboundaryid);
 	  } else {
 	    if (temprates[firstboundaryid] > 0.0) {
 	      if (tallymeans[firstboundaryid] > tallymeans[secondboundaryid])
-		constantp_loop(temprates,firstboundaryid,secondboundaryid);
-	      else constantp_loop(temprates,secondboundaryid,firstboundaryid);
+		constantpq_loop(temprates,firstboundaryid,secondboundaryid);
+	      else constantpq_loop(temprates,secondboundaryid,firstboundaryid);
 	    } else {
 	      if (tallymeans[firstboundaryid] < tallymeans[secondboundaryid])
-		constantp_loop(temprates,firstboundaryid,secondboundaryid);
-	      else constantp_loop(temprates,secondboundaryid,firstboundaryid);
+		constantpq_loop(temprates,firstboundaryid,secondboundaryid);
+	      else constantpq_loop(temprates,secondboundaryid,firstboundaryid);
 	    }
 	  }
 	} else {
 	  if (fabs(temprates[firstboundaryid]) > maxrate[firstboundaryid])	
-	    constantp_loop(temprates,firstboundaryid,secondboundaryid);
-   	  else constantp_loop(temprates,secondboundaryid,firstboundaryid);
+	    constantpq_loop(temprates,firstboundaryid,secondboundaryid);
+   	  else constantpq_loop(temprates,secondboundaryid,firstboundaryid);
    	}
       }
     }
@@ -1435,7 +1473,7 @@ void FixMultistress::linkvolstress_loop(double therates[], int firstid, int seco
 
 /* ---------------------------------------------------------------------- */
 
-void FixMultistress::constantp_loop(double therates[], int firstid, int secondid)
+void FixMultistress::constantpq_loop(double therates[], int firstid, int secondid)
 {
   if (fabs(therates[firstid]) > maxrate[firstid])
     therates[firstid] < 0.0 ? therates[firstid] = -maxrate[firstid] : therates[firstid] = maxrate[firstid];
@@ -1556,10 +1594,11 @@ void FixMultistress::lost_atom_check()
 void FixMultistress::write_restart(FILE *fp)
 {
   int n = 0;
-  double list[3];
+  double list[4];
   list[n++] = ncyclicsteps;
   list[n++] = initialvolume;
   list[n++] = meaneffectivestress;
+  list[n++] = deviatorstress;
 
   if (me == 0) {
     int size = n * sizeof(double);
@@ -1577,4 +1616,5 @@ void FixMultistress::restart(char *buf)
   ncyclicsteps = static_cast<int> (list[n++]);
   initialvolume = static_cast<double> (list[n++]);
   meaneffectivestress = static_cast<double> (list[n++]);
+  deviatorstress = static_cast<double> (list[n++]);
 }

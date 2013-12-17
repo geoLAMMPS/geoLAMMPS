@@ -94,6 +94,10 @@ class Domain : protected Pointers {
     [KH - 13 November 2012]*/
   double meaneffectivestress;
 
+  /*~ Added to store the initial value of deviator stress 
+    [KH - 17 December 2013]*/
+  double deviatorstress;
+
   class Lattice *lattice;                  // user-defined lattice
 
   int nregion;                             // # of defined Regions

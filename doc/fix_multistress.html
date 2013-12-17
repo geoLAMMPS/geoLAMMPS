@@ -45,6 +45,9 @@
 <PRE>keyword = <I>constantp</I>
   <I>x y</I> or <I>x z</I> or <I>y z</I> or <I>y x</I> or <I>z x</I> or <I>z y</I> = used for constant p' tests. See note 11. 
 </PRE>
+<PRE>keyword = <I>constantq</I>
+  <I>x y</I> or <I>x z</I> or <I>y z</I> or <I>y x</I> or <I>z x</I> or <I>z y</I> = used for constant q tests. See note 11. 
+</PRE>
 <PRE>keyword = <I>units</I>
   <I>lattice</I> or <I>box</I> = the type of units to use. See note 9. 
 </PRE>
@@ -57,7 +60,8 @@ fix 2 all multistress 1 40000 1.5 x stress 100000 y stress 100000 z erate -0.01 
 fix 1 all multistress 1 40000 x erate 0.01 y erate 0.04 z erate -0.03 units box
 fix 3 all multistress 0.5 100000 10 z vel -0.01 linkvolstress x y units box
 fix 3 all multistress 0.5 100000 10 x stress 100000 y constantb z x z erate -0.01 units box
-fix 3 all multistress 1 50000 1 z erate -0.01 constantp x y units box 
+fix 3 all multistress 1 50000 1 z erate -0.01 constantp x y units box
+fix name all multistress 1 100000 1 x vel -0.5 constantq y z units box 
 </PRE>
 <P><B>Description:</B>
 </P>
@@ -65,7 +69,7 @@ fix 3 all multistress 1 50000 1 z erate -0.01 constantp x y units box
 sample bounded by periodic boundaries, whether in an orthogonal or
 triclinic bounding box. Can also be used to simulate an undrained
 test by maintaining a constant volume. More on this in Note 7. This
-fix is now also capable of doing constant p' tests, if this is useful to
+fix is now also capable of doing constant p' and constant q tests, if this is useful to
 you: details are given in Note 11. The capability to maintain a constant
 intermediate stress ratio is also available.
 </P>
@@ -75,7 +79,7 @@ as it does not need to include lots of stress-control code and is not redefined
 on every timestep.
 </P>
 <P>Because fix multistress generally is used for controlling the stresses on at least
-one boundary, it automatically sets up a stress compute (compute_stress_gran). The facility
+one boundary, it automatically sets up a stress compute (compute_stress_atom). The facility
 has been included for the user to access this compute and write out mean stresses on the boundaries.
 Furthermore, fix multistress allows the per-atom particle stresses to be dumped out. The name of the
 stress compute is "{fix multistress ID}_stress". As an example, the following lines define a
@@ -249,7 +253,7 @@ specific to soil mechanics!
 <P><I><B>Note 11:</B></I>
 </P>
 <P><I>constantp</I> has the same syntax as <I>linkvolstress</I>, but instead of controlling the volume, this option allows you
-to run a simulation at constant mean effective stress, p'. The <I>constantp</I> option does 2 things. 1) It maintains a
+to run a simulation at constant mean effective stress, p'. The <I>constantp</I> option does two things: 1) it maintains a
 constant p' and 2) it keeps the stresses in the two specified directions equal. The initial mean effective stress
 is stored externally (in domain->meaneffectivestress) and is also stored in the restart file so accuracy should be
 quite good.
@@ -267,6 +271,10 @@ the following error message in fix_multistress.cpp:
 </PRE>
 <P>...change the word 'all' to 'warning' and recompile. The <I>constantp</I> option will still be active though, so strange things
 might happen with the strain rates of the two controlled boundaries.
+</P>
+<P><I>constantq</I> works in essentially an identical way, except the deviator stress is held constant rather than p'. As
+you might expect, the <I>constantq</I> option does two things: 1) it maintains a constant q and 2) it keeps the stresses in the two 
+specified directions equal. The initial deviator stress is stored externally (in domain->deviatorstress) and also in the restart file.
 </P>
 <P><I><B>Note 12:</B></I>
 </P>

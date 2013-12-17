@@ -93,9 +93,9 @@ Domain::Domain(LAMMPS *lmp) : Pointers(lmp)
   nregion = maxregion = 0;
   regions = NULL;
 
-  //~ Initialise at 0 [KH - 13 November 2012]
+  //~ Initialise at 0 [KH - 17 December 2013]
   ncyclicsteps = 0;
-  initialvolume = meaneffectivestress = 0.0;
+  initialvolume = meaneffectivestress = deviatorstress = 0.0;
 }
 
 /* ---------------------------------------------------------------------- */

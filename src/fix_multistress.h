@@ -40,9 +40,9 @@ namespace LAMMPS_NS {
     void eval_fix_deform_params_basic();
     void eval_fix_deform_params_special();
     void eval_fix_deform_params_linkvolstress();
-    void eval_fix_deform_params_constantp();
+    void eval_fix_deform_params_constantpq();
     inline void linkvolstress_loop(double [], int, int, double);
-    inline void constantp_loop(double [], int, int);
+    inline void constantpq_loop(double [], int, int);
     void update_fix_deform_params();
     void instability_test(int);
     double *param_export();
@@ -63,6 +63,7 @@ namespace LAMMPS_NS {
     int lvstressflag; //~ 1 if linkvolstress is active, otherwise 0
     int constanteflag; //~ Added for constant void ratio with fix crushing
     int constpflag; //~ 1 if constantp is active, otherwise 0
+    int constqflag; //~ 1 if constantq is active, otherwise 0
     int maxrateflag; //~ 1 if a maximum strain rate is defined, otherwise 0
     int extrasteps; //~ The number of additional steps to run
     int ncyclicsteps; //~ Number of steps for which cyclic loading is active
@@ -77,6 +78,7 @@ namespace LAMMPS_NS {
     double initialvolume; //~ The initial volume bounded by the periodic space
     double pboundstart[6]; //~ The initial positions of the cell boundaries
     double meaneffectivestress; //~ The initial value of p'
+    double deviatorstress; //~ The initial value of q
     double temprates[6]; //~ Strain rates prior to the imposition of maxrate restrictions
 
     int strflag[6]; //~ Flags to indicate which dimensions are servo-controlled
@@ -85,7 +87,7 @@ namespace LAMMPS_NS {
     int ictrlflag[6]; //~ Flags to indicate that cumulative error terms should start to be summed
     int cyclicflag[6]; //~ Flags to indicate whether or not cyclic stress control is active on a boundary: 0 if not active; 1 if cyclicmean; 2 if cyclicdeviator
     int linkvolstress[3]; //~ Flags to indicate that the volume is maintained constant and the stresses in two specified directions are kept equal
-    int constantp[3]; //~ Flags to indicate that the mean effective stress is maintained constant and the stresses in two specified directions are kept equal
+    int constantpq[3]; //~ Flags to indicate that either the mean effective stress or the deviator stress is maintained constant and the stresses in two specified directions are kept equal
     int constbflag[3]; //~ Flags to indicate that the b value is maintained constant for a boundary
     int constructorflag; //~ Flag to denote whether the constructor has been run on this timestep (1) or not (0)
     int cstressflag; //~ Flag defined for convenience to indicate whether cyclic stress loading is active
