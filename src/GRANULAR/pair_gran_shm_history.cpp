@@ -34,6 +34,7 @@
 #include "fix.h"
 #include "fix_pour.h"
 #include "fix_shear_history.h"
+#include "memory.h"
 
 using namespace LAMMPS_NS;
 
