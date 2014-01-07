@@ -98,19 +98,19 @@ FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
     error->warning(FLERR,"SI units are best when using fix crushing");
 
   //~ Read in all user-specified data
-  displaymessages = atoi(arg[3]); //~ Write information to the screen (1) or not (0)
-  seed = atoi(arg[4]);
+  displaymessages = force->inumeric(FLERR,arg[3]); //~ Write information to the screen (1) or not (0)
+  seed = force->inumeric(FLERR,arg[4]);
 
   for (int i = 0; i < 5; i++)
-    weibullparams[i][0] = atof(arg[5+i]);
+    weibullparams[i][0] = force->numeric(FLERR,arg[5+i]);
 
-  chiplusone = atof(arg[10])+1.0;
-  alphafactor = atof(arg[11]);
-  redtype = atoi(arg[12]);
+  chiplusone = force->numeric(FLERR,arg[10])+1.0;
+  alphafactor = force->numeric(FLERR,arg[11]);
+  redtype = force->inumeric(FLERR,arg[12]);
 
   int iarg = 13;
   if (redtype == 0) {
-    reduction = atof(arg[iarg]);
+    reduction = force->numeric(FLERR,arg[iarg]);
 
     if (reduction <= 0 || reduction >= 1)
       error->all(FLERR,"Radius reduction in fix crushing must be between 0 and 1");
@@ -118,7 +118,7 @@ FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
     iarg++;
   } else if (redtype != 1) error->all(FLERR,"Illegal redtype specification in fix crushing command");
 
-  constante = atoi(arg[iarg]);
+  constante = force->inumeric(FLERR,arg[iarg]);
 
   //~ Check if the reallocate keyword is present
   reallocateflag = 0;
@@ -131,14 +131,14 @@ FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
 
   if (numarg == iarg+1 || numarg == iarg+6) commlimit = -1.0;
   else if (numarg == iarg+2 || numarg == iarg+7) {
-    commlimit = atof(arg[iarg+1]);
+    commlimit = force->numeric(FLERR,arg[iarg+1]);
     iarg++;
   } else error->all(FLERR,"Illegal number of arguments in fix crushing command");
   
   if (numarg == iarg+6) {
     //~ Read in m, sigma0, d0, a and b for second and subsequent breakages
     for (int i = 0; i < 5; i++)
-      weibullparams[i][1] = atof(arg[iarg+1+i]);
+      weibullparams[i][1] = force->numeric(FLERR,arg[iarg+1+i]);
   } else { //~ Use the same values for the first, second... breakages
     for (int i = 0; i < 5; i++)
       weibullparams[i][1] = weibullparams[i][0];

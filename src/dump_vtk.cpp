@@ -58,7 +58,7 @@ DumpVTK::DumpVTK(LAMMPS *lmp, int narg, char **arg) :
 
   clearstep = 1;
 
-  nevery = atoi(arg[3]);
+  nevery = force->inumeric(FLERR,arg[3]);
 
   // size_one may be changed below if necessary
 
@@ -1616,7 +1616,7 @@ int DumpVTK::modify_param(int narg, char **arg)
 
     // set threshhold value
 
-    thresh_value[nthresh] = atof(arg[3]);
+    thresh_value[nthresh] = force->numeric(FLERR,arg[3]);
 
     nthresh++;
     return 4;

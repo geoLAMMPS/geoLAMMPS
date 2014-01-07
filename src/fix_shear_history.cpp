@@ -39,7 +39,7 @@ FixShearHistory::FixShearHistory(LAMMPS *lmp, int narg, char **arg) :
   create_attribute = 1;
 
   //~ Read in the number of shear quantities if available [KH - 21 November 2012]
-  if (narg == 4) num_quants = atoi(arg[3]); // added in GM
+  if (narg == 4) num_quants = force->inumeric(FLERR,arg[3]); // added in GM
   else num_quants = 3; //~ Assume the default value of 3 instead
 
   // perform initial allocation of atom-based arrays

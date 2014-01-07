@@ -170,9 +170,9 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
       iarg += 3;
     } else if (strcmp(arg[iarg],"translate") == 0) {
       wtranslate = 1;
-      velwall[0] = atof(arg[iarg+1]);
-      velwall[1] = atof(arg[iarg+2]);
-      velwall[2] = atof(arg[iarg+3]);
+      velwall[0] = force->numeric(FLERR,arg[iarg+1]);
+      velwall[1] = force->numeric(FLERR,arg[iarg+2]);
+      velwall[2] = force->numeric(FLERR,arg[iarg+3]);
       iarg += 4;
     } else if (strcmp(arg[iarg],"stresscontrol") == 0) {
       wscontrol = 1;
@@ -182,8 +182,8 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
         int nn = strlen(&arg[iarg+1][2]) + 1;
         fstr = new char[nn];
         strcpy(fstr,&arg[iarg+1][2]);
-      } else targetf = atof(arg[iarg+1]);
-      gain = atof(arg[iarg+2]);
+      } else targetf = force->numeric(FLERR,arg[iarg+1]);
+      gain = force->numeric(FLERR,arg[iarg+2]);
       if (strcmp(arg[iarg+2],"auto") == 0) error->all(FLERR,"Illegal fix wall/gran command - more coding needed");
       iarg += 3;
     } else error->all(FLERR,"Illegal fix wall/gran command");
@@ -1098,24 +1098,24 @@ int FixWallGran::modify_param(int narg, char **arg)
 
     if (strcmp(arg[argsread],"gamman") == 0) {// do while loop instead?
       fprintf(screen, "changed wall gamman from %f to ",gamman);
-      gamman=atof(arg[argsread+1]);
+      gamman=force->numeric(FLERR,arg[argsread+1]);
       argsread+=2;
       fprintf(screen, "%f\n",gamman);
     }
     else if (strcmp(arg[argsread],"gammat") == 0) {
       fprintf(screen, "changed wall gammat from %f to ",gammat);
-      gammat=atof(arg[argsread+1]);
+      gammat=force->numeric(FLERR,arg[argsread+1]);
       argsread+=2;
       fprintf(screen, "%f\n",gammat);
     }
     else if (strcmp(arg[argsread],"mu") == 0) {
       fprintf(screen, "changed wall friction coefficient from %f to ",xmu);
-      xmu=atof(arg[argsread+1]);
+      xmu=force->numeric(FLERR,arg[argsread+1]);
       argsread+=2;
       fprintf(screen, "%f\n",xmu);
     }
     else if (strcmp(arg[argsread],"dampflag") == 0) {
-      dampflag=atoi(arg[argsread+1]);
+      dampflag=force->inumeric(FLERR,arg[argsread+1]);
       argsread+=2;
       fprintf(screen, "changed wall dampflag to %d \n",dampflag);
     }
@@ -1127,9 +1127,9 @@ int FixWallGran::modify_param(int narg, char **arg)
          fprintf(screen, "stopped wall translation\n");
       } else {
          wtranslate = 1;
-         velwall[0] = atof(arg[argsread+1]);
-         velwall[1] = atof(arg[argsread+2]);
-         velwall[2] = atof(arg[argsread+3]);
+         velwall[0] = force->numeric(FLERR,arg[argsread+1]);
+         velwall[1] = force->numeric(FLERR,arg[argsread+2]);
+         velwall[2] = force->numeric(FLERR,arg[argsread+3]);
          argsread+= 4;
          fprintf(screen, "changed wall velocity to [ %e %e %e ]\n",velwall[0],velwall[1],velwall[2]);
       }
@@ -1154,13 +1154,13 @@ int FixWallGran::modify_param(int narg, char **arg)
         if (fstr) delete [] fstr;// command to extend fstr?
         fstr = new char[nn];
         strcpy(fstr,&arg[argsread+1][2]);
-        gain = atof(arg[argsread+2]);
+        gain = force->numeric(FLERR,arg[argsread+2]);
         argsread += 3;
         fprintf(screen, "Set wall stress control with varying target force\n");
       } else {
-        targetf = atof(arg[argsread+1]);
+        targetf = force->numeric(FLERR,arg[argsread+1]);
         ftvarying = 0;
-        gain = atof(arg[argsread+2]);
+        gain = force->numeric(FLERR,arg[argsread+2]);
         argsread += 3;
         fprintf(screen, "Set wall stress control with constant target force\n");
       }

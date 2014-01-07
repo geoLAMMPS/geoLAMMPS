@@ -25,6 +25,7 @@
 #include "memory.h"
 #include "group.h"
 #include "modify.h"
+#include "force.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -47,8 +48,8 @@ FixFluidDrag::FixFluidDrag(LAMMPS *lmp, int narg, char **arg) :
   peratom_freq = 1;
   nevery = 1; //~ Set how often to run the end_of_step function
 
-  hydgrad = atof(arg[3]); //~ The hydraulic gradient
-  compmethod = atoi(arg[4]); //~ Read in the computational method
+  hydgrad = force->numeric(FLERR,arg[3]); //~ The hydraulic gradient
+  compmethod = force->inumeric(FLERR,arg[4]); //~ Read in the computational method
 
   //~ Check that the latter is sensible
   if (compmethod < 0 || compmethod > 1)
@@ -72,25 +73,25 @@ FixFluidDrag::FixFluidDrag(LAMMPS *lmp, int narg, char **arg) :
     if (narg != 7) error->all(FLERR,"Illegal fix fluiddrag command");
     style = CHUTE;
     phi = 0.0;
-    theta = 180.0 - atof(arg[6]);
+    theta = 180.0 - force->numeric(FLERR,arg[6]);
   } else if (strcmp(arg[5],"spherical") == 0) {
     if (narg != 8) error->all(FLERR,"Illegal fix fluiddrag command");
     style = SPHERICAL;
-    phi = atof(arg[6]);
-    theta = atof(arg[7]);
+    phi = force->numeric(FLERR,arg[6]);
+    theta = force->numeric(FLERR,arg[7]);
   } else if (strcmp(arg[5],"gradient") == 0) {
     if (narg != 10) error->all(FLERR,"Illegal fix fluiddrag command");
     style = GRADIENT;
-    phi = atof(arg[6]);
-    theta = atof(arg[7]);
-    phigrad = atof(arg[8]);
-    thetagrad = atof(arg[9]);
+    phi = force->numeric(FLERR,arg[6]);
+    theta = force->numeric(FLERR,arg[7]);
+    phigrad = force->numeric(FLERR,arg[8]);
+    thetagrad = force->numeric(FLERR,arg[9]);
   } else if (strcmp(arg[5],"vector") == 0) {
     if (narg != 9) error->all(FLERR,"Illegal fix fluiddrag command");
     style = VECTOR;
-    xdir = atof(arg[6]);
-    ydir = atof(arg[7]);
-    zdir = atof(arg[8]);
+    xdir = force->numeric(FLERR,arg[6]);
+    ydir = force->numeric(FLERR,arg[7]);
+    zdir = force->numeric(FLERR,arg[8]);
   } else error->all(FLERR,"Illegal fix fluiddrag command");
 
   PI = 4.0*atan(1.0);

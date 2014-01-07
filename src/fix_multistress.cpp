@@ -141,10 +141,10 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
   constqflag = 0; //~ A flag to indicate whether constantq is active
   constanteflag = 0; //~ A flag used for maintaining a constant e with fix crushing
 
-  tolerance = atof(arg[3]); //~ Read in as a double
+  tolerance = force->numeric(FLERR,arg[3]); //~ Read in as a double
   if (tolerance <= 0 || tolerance >= 100) error->all(FLERR,"The tolerance must be a positive percentage");
 
-  extrasteps = atoi(arg[4]);
+  extrasteps = force->inumeric(FLERR,arg[4]);
   if (extrasteps <= 0) error->all(FLERR,"The number of extra steps must be positive");
 
   //~ Determine which sets of units are used - box or lattice (default)
@@ -170,7 +170,7 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
   if (strncmp(arg[iarg],"x",1) != 0 && strncmp(arg[iarg],"y",1) != 0 &&
       strncmp(arg[iarg],"z",1) != 0) {
     for (int i = 0; i < 6; i++)
-      maxrate[i] = fabs(atof(arg[iarg])); //~ Use the absolute value
+      maxrate[i] = fabs(force->numeric(FLERR,arg[iarg])); //~ Use the absolute value
 
     maxrateflag = 1;
     iarg++;
@@ -221,11 +221,11 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
       double xhistart = domain->boxhi[0];
 
       if (strcmp(arg[iarg+1],"stress") == 0) {
-	starget[0] = atof(arg[iarg+2]);
+	starget[0] = force->numeric(FLERR,arg[iarg+2]);
 	strflag[0] += 1; //~ Incremented to allow checking for multiple specifications
       } else if (strcmp(arg[iarg+1],"cyclicmean") == 0 || strcmp(arg[iarg+1],"cyclicdeviator") == 0) {
 	for (int i = 0; i < 3; i++)
-	  cyclicparam[i][0] = atof(arg[iarg+i+2]);
+	  cyclicparam[i][0] = force->numeric(FLERR,arg[iarg+i+2]);
 
 	addextra = 2;
 	strflag[0] += 1;
@@ -233,7 +233,7 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
 	if (strcmp(arg[iarg+1],"cyclicmean") == 0) cyclicflag[0] = 1;
 	else cyclicflag[0] = 2;
       } else if (strcmp(arg[iarg+1],"constantb") == 0) {
-	cyclicparam[0][0] = atof(arg[iarg+2]); //~ Store the b value here
+	cyclicparam[0][0] = force->numeric(FLERR,arg[iarg+2]); //~ Store the b value here
 	addextra = 2;
 	strflag[0] += 1;
 
@@ -242,25 +242,25 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
 	else error->all(FLERR,"Incorrect constantb specification in fix multistress");
       } else {
 	if (strcmp(arg[iarg+1],"erate") == 0) {
-	  erates[0] = atof(arg[iarg+2]);
+	  erates[0] = force->numeric(FLERR,arg[iarg+2]);
 	} else if (strcmp(arg[iarg+1],"vel") == 0) {
-	  erates[0] = map[0]*atof(arg[iarg+2])/(xhistart-xlostart);
+	  erates[0] = map[0]*force->numeric(FLERR,arg[iarg+2])/(xhistart-xlostart);
 	} else if (strcmp(arg[iarg+1],"scale") == 0) {
 	  if (domain->triclinic == 1)
 	    error->all(FLERR,"Scale is valid in fix multistress only for orthogonal boxes");
 	  else {
-	    erates[0] = (atof(arg[iarg+2])-1)/delt;
+	    erates[0] = (force->numeric(FLERR,arg[iarg+2])-1)/delt;
 	    deltflag[0] = 1;
 	  }
 	} else if (strcmp(arg[iarg+1],"delta") == 0) {
-	    erates[0] = map[0]*(atof(arg[iarg+3])-atof(arg[iarg+2]))/(delt*(xhistart-xlostart));
+	    erates[0] = map[0]*(force->numeric(FLERR,arg[iarg+3])-force->numeric(FLERR,arg[iarg+2]))/(delt*(xhistart-xlostart));
 	    deltflag[0] = 1;
 	    addextra = 1;
 	} else if (strcmp(arg[iarg+1],"final") == 0) {
-	  if (atof(arg[iarg+2]) >= atof(arg[iarg+3]))
+	  if (force->numeric(FLERR,arg[iarg+2]) >= force->numeric(FLERR,arg[iarg+3]))
 	    error->all(FLERR,"Correct the order of the fix multistress arguments");
 
-	  erates[0] = (xlostart-xhistart+map[0]*(atof(arg[iarg+3])-atof(arg[iarg+2])))/(delt*(xhistart-xlostart));
+	  erates[0] = (xlostart-xhistart+map[0]*(force->numeric(FLERR,arg[iarg+3])-force->numeric(FLERR,arg[iarg+2])))/(delt*(xhistart-xlostart));
 	  deltflag[0] = 1;
 	  addextra = 1;
 	} else error->all(FLERR,"Illegal fix multistress command");
@@ -273,11 +273,11 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
       double yhistart = domain->boxhi[1];
 
       if (strcmp(arg[iarg+1],"stress") == 0) {
-	starget[1] = atof(arg[iarg+2]);
+	starget[1] = force->numeric(FLERR,arg[iarg+2]);
 	strflag[1] += 1; //~ Incremented to allow checking for multiple specifications
       } else if (strcmp(arg[iarg+1],"cyclicmean") == 0 || strcmp(arg[iarg+1],"cyclicdeviator") == 0) {
 	for (int i = 0; i < 3; i++)
-	  cyclicparam[i][1] = atof(arg[iarg+i+2]);
+	  cyclicparam[i][1] = force->numeric(FLERR,arg[iarg+i+2]);
 
 	addextra = 2;
 	strflag[1] += 1;
@@ -285,7 +285,7 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
 	if (strcmp(arg[iarg+1],"cyclicmean") == 0) cyclicflag[1] = 1;
 	else cyclicflag[1] = 2;
       } else if (strcmp(arg[iarg+1],"constantb") == 0) {
-	cyclicparam[0][1] = atof(arg[iarg+2]); //~ Store the b value here
+	cyclicparam[0][1] = force->numeric(FLERR,arg[iarg+2]); //~ Store the b value here
 	addextra = 2;
 	strflag[1] += 1;
 
@@ -294,25 +294,25 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
 	else error->all(FLERR,"Incorrect constantb specification in fix multistress");
       } else {
 	if (strcmp(arg[iarg+1],"erate") == 0) {
-	  erates[1] = atof(arg[iarg+2]);
+	  erates[1] = force->numeric(FLERR,arg[iarg+2]);
 	} else if (strcmp(arg[iarg+1],"vel") == 0) {
-	  erates[1] = map[1]*atof(arg[iarg+2])/(yhistart-ylostart);
+	  erates[1] = map[1]*force->numeric(FLERR,arg[iarg+2])/(yhistart-ylostart);
 	} else if (strcmp(arg[iarg+1],"scale") == 0) {
 	  if (domain->triclinic == 1)
 	    error->all(FLERR,"Scale is valid in fix multistress only for orthogonal boxes");
 	  else {
-	    erates[1] = (atof(arg[iarg+2])-1)/delt;
+	    erates[1] = (force->numeric(FLERR,arg[iarg+2])-1)/delt;
 	    deltflag[1] = 1;
 	  }
 	} else if (strcmp(arg[iarg+1],"delta") == 0) {
-	  erates[1] = map[1]*(atof(arg[iarg+3])-atof(arg[iarg+2]))/(delt*(yhistart-ylostart));
+	  erates[1] = map[1]*(force->numeric(FLERR,arg[iarg+3])-force->numeric(FLERR,arg[iarg+2]))/(delt*(yhistart-ylostart));
 	  deltflag[1] = 1;
 	  addextra = 1;
 	} else if (strcmp(arg[iarg+1],"final") == 0) {
-	  if (atof(arg[iarg+2]) >= atof(arg[iarg+3]))
+	  if (force->numeric(FLERR,arg[iarg+2]) >= force->numeric(FLERR,arg[iarg+3]))
 	    error->all(FLERR,"Correct the order of the fix multistress arguments");
 	  
-	  erates[1] = (ylostart-yhistart+map[1]*(atof(arg[iarg+3])-atof(arg[iarg+2])))/(delt*(yhistart-ylostart));
+	  erates[1] = (ylostart-yhistart+map[1]*(force->numeric(FLERR,arg[iarg+3])-force->numeric(FLERR,arg[iarg+2])))/(delt*(yhistart-ylostart));
 	  deltflag[1] = 1;
 	  addextra = 1;
 	} else error->all(FLERR,"Illegal fix multistress command");
@@ -325,11 +325,11 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
       double zhistart = domain->boxhi[2];
 
       if (strcmp(arg[iarg+1],"stress") == 0) {
-	starget[2] = atof(arg[iarg+2]);
+	starget[2] = force->numeric(FLERR,arg[iarg+2]);
 	strflag[2] += 1; //~ Incremented to allow checking for multiple specifications
       } else if (strcmp(arg[iarg+1],"cyclicmean") == 0 || strcmp(arg[iarg+1],"cyclicdeviator") == 0) {
 	for (int i = 0; i < 3; i++)
-	  cyclicparam[i][2] = atof(arg[iarg+i+2]);
+	  cyclicparam[i][2] = force->numeric(FLERR,arg[iarg+i+2]);
 
 	addextra = 2;
 	strflag[2] += 1;
@@ -337,7 +337,7 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
 	if (strcmp(arg[iarg+1],"cyclicmean") == 0) cyclicflag[2] = 1;
 	else cyclicflag[2] = 2;
       } else if (strcmp(arg[iarg+1],"constantb") == 0) {
-	cyclicparam[0][2] = atof(arg[iarg+2]); //~ Store the b value here
+	cyclicparam[0][2] = force->numeric(FLERR,arg[iarg+2]); //~ Store the b value here
 	addextra = 2;
 	strflag[2] += 1;
 
@@ -346,25 +346,25 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
 	else error->all(FLERR,"Incorrect constantb specification in fix multistress");
       } else {
 	if (strcmp(arg[iarg+1],"erate") == 0) {
-	  erates[2] = atof(arg[iarg+2]);
+	  erates[2] = force->numeric(FLERR,arg[iarg+2]);
 	} else if (strcmp(arg[iarg+1],"vel") == 0) {
-	  erates[2] = map[2]*atof(arg[iarg+2])/(zhistart-zlostart);
+	  erates[2] = map[2]*force->numeric(FLERR,arg[iarg+2])/(zhistart-zlostart);
 	} else if (strcmp(arg[iarg+1],"scale") == 0) {
 	  if (domain->triclinic == 1)
 	    error->all(FLERR,"Scale is valid in fix multistress only for orthogonal boxes");
 	  else {
-	    erates[2] = (atof(arg[iarg+2])-1)/delt;
+	    erates[2] = (force->numeric(FLERR,arg[iarg+2])-1)/delt;
 	    deltflag[2] = 1;
 	  }
 	} else if (strcmp(arg[iarg+1],"delta") == 0) {
-	  erates[2] = map[2]*(atof(arg[iarg+3])-atof(arg[iarg+2]))/(delt*(zhistart-zlostart));
+	  erates[2] = map[2]*(force->numeric(FLERR,arg[iarg+3])-force->numeric(FLERR,arg[iarg+2]))/(delt*(zhistart-zlostart));
 	  deltflag[2] = 1;
 	  addextra = 1;
 	} else if (strcmp(arg[iarg+1],"final") == 0) {
-	  if (atof(arg[iarg+2]) >= atof(arg[iarg+3]))
+	  if (force->numeric(FLERR,arg[iarg+2]) >= force->numeric(FLERR,arg[iarg+3]))
 	    error->all(FLERR,"Correct the order of the fix multistress arguments");
 
-	  erates[2] = (zlostart-zhistart+map[2]*(atof(arg[iarg+3])-atof(arg[iarg+2])))/(delt*(zhistart-zlostart));
+	  erates[2] = (zlostart-zhistart+map[2]*(force->numeric(FLERR,arg[iarg+3])-force->numeric(FLERR,arg[iarg+2])))/(delt*(zhistart-zlostart));
 	  deltflag[2] = 1;
 	  addextra = 1;
 	} else error->all(FLERR,"Illegal fix multistress command");
@@ -378,27 +378,27 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
       double yhistart = domain->boxhi[1];
 
       if (strcmp(arg[iarg+1],"stress") == 0) {
-	starget[3] = atof(arg[iarg+2]);
+	starget[3] = force->numeric(FLERR,arg[iarg+2]);
 	strflag[3] += 1;
       } else if (strcmp(arg[iarg+1],"cyclicmean") == 0) {
 	for (int i = 0; i < 3; i++)
-	  cyclicparam[i][3] = atof(arg[iarg+i+2]);
+	  cyclicparam[i][3] = force->numeric(FLERR,arg[iarg+i+2]);
 
 	addextra = 2;
 	cyclicflag[3] = 1;
 	strflag[3] += 1;
       } else {
 	if (strcmp(arg[iarg+1],"erate") == 0) {
-	  erates[3] = atof(arg[iarg+2]);
+	  erates[3] = force->numeric(FLERR,arg[iarg+2]);
 	} else if (strcmp(arg[iarg+1],"vel") == 0) {
-	  erates[3] = map[3]*atof(arg[iarg+2])/(yhistart-ylostart);
+	  erates[3] = map[3]*force->numeric(FLERR,arg[iarg+2])/(yhistart-ylostart);
 	} else if (strcmp(arg[iarg+1],"scale") == 0) {
 	  error->all(FLERR,"Scale is valid in fix multistress only for orthogonal boxes");
 	} else if (strcmp(arg[iarg+1],"delta") == 0) {
-	  erates[3] = map[3]*atof(arg[iarg+2])/(delt*(yhistart-ylostart));
+	  erates[3] = map[3]*force->numeric(FLERR,arg[iarg+2])/(delt*(yhistart-ylostart));
 	  deltflag[3] = 1;
 	} else if (strcmp(arg[iarg+1],"final") == 0) {
-	  erates[3] = (map[3]*atof(arg[iarg+2])-xytiltstart)/(delt*(yhistart-ylostart));
+	  erates[3] = (map[3]*force->numeric(FLERR,arg[iarg+2])-xytiltstart)/(delt*(yhistart-ylostart));
 	  deltflag[3] = 1;
 	} else error->all(FLERR,"Illegal fix multistress command");
 	
@@ -411,27 +411,27 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
       double zhistart = domain->boxhi[2];
 
       if (strcmp(arg[iarg+1],"stress") == 0) {
-	starget[4] = atof(arg[iarg+2]);
+	starget[4] = force->numeric(FLERR,arg[iarg+2]);
 	strflag[4] += 1;
       } else if (strcmp(arg[iarg+1],"cyclicmean") == 0) {
 	for (int i = 0; i < 3; i++)
-	  cyclicparam[i][4] = atof(arg[iarg+i+2]);
+	  cyclicparam[i][4] = force->numeric(FLERR,arg[iarg+i+2]);
 
 	addextra = 2;
 	cyclicflag[4] = 1;
 	strflag[4] += 1;
       } else {
 	if (strcmp(arg[iarg+1],"erate") == 0) {
-	  erates[4] = atof(arg[iarg+2]);
+	  erates[4] = force->numeric(FLERR,arg[iarg+2]);
 	} else if (strcmp(arg[iarg+1],"vel") == 0) {
-	  erates[4] = map[4]*atof(arg[iarg+2])/(zhistart-zlostart);
+	  erates[4] = map[4]*force->numeric(FLERR,arg[iarg+2])/(zhistart-zlostart);
 	} else if (strcmp(arg[iarg+1],"scale") == 0) {
 	  error->all(FLERR,"Scale is valid in fix multistress only for orthogonal boxes");
 	} else if (strcmp(arg[iarg+1],"delta") == 0) {
-	  erates[4] = map[4]*atof(arg[iarg+2])/(delt*(zhistart-zlostart));
+	  erates[4] = map[4]*force->numeric(FLERR,arg[iarg+2])/(delt*(zhistart-zlostart));
 	  deltflag[4] = 1;
 	} else if (strcmp(arg[iarg+1],"final") == 0) {
-	  erates[4] = (map[4]*atof(arg[iarg+2])-xztiltstart)/(delt*(zhistart-zlostart));
+	  erates[4] = (map[4]*force->numeric(FLERR,arg[iarg+2])-xztiltstart)/(delt*(zhistart-zlostart));
 	  deltflag[4] = 1;
 	} else error->all(FLERR,"Illegal fix multistress command");
 	
@@ -444,27 +444,27 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
       double zhistart = domain->boxhi[2];
 
       if (strcmp(arg[iarg+1],"stress") == 0) {
-	starget[5] = atof(arg[iarg+2]);
+	starget[5] = force->numeric(FLERR,arg[iarg+2]);
 	strflag[5] += 1;
       } else if (strcmp(arg[iarg+1],"cyclicmean") == 0) {
 	for (int i = 0; i < 3; i++)
-	  cyclicparam[i][5] = atof(arg[iarg+i+2]);
+	  cyclicparam[i][5] = force->numeric(FLERR,arg[iarg+i+2]);
 
 	addextra = 2;
 	cyclicflag[5] = 1;
 	strflag[5] += 1;
       } else {
 	if (strcmp(arg[iarg+1],"erate") == 0) {
-	  erates[5] = atof(arg[iarg+2]);
+	  erates[5] = force->numeric(FLERR,arg[iarg+2]);
 	} else if (strcmp(arg[iarg+1],"vel") == 0) {
-	  erates[5] = map[5]*atof(arg[iarg+2])/(zhistart-zlostart);
+	  erates[5] = map[5]*force->numeric(FLERR,arg[iarg+2])/(zhistart-zlostart);
 	} else if (strcmp(arg[iarg+1],"scale") == 0) {
 	  error->all(FLERR,"Scale is valid in fix multistress only for orthogonal boxes");
 	} else if (strcmp(arg[iarg+1],"delta") == 0) {
-	  erates[5] = map[5]*atof(arg[iarg+2])/(delt*(zhistart-zlostart));
+	  erates[5] = map[5]*force->numeric(FLERR,arg[iarg+2])/(delt*(zhistart-zlostart));
 	  deltflag[5] = 1;
 	} else if (strcmp(arg[iarg+1],"final") == 0) {
-	  erates[5] = (map[5]*atof(arg[iarg+2])-yztiltstart)/(delt*(zhistart-zlostart));
+	  erates[5] = (map[5]*force->numeric(FLERR,arg[iarg+2])-yztiltstart)/(delt*(zhistart-zlostart));
 	  deltflag[5] = 1;
 	} else error->all(FLERR,"Illegal fix multistress command");
 	
