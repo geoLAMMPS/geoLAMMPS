@@ -41,7 +41,7 @@ using namespace LAMMPS_NS;
 using namespace FixConst;
 using namespace MathConst;
 
-enum{XPLANE,YPLANE,ZPLANE,ZCYLINDER};    // XYZ PLANE need to be 0,1,2
+enum{XPLANE=0,YPLANE=1,ZPLANE=2,ZCYLINDER};    // XYZ PLANE need to be 0,1,2
 enum{HOOKE,HOOKE_HISTORY,HERTZ_HISTORY,SHM_HISTORY}; //~ Added SHM_HISTORY option [KH - 30 October 2013]
 
 #define BIG 1.0e20
@@ -70,30 +70,26 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   //~ Make special allowances for shm pairstyle [KH - 30 October 2013]
   double Geq, Poiseq;
   if (force->pair_match("gran/shm/history",1)) {
-    Geq = atof(arg[3]);
-    Poiseq = atof(arg[4]);
-    xmu = atof(arg[5]);
+    Geq = force->numeric(FLERR,arg[3]);
+    Poiseq = force->numeric(FLERR,arg[4]);
+    xmu = force->numeric(FLERR,arg[5]);
 
     if (Geq < 0.0 || Poiseq < 0.0 || xmu < 0.0 || Poiseq > 0.5) error->all(FLERR,"Illegal shm pair parameter values in fix wall gran");
 
     kn = 4.0*Geq / (3.0*(1.0-Poiseq));
     kt = 4.0*Geq / (2.0-Poiseq);
   } else {
-    kn = atof(arg[3]);
+    kn = force->numeric(FLERR,arg[3]);
     if (strcmp(arg[4],"NULL") == 0) kt = kn * 2.0/7.0;
-    else kt = atof(arg[4]);
-    
-    gamman = atof(arg[5]);
-    if (strcmp(arg[6],"NULL") == 0) gammat = 0.5 * gamman;
-    else gammat = atof(arg[6]);
-    
-    xmu = atof(arg[7]);
-    dampflag = atoi(arg[8]);
-    if (dampflag == 0) gammat = 0.0;
+    else kt = force->numeric(FLERR,arg[4]);
 
-    if (kn < 0.0 || kt < 0.0 || gamman < 0.0 || gammat < 0.0 ||
-	xmu < 0.0 || dampflag < 0 || dampflag > 1)
-      error->all(FLERR,"Illegal fix wall/gran command");
+    gamman = force->numeric(FLERR,arg[5]);
+    if (strcmp(arg[6],"NULL") == 0) gammat = 0.5 * gamman;
+    else gammat = force->numeric(FLERR,arg[6]);
+
+    xmu = force->numeric(FLERR,arg[7]);
+    dampflag = force->inumeric(FLERR,arg[8]);
+    if (dampflag == 0) gammat = 0.0;
   }
 
   // convert Kn and Kt from pressure units to force/distance^2 if Hertzian
@@ -112,31 +108,31 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/gran command");
     wallstyle = XPLANE;
     if (strcmp(arg[iarg+1],"NULL") == 0) lo = -BIG;
-    else lo = atof(arg[iarg+1]);
+    else lo = force->numeric(FLERR,arg[iarg+1]);
     if (strcmp(arg[iarg+2],"NULL") == 0) hi = BIG;
-    else hi = atof(arg[iarg+2]);
+    else hi = force->numeric(FLERR,arg[iarg+2]);
     iarg += 3;
   } else if (strcmp(arg[iarg],"yplane") == 0) {
     if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/gran command");
     wallstyle = YPLANE;
     if (strcmp(arg[iarg+1],"NULL") == 0) lo = -BIG;
-    else lo = atof(arg[iarg+1]);
+    else lo = force->numeric(FLERR,arg[iarg+1]);
     if (strcmp(arg[iarg+2],"NULL") == 0) hi = BIG;
-    else hi = atof(arg[iarg+2]);
+    else hi = force->numeric(FLERR,arg[iarg+2]);
     iarg += 3;
   } else if (strcmp(arg[iarg],"zplane") == 0) {
     if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/gran command");
     wallstyle = ZPLANE;
     if (strcmp(arg[iarg+1],"NULL") == 0) lo = -BIG;
-    else lo = atof(arg[iarg+1]);
+    else lo = force->numeric(FLERR,arg[iarg+1]);
     if (strcmp(arg[iarg+2],"NULL") == 0) hi = BIG;
-    else hi = atof(arg[iarg+2]);
+    else hi = force->numeric(FLERR,arg[iarg+2]);
     iarg += 3;
   } else if (strcmp(arg[iarg],"zcylinder") == 0) {
     if (narg < iarg+2) error->all(FLERR,"Illegal fix wall/gran command");
     wallstyle = ZCYLINDER;
     lo = hi = 0.0;
-    cylradius = atof(arg[iarg+1]);
+    cylradius = force->numeric(FLERR,arg[iarg+1]);
     iarg += 2;
   }
 
@@ -157,8 +153,8 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
       else if (strcmp(arg[iarg+1],"y") == 0) axis = 1;
       else if (strcmp(arg[iarg+1],"z") == 0) axis = 2;
       else error->all(FLERR,"Illegal fix wall/gran command");
-      amplitude = atof(arg[iarg+2]);
-      period = atof(arg[iarg+3]);
+      amplitude = force->numeric(FLERR,arg[iarg+2]);
+      period = force->numeric(FLERR,arg[iarg+3]);
       wiggle = 1;
       loINI = lo;
       hiINI = hi;
@@ -169,7 +165,7 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
       else if (strcmp(arg[iarg+1],"y") == 0) axis = 1;
       else if (strcmp(arg[iarg+1],"z") == 0) axis = 2;
       else error->all(FLERR,"Illegal fix wall/gran command");
-      vshear = atof(arg[iarg+2]);
+      vshear = force->numeric(FLERR,arg[iarg+2]);
       wshear = 1;
       iarg += 3;
     } else if (strcmp(arg[iarg],"translate") == 0) {

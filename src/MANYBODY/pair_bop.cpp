@@ -50,8 +50,10 @@
 #include "neigh_request.h"
 #include "memory.h"
 #include "error.h"
+#include "math_special.h"
 
 using namespace LAMMPS_NS;
+using namespace MathSpecial;
 
 #define MAXLINE 1024
 #define EPSILON 1.0e-6
@@ -7223,9 +7225,9 @@ void PairBOP::PiBo()
 // piB is similary formulation to (a) Eq. 36 and (b) Eq. 18
 
           piB[n]=(ABrtR1+ABrtR2)*pi_a[iij]*betaP[temp_ij];
-          dPiB1=-.5*(pow(ABrtR1,3)+pow(ABrtR2,3))*pi_c[iij]*pi_a[iij]*betaP[temp_ij];
-          dPiB2=.25*BBrtR*(pow(ABrtR2,3)-pow(ABrtR1,3))*pi_c[iij]*pi_a[iij]*betaP[temp_ij];
-          dPiB3=((ABrtR1+ABrtR2)*pi_a[iij]-(pow(ABrtR1,3)+pow(ABrtR2,3))*pi_a[iij]
+          dPiB1=-.5*(cube(ABrtR1)+cube(ABrtR2))*pi_c[iij]*pi_a[iij]*betaP[temp_ij];
+          dPiB2=.25*BBrtR*(cube(ABrtR2)-cube(ABrtR1))*pi_c[iij]*pi_a[iij]*betaP[temp_ij];
+          dPiB3=((ABrtR1+ABrtR2)*pi_a[iij]-(cube(ABrtR1)+cube(ABrtR2))*pi_a[iij]
               *betaP[temp_ij]*betaP[temp_ij])*dBetaP[temp_ij]/rij[temp_ij];
           n++;
           pp2=2.0*betaP[temp_ij];
@@ -8147,9 +8149,9 @@ void PairBOP::PiBo_otf()
 // piB is similary formulation to (a) Eq. 36 and (b) Eq. 18
 
           piB[n]=(ABrtR1+ABrtR2)*pi_a[iij]*betaP_ij;
-          dPiB1=-.5*(pow(ABrtR1,3)+pow(ABrtR2,3))*pi_c[iij]*pi_a[iij]*betaP_ij;
-          dPiB2=.25*BBrtR*(pow(ABrtR2,3)-pow(ABrtR1,3))*pi_c[iij]*pi_a[iij]*betaP_ij;
-          dPiB3=((ABrtR1+ABrtR2)*pi_a[iij]-(pow(ABrtR1,3)+pow(ABrtR2,3))*pi_a[iij]
+          dPiB1=-.5*(cube(ABrtR1)+cube(ABrtR2))*pi_c[iij]*pi_a[iij]*betaP_ij;
+          dPiB2=.25*BBrtR*(cube(ABrtR2)-cube(ABrtR1))*pi_c[iij]*pi_a[iij]*betaP_ij;
+          dPiB3=((ABrtR1+ABrtR2)*pi_a[iij]-(cube(ABrtR1)+cube(ABrtR2))*pi_a[iij]
               *betaP_ij*betaP_ij)*dBetaP_ij/r_ij;
           n++;
 
@@ -8210,7 +8212,7 @@ void PairBOP::read_file(char *filename)
   rcore=0.1;
 
   if (me == 0) {
-    FILE *fp = fopen(filename,"r");
+    FILE *fp = open_potential(filename);
     if (fp == NULL) {
       char str[128];
       sprintf(str,"Cannot open BOP potential file %s",filename);
@@ -8270,7 +8272,7 @@ void PairBOP::read_file(char *filename)
   if (me == 0) {
     words = new char*[bop_types];
     for(i=0;i<bop_types;i++) words[i]=NULL;
-    FILE *fp = fopen(filename,"r");
+    FILE *fp = open_potential(filename);
     if (fp == NULL) {
       char str[128];
       sprintf(str,"Cannot open BOP potential file %s",filename);
@@ -8434,7 +8436,7 @@ void PairBOP::read_table(char *filename)
   MPI_Comm_rank(world,&me);
 
   if (me == 0) {
-    FILE *fp = fopen(filename,"r");
+    FILE *fp = open_potential(filename);
     if (fp == NULL) {
       char str[128];
       sprintf(str,"Cannot open BOP potential file %s",filename);
@@ -8483,7 +8485,7 @@ void PairBOP::read_table(char *filename)
   allocate();
 
   if (me == 0) {
-    FILE *fp = fopen(filename,"r");
+    FILE *fp = open_potential(filename);
     if (fp == NULL) {
       char str[128];
       sprintf(str,"Cannot open BOP potential file %s",filename);
@@ -9017,7 +9019,7 @@ void PairBOP::setSign()
           cs=0.0;
           if(xBO<alpha)
             cs=32.0*(alpha-xBO);
-          bigF=(sigma_f[i]*(1.0-sigma_f[i])-fth*(1.0-fth))/pow(1.0-2.0*fth,2);
+          bigF=(sigma_f[i]*(1.0-sigma_f[i])-fth*(1.0-fth))/square(1.0-2.0*fth);
           FsigBO[i][j]=2.0*fth+2.0*bigF*(1.0-2.0*fth)*(1.0+bigF*(1.0-cs*bigF));
         }
       }

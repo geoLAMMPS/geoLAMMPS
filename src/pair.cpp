@@ -16,6 +16,7 @@
 ------------------------------------------------------------------------- */
 
 #include "mpi.h"
+#include "ctype.h"
 #include "float.h"
 #include "limits.h"
 #include "math.h"
@@ -148,23 +149,23 @@ void Pair::modify_params(int narg, char **arg)
       iarg += 2;
     } else if (strcmp(arg[iarg],"table") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal pair_modify command");
-      ncoultablebits = atoi(arg[iarg+1]);
+      ncoultablebits = force->inumeric(FLERR,arg[iarg+1]);
       if (ncoultablebits > sizeof(float)*CHAR_BIT)
         error->all(FLERR,"Too many total bits for bitmapped lookup table");
       iarg += 2;
     } else if (strcmp(arg[iarg],"table/disp") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal pair_modify command");
-      ndisptablebits = atoi(arg[iarg+1]);
+      ndisptablebits = force->inumeric(FLERR,arg[iarg+1]);
       if (ndisptablebits > sizeof(float)*CHAR_BIT)
         error->all(FLERR,"Too many total bits for bitmapped lookup table");
       iarg += 2;
     } else if (strcmp(arg[iarg],"tabinner") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal pair_modify command");
-      tabinner = atof(arg[iarg+1]);
+      tabinner = force->numeric(FLERR,arg[iarg+1]);
       iarg += 2;
     } else if (strcmp(arg[iarg],"tabinner/disp") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal pair_modify command");
-      tabinner_disp = atof(arg[iarg+1]);
+      tabinner_disp = force->numeric(FLERR,arg[iarg+1]);
       iarg += 2;
     } else if (strcmp(arg[iarg],"tail") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal pair_modify command");
@@ -1536,12 +1537,12 @@ void Pair::write_file(int narg, char **arg)
 
   // parse arguments
 
-  int itype = atoi(arg[0]);
-  int jtype = atoi(arg[1]);
+  int itype = force->inumeric(FLERR,arg[0]);
+  int jtype = force->inumeric(FLERR,arg[1]);
   if (itype < 1 || itype > atom->ntypes || jtype < 1 || jtype > atom->ntypes)
     error->all(FLERR,"Invalid atom types in pair_write command");
 
-  int n = atoi(arg[2]);
+  int n = force->inumeric(FLERR,arg[2]);
 
   int style;
   if (strcmp(arg[3],"r") == 0) style = RLINEAR;
@@ -1549,8 +1550,8 @@ void Pair::write_file(int narg, char **arg)
   else if (strcmp(arg[3],"bitmap") == 0) style = BMP;
   else error->all(FLERR,"Invalid style in pair_write command");
 
-  double inner = atof(arg[4]);
-  double outer = atof(arg[5]);
+  double inner = force->numeric(FLERR,arg[4]);
+  double outer = force->numeric(FLERR,arg[5]);
   if (inner <= 0.0 || inner >= outer)
     error->all(FLERR,"Invalid cutoffs in pair_write command");
 
@@ -1590,8 +1591,8 @@ void Pair::write_file(int narg, char **arg)
   double q[2];
   q[0] = q[1] = 1.0;
   if (narg == 10) {
-    q[0] = atof(arg[8]);
-    q[1] = atof(arg[9]);
+    q[0] = force->numeric(FLERR,arg[8]);
+    q[1] = force->numeric(FLERR,arg[9]);
   }
   double *q_hold;
 
@@ -1701,6 +1702,77 @@ void Pair::init_bitmap(double inner, double outer, int ntablebits,
   masklo = rsq_lookup.i & ~(nmask);
 }
 
+/* ----------------------------------------------------------------------
+   open a potential file as specified by name
+   failing that, search in dir specified by env variable LAMMPS_POTENTIALS
+------------------------------------------------------------------------- */
+  
+FILE *Pair::open_potential(const char *name)
+{
+  FILE *fp;
+
+  if (name == NULL) return NULL;
+
+  // attempt to open file directly
+  // if successful, return ptr
+
+  fp = fopen(name,"r");
+  if (fp) return fp;
+
+  // try the environment variable directory
+
+  const char *path = getenv("LAMMPS_POTENTIALS");
+  if (path == NULL) return NULL;
+
+  const char *pot = potname(name);
+  if (pot == NULL) return NULL;
+
+  size_t len1 = strlen(path);
+  size_t len2 = strlen(pot);
+  char *newpath = new char[len1+len2+2];
+
+  strcpy(newpath,path);
+#if defined(_WIN32)
+  newpath[len1] = '\\';
+  newpath[len1+1] = 0;
+#else
+  newpath[len1] = '/';
+  newpath[len1+1] = 0;
+#endif
+  strcat(newpath,pot);
+  
+  fp = fopen(newpath,"r");
+  delete[] newpath;
+  return fp;
+}
+
+/* ----------------------------------------------------------------------
+   strip off leading part of path, return just the filename
+------------------------------------------------------------------------- */
+
+const char *Pair::potname(const char *path)
+{
+  const char *pot;
+
+  if (path == NULL) return NULL;
+
+#if defined(_WIN32)
+  // skip over the disk drive part of windows pathnames
+  if (isalpha(path[0]) && path[1] == ':') 
+    path += 2;
+#endif
+
+  for (pot = path; *path != '\0'; ++path) {
+#if defined(_WIN32)
+    if ((*path == '\\') || (*path == '/')) pot = path + 1;
+#else
+    if (*path == '/') pot = path + 1;
+#endif
+  }
+
+  return pot;
+}
+
 /* ---------------------------------------------------------------------- */
 
 double Pair::memory_usage()
@@ -1709,3 +1781,4 @@ double Pair::memory_usage()
   bytes += comm->nthreads*maxvatom*6 * sizeof(double);
   return bytes;
 }
+

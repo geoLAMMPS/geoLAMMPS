@@ -47,6 +47,7 @@ class PairGranHookeHistory : public Pair {
   void *extract(const char *, int &);
   void rolling_resistance(int, int, int, int, double, double, double, double, double, double, double, double, double **, double *, double *, double *, double *, double *); //~ Added these two functions [KH - 24 October 2013]
   void add_old_omega_fix();
+  double memory_usage();
 
  protected:
   double gamman,gammat;
@@ -61,9 +62,12 @@ class PairGranHookeHistory : public Pair {
   double *maxrad_dynamic,*maxrad_frozen;
 
   class FixShearHistory *fix_history;
-  class Fix *fix_rigid;
-  int *body;
-  double *mass_rigid;
+
+  // storage of rigid body masses for use in granular interactions
+
+  class Fix *fix_rigid;    // ptr to rigid body fix, NULL if none
+  double *mass_rigid;      // rigid mass for owned+ghost atoms
+  int nmax;                // allocated size of mass_rigid
 
   void allocate();
 

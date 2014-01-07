@@ -127,7 +127,7 @@ class FixRigid : public Fix {
   int POINT,SPHERE,ELLIPSOID,LINE,TRIANGLE,DIPOLE;   // bitmasks for eflags
   int OMEGA,ANGMOM,TORQUE;
 
-  void no_squish_rotate(int, double *, double *, double *, double);
+  void no_squish_rotate(int, double *, double *, double *, double) const;
   void set_xv();
   void set_v();
   void setup_bodies();
@@ -194,6 +194,10 @@ E: Rigid fix must come before NPT/NPH fix
 NPT/NPH fix must be defined in input script after all rigid fixes,
 else the rigid fix contribution to the pressure virial is
 incorrect.
+
+W: Cannot count rigid body degrees-of-freedom before bodies are fully initialized
+
+UNDOCUMENTED
 
 W: Computing temperature of portions of rigid bodies
 

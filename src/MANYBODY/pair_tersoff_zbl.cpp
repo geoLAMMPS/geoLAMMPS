@@ -68,13 +68,13 @@ void PairTersoffZBL::read_file(char *file)
 
   memory->sfree(params);
   params = NULL;
-  nparams = 0;
+  nparams = maxparam = 0;
 
   // open file on proc 0
 
   FILE *fp;
   if (comm->me == 0) {
-    fp = fopen(file,"r");
+    fp = open_potential(file);
     if (fp == NULL) {
       char str[128];
       sprintf(str,"Cannot open Tersoff potential file %s",file);
