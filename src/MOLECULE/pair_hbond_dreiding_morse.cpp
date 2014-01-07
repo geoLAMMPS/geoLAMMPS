@@ -50,8 +50,8 @@ void PairHbondDreidingMorse::compute(int eflag, int vflag)
 {
   int i,j,k,m,ii,jj,kk,inum,jnum,knum,itype,jtype,ktype;
   double delx,dely,delz,rsq,rsq1,rsq2,r1,r2;
-  double factor_hb,force_angle,force_kernel,evdwl,ehbond;
-  double c,s,a,b,ac,a11,a12,a22,vx1,vx2,vy1,vy2,vz1,vz2;
+  double factor_hb,force_angle,force_kernel,force_switch,evdwl,ehbond;
+  double c,s,a,b,d,ac,a11,a12,a22,vx1,vx2,vy1,vy2,vz1,vz2;
   double fi[3],fj[3],delr1[3],delr2[3];
   double r,dr,dexp,eng_morse,switch1,switch2;
   int *ilist,*jlist,*klist,*numneigh,**firstneigh;
@@ -143,6 +143,7 @@ void PairHbondDreidingMorse::compute(int eflag, int vflag)
             eng_morse = pm.d0 * (dexp*dexp - 2.0*dexp);
             force_kernel = pm.morse1*(dexp*dexp - dexp)/r * powint(c,pm.ap);
             force_angle = pm.ap * eng_morse * powint(c,pm.ap-1)*s;
+	    force_switch = 0.0;
 
             if (rsq > pm.cut_innersq) {
               switch1 = (pm.cut_outersq-rsq) * (pm.cut_outersq-rsq) *
@@ -150,8 +151,11 @@ void PairHbondDreidingMorse::compute(int eflag, int vflag)
                         pm.denom_vdw;
               switch2 = 12.0*rsq * (pm.cut_outersq-rsq) *
                         (rsq-pm.cut_innersq) / pm.denom_vdw;
-              force_kernel = force_kernel*switch1 + eng_morse*switch2;
-              eng_morse *= switch1;
+
+              force_kernel *= switch1;
+	      force_angle  *= switch1;
+	      force_switch  = eng_morse*switch2/rsq;
+              eng_morse    *= switch1;
             }
 
             if (eflag) {
@@ -162,6 +166,7 @@ void PairHbondDreidingMorse::compute(int eflag, int vflag)
 
             a = factor_hb*force_angle/s;
             b = factor_hb*force_kernel;
+            d = factor_hb*force_switch;
 
             a11 = a*c / rsq1;
             a12 = -a / (r1*r2);
@@ -174,12 +179,12 @@ void PairHbondDreidingMorse::compute(int eflag, int vflag)
             vz1 = a11*delr1[2] + a12*delr2[2];
             vz2 = a22*delr2[2] + a12*delr1[2];
 
-            fi[0] = vx1 + b*delx;
-            fi[1] = vy1 + b*dely;
-            fi[2] = vz1 + b*delz;
-            fj[0] = vx2 - b*delx;
-            fj[1] = vy2 - b*dely;
-            fj[2] = vz2 - b*delz;
+            fi[0] = vx1 + (b+d)*delx;
+            fi[1] = vy1 + (b+d)*dely;
+            fi[2] = vz1 + (b+d)*delz;
+            fj[0] = vx2 - (b+d)*delx;
+            fj[1] = vy2 - (b+d)*dely;
+            fj[2] = vz2 - (b+d)*delz;
 
             f[i][0] += fi[0];
             f[i][1] += fi[1];
@@ -230,22 +235,22 @@ void PairHbondDreidingMorse::coeff(int narg, char **arg)
   else if (strcmp(arg[3],"j") == 0) donor_flag = 1;
   else error->all(FLERR,"Incorrect args for pair coefficients");
 
-  double d0_one = force->numeric(arg[4]);
-  double alpha_one = force->numeric(arg[5]);
-  double r0_one = force->numeric(arg[6]);
+  double d0_one = force->numeric(FLERR,arg[4]);
+  double alpha_one = force->numeric(FLERR,arg[5]);
+  double r0_one = force->numeric(FLERR,arg[6]);
 
   int ap_one = ap_global;
-  if (narg > 7) ap_one = force->inumeric(arg[7]);
+  if (narg > 7) ap_one = force->inumeric(FLERR,arg[7]);
   double cut_inner_one = cut_inner_global;
   double cut_outer_one = cut_outer_global;
   if (narg > 9) {
-    cut_inner_one = force->numeric(arg[8]);
-    cut_outer_one = force->numeric(arg[9]);
+    cut_inner_one = force->numeric(FLERR,arg[8]);
+    cut_outer_one = force->numeric(FLERR,arg[9]);
   }
   if (cut_inner_one>cut_outer_one)
     error->all(FLERR,"Pair inner cutoff >= Pair outer cutoff");
   double cut_angle_one = cut_angle_global;
-  if (narg > 10) cut_angle_one = force->numeric(arg[10]) * MY_PI/180.0;
+  if (narg > 10) cut_angle_one = force->numeric(FLERR,arg[10]) * MY_PI/180.0;
 
   // grow params array if necessary
 

@@ -109,6 +109,9 @@ PPPM::PPPM(LAMMPS *lmp, int narg, char **arg) : KSpace(lmp, narg, arg)
   nmax = 0;
   part2grid = NULL;
 
+  peratom_allocate_flag = 0;
+  group_allocate_flag = 0;
+
   // define acons coefficients for estimation of kspace errors
   // see JCP 109, pg 7698 for derivation of coefficients
   // higher order coefficients may be computed if needed
@@ -152,8 +155,8 @@ PPPM::~PPPM()
 {
   delete [] factors;
   deallocate();
-  deallocate_peratom();
-  deallocate_groups();
+  if (peratom_allocate_flag) deallocate_peratom();
+  if (group_allocate_flag) deallocate_groups();
   memory->destroy(part2grid);
   memory->destroy(acons);
 }
@@ -275,10 +278,8 @@ void PPPM::init()
   // free all arrays previously allocated
 
   deallocate();
-  deallocate_peratom();
-  peratom_allocate_flag = 0;
-  deallocate_groups();
-  group_allocate_flag = 0;
+  if (peratom_allocate_flag) deallocate_peratom();
+  if (group_allocate_flag) deallocate_groups();
 
   // setup FFT grid resolution and g_ewald
   // normally one iteration thru while loop is all that is required
@@ -296,6 +297,7 @@ void PPPM::init()
       error->warning(FLERR,"Reducing PPPM order b/c stencil extends "
                      "beyond nearest neighbor processor");
 
+    if (stagger_flag && !differentiation_flag) compute_gf_denom();
     set_grid_global();
     set_grid_local();
     if (overlap_allowed) break;
@@ -368,7 +370,7 @@ void PPPM::init()
   }
 
   // allocate K-space dependent memory
-  // don't invoke allocate_peratom(), compute() will allocate when needed
+  // don't invoke allocate peratom() or group(), will be allocated when needed
 
   allocate();
   cg->ghost_notify();
@@ -563,10 +565,8 @@ void PPPM::setup_grid()
   // free all arrays previously allocated
 
   deallocate();
-  deallocate_peratom();
-  peratom_allocate_flag = 0;
-  deallocate_groups();
-  group_allocate_flag = 0;
+  if (peratom_allocate_flag) deallocate_peratom();
+  if (group_allocate_flag) deallocate_groups();
 
   // reset portion of global grid that each proc owns
 
@@ -574,7 +574,7 @@ void PPPM::setup_grid()
 
   // reallocate K-space dependent memory
   // check if grid communication is now overlapping if not allowed
-  // don't invoke allocate_peratom(), compute() will allocate when needed
+  // don't invoke allocate peratom() or group(), will be allocated when needed
 
   allocate();
 
@@ -615,7 +615,6 @@ void PPPM::compute(int eflag, int vflag)
     allocate_peratom();
     cg_peratom->ghost_notify();
     cg_peratom->setup();
-    peratom_allocate_flag = 1;
   }
 
   // convert atoms from box to lamda coords
@@ -702,10 +701,13 @@ void PPPM::compute(int eflag, int vflag)
 
   // per-atom energy/virial
   // energy includes self-energy correction
+  // notal accounts for TIP4P tallying eatom/vatom for ghost atoms
 
   if (evflag_atom) {
     double *q = atom->q;
     int nlocal = atom->nlocal;
+    int ntotal = nlocal;
+    if (tip4pflag) ntotal += atom->nghost;
 
     if (eflag_atom) {
       for (i = 0; i < nlocal; i++) {
@@ -714,10 +716,11 @@ void PPPM::compute(int eflag, int vflag)
           (g_ewald*g_ewald*volume);
         eatom[i] *= qscale;
       }
+      for (i = nlocal; i < ntotal; i++) eatom[i] *= 0.5*qscale;
     }
 
     if (vflag_atom) {
-      for (i = 0; i < nlocal; i++)
+      for (i = 0; i < ntotal; i++)
         for (j = 0; j < 6; j++) vatom[i][j] *= 0.5*qscale;
     }
   }
@@ -778,7 +781,7 @@ void PPPM::allocate()
 
   // summation coeffs
 
-  memory->create(gf_b,order,"pppm:gf_b");
+  if (!stagger_flag) memory->create(gf_b,order,"pppm:gf_b");
   memory->create2d_offset(rho1d,3,-order/2,order/2,"pppm:rho1d");
   memory->create2d_offset(drho1d,3,-order/2,order/2,"pppm:drho1d");
   memory->create2d_offset(rho_coeff,order,(1-order)/2,order/2,"pppm:rho_coeff");
@@ -826,49 +829,6 @@ void PPPM::allocate()
 }
 
 /* ----------------------------------------------------------------------
-   allocate per-atom memory that depends on # of K-vectors and order
-------------------------------------------------------------------------- */
-
-void PPPM::allocate_peratom()
-{
-  if (differentiation_flag != 1)
-    memory->create3d_offset(u_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
-                            nxlo_out,nxhi_out,"pppm:u_brick");
-
-  memory->create3d_offset(v0_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
-                          nxlo_out,nxhi_out,"pppm:v0_brick");
-  memory->create3d_offset(v1_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
-                          nxlo_out,nxhi_out,"pppm:v1_brick");
-  memory->create3d_offset(v2_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
-                          nxlo_out,nxhi_out,"pppm:v2_brick");
-  memory->create3d_offset(v3_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
-                          nxlo_out,nxhi_out,"pppm:v3_brick");
-  memory->create3d_offset(v4_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
-                          nxlo_out,nxhi_out,"pppm:v4_brick");
-  memory->create3d_offset(v5_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
-                          nxlo_out,nxhi_out,"pppm:v5_brick");
-
-  // create ghost grid object for rho and electric field communication
-
-  int (*procneigh)[2] = comm->procneigh;
-
-  if (differentiation_flag == 1)
-    cg_peratom =
-      new CommGrid(lmp,world,6,1,
-                   nxlo_in,nxhi_in,nylo_in,nyhi_in,nzlo_in,nzhi_in,
-                   nxlo_out,nxhi_out,nylo_out,nyhi_out,nzlo_out,nzhi_out,
-                   procneigh[0][0],procneigh[0][1],procneigh[1][0],
-                   procneigh[1][1],procneigh[2][0],procneigh[2][1]);
-  else
-    cg_peratom =
-      new CommGrid(lmp,world,7,1,
-                   nxlo_in,nxhi_in,nylo_in,nyhi_in,nzlo_in,nzhi_in,
-                   nxlo_out,nxhi_out,nylo_out,nyhi_out,nzlo_out,nzhi_out,
-                   procneigh[0][0],procneigh[0][1],procneigh[1][0],
-                   procneigh[1][1],procneigh[2][0],procneigh[2][1]);
-}
-
-/* ----------------------------------------------------------------------
    deallocate memory that depends on # of K-vectors and order
 ------------------------------------------------------------------------- */
 
@@ -907,6 +867,7 @@ void PPPM::deallocate()
   }
 
   memory->destroy(gf_b);
+  if (stagger_flag) gf_b = NULL;
   memory->destroy2d_offset(rho1d,-order/2);
   memory->destroy2d_offset(drho1d,-order/2);
   memory->destroy2d_offset(rho_coeff,(1-order)/2);
@@ -919,11 +880,59 @@ void PPPM::deallocate()
 }
 
 /* ----------------------------------------------------------------------
+   allocate per-atom memory that depends on # of K-vectors and order
+------------------------------------------------------------------------- */
+
+void PPPM::allocate_peratom()
+{
+  peratom_allocate_flag = 1;
+
+  if (differentiation_flag != 1)
+    memory->create3d_offset(u_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
+                            nxlo_out,nxhi_out,"pppm:u_brick");
+
+  memory->create3d_offset(v0_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
+                          nxlo_out,nxhi_out,"pppm:v0_brick");
+
+  memory->create3d_offset(v1_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
+                          nxlo_out,nxhi_out,"pppm:v1_brick");
+  memory->create3d_offset(v2_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
+                          nxlo_out,nxhi_out,"pppm:v2_brick");
+  memory->create3d_offset(v3_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
+                          nxlo_out,nxhi_out,"pppm:v3_brick");
+  memory->create3d_offset(v4_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
+                          nxlo_out,nxhi_out,"pppm:v4_brick");
+  memory->create3d_offset(v5_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
+                          nxlo_out,nxhi_out,"pppm:v5_brick");
+
+  // create ghost grid object for rho and electric field communication
+
+  int (*procneigh)[2] = comm->procneigh;
+
+  if (differentiation_flag == 1)
+    cg_peratom =
+      new CommGrid(lmp,world,6,1,
+                   nxlo_in,nxhi_in,nylo_in,nyhi_in,nzlo_in,nzhi_in,
+                   nxlo_out,nxhi_out,nylo_out,nyhi_out,nzlo_out,nzhi_out,
+                   procneigh[0][0],procneigh[0][1],procneigh[1][0],
+                   procneigh[1][1],procneigh[2][0],procneigh[2][1]);
+  else
+    cg_peratom =
+      new CommGrid(lmp,world,7,1,
+                   nxlo_in,nxhi_in,nylo_in,nyhi_in,nzlo_in,nzhi_in,
+                   nxlo_out,nxhi_out,nylo_out,nyhi_out,nzlo_out,nzhi_out,
+                   procneigh[0][0],procneigh[0][1],procneigh[1][0],
+                   procneigh[1][1],procneigh[2][0],procneigh[2][1]);
+}
+
+/* ----------------------------------------------------------------------
    deallocate per-atom memory that depends on # of K-vectors and order
 ------------------------------------------------------------------------- */
 
 void PPPM::deallocate_peratom()
 {
+  peratom_allocate_flag = 0;
+
   memory->destroy3d_offset(v0_brick,nzlo_out,nylo_out,nxlo_out);
   memory->destroy3d_offset(v1_brick,nzlo_out,nylo_out,nxlo_out);
   memory->destroy3d_offset(v2_brick,nzlo_out,nylo_out,nxlo_out);
@@ -975,7 +984,7 @@ void PPPM::set_grid_global()
 
   if (!gridflag) {
 
-    if (differentiation_flag == 1) {
+    if (differentiation_flag == 1 || stagger_flag) {
 
       h = h_x = h_y = h_z = 4.0/g_ewald;
       int count = 0;
@@ -1124,7 +1133,7 @@ double PPPM::compute_df_kspace()
   double zprd_slab = zprd*slab_volfactor;
   bigint natoms = atom->natoms;
   double df_kspace = 0.0;
-  if (differentiation_flag == 1) {
+  if (differentiation_flag == 1 || stagger_flag) {
     double qopt = compute_qopt();
     df_kspace = sqrt(qopt/natoms)*q2/(xprd*yprd*zprd_slab);
   } else {
@@ -1412,6 +1421,12 @@ void PPPM::set_grid_local()
                             nz_pppm/zprd_slab + shift) - OFFSET;
   nzlo_out = nlo + nlower;
   nzhi_out = nhi + nupper;
+
+  if (stagger_flag) {
+    nxhi_out++;
+    nyhi_out++;
+    nzhi_out++;
+  }
 
   // for slab PPPM, change the grid boundary for processors at +z end
   //   to include the empty volume between periodically repeating slabs
@@ -3049,10 +3064,7 @@ void PPPM::compute_group_group(int groupbit_A, int groupbit_B, int BA_flag)
     error->all(FLERR,"Cannot (yet) use 'kspace_modify "
                "diff ad' with compute group/group");
 
-  if (!group_allocate_flag) {
-    allocate_groups();
-    group_allocate_flag = 1;
-  }
+  if (!group_allocate_flag) allocate_groups();
 
   // convert atoms from box to lamda coords
 
@@ -3137,6 +3149,8 @@ void PPPM::compute_group_group(int groupbit_A, int groupbit_B, int BA_flag)
 
 void PPPM::allocate_groups()
 {
+  group_allocate_flag = 1;
+
   memory->create3d_offset(density_A_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
                           nxlo_out,nxhi_out,"pppm:density_A_brick");
   memory->create3d_offset(density_B_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
@@ -3151,6 +3165,8 @@ void PPPM::allocate_groups()
 
 void PPPM::deallocate_groups()
 {
+  group_allocate_flag = 0;
+
   memory->destroy3d_offset(density_A_brick,nzlo_out,nylo_out,nxlo_out);
   memory->destroy3d_offset(density_B_brick,nzlo_out,nylo_out,nxlo_out);
   memory->destroy(density_A_fft);

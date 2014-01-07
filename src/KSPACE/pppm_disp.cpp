@@ -70,7 +70,7 @@ PPPMDisp::PPPMDisp(LAMMPS *lmp, int narg, char **arg) : KSpace(lmp, narg, arg)
 
   triclinic_support = 0;
   pppmflag = dispersionflag = 1;
-  accuracy_relative = atof(arg[0]);
+  accuracy_relative = fabs(force->numeric(FLERR,arg[0]));
   
   nfactors = 3;
   factors = new int[nfactors];
@@ -187,7 +187,7 @@ PPPMDisp::~PPPMDisp()
   delete [] csumi;
   csumi = NULL;
   deallocate();
-  deallocate_peratom();
+  if (peratom_allocate_flag) deallocate_peratom();
   memory->destroy(part2grid);
   memory->destroy(part2grid_6);
   part2grid = part2grid_6 = NULL;
@@ -223,9 +223,9 @@ void PPPMDisp::init()
   }
 
   // free all arrays previously allocated
+
   deallocate();
-  deallocate_peratom(); 
-  peratom_allocate_flag = 0;
+  if (peratom_allocate_flag) deallocate_peratom(); 
 
   // set scale
 
@@ -775,8 +775,7 @@ void PPPMDisp::setup_grid()
   // free all arrays previously allocated
 
   deallocate();
-  deallocate_peratom();
-  peratom_allocate_flag = 0;
+  if (peratom_allocate_flag) deallocate_peratom();
 
   // reset portion of global grid that each proc owns
 
@@ -1137,7 +1136,8 @@ void PPPMDisp::compute(int eflag, int vflag)
   // 2d slab correction
 
   if (slabflag) slabcorr(eflag);
-  energy = energy_1 + energy_6;
+  if (function[0]) energy += energy_1;
+  if (function[1] + function[2]) energy += energy_6;
 
   // convert atoms back from lamda to box coords
   
@@ -2838,12 +2838,15 @@ void PPPMDisp::calc_csum()
   MPI_Allreduce(neach,neach_all,ntypes+1,MPI_INT,MPI_SUM,world);
 
   // copmute csumij and csumi
-
+  double d1, d2;
   if (function[1]){
     for (i=1; i<=ntypes; i++) {
       for (j=1; j<=ntypes; j++) {
         csumi[i] += neach_all[j]*B[i]*B[j];
-        csumij += neach_all[i]*neach_all[j]*B[i]*B[j]; 
+        d1 = neach_all[i]*B[i];
+        d2 = neach_all[j]*B[j];
+        csumij += d1*d2;
+        //csumij += neach_all[i]*neach_all[j]*B[i]*B[j]; 
       }
     }
   } else {
@@ -2851,7 +2854,10 @@ void PPPMDisp::calc_csum()
       for (j=1; j<=ntypes; j++) {
         for (k=0; k<=6; k++) {
           csumi[i] += neach_all[j]*B[7*i + k]*B[7*(j+1)-k-1];
-          csumij += neach_all[i]*neach_all[j]*B[7*i + k]*B[7*(j+1)-k-1];
+          d1 = neach_all[i]*B[7*i + k];
+          d2 = neach_all[j]*B[7*(j+1)-k-1];
+          csumij += d1*d2;
+          //csumij += neach_all[i]*neach_all[j]*B[7*i + k]*B[7*(j+1)-k-1];
         }
       }
     }
@@ -4168,7 +4174,7 @@ void PPPMDisp::poisson_2s_ik(FFT_SCALAR* dfft_1, FFT_SCALAR* dfft_2,
     }
 
     fft1_6->compute(work1_6,work1_6,1);
-    fft2_6->compute(work2_6,work2_6,1);
+    fft1_6->compute(work2_6,work2_6,1);
 
     double s2 = scaleinv*scaleinv;
 
@@ -4334,7 +4340,7 @@ void PPPMDisp::poisson_2s_ad(FFT_SCALAR* dfft_1, FFT_SCALAR* dfft_2,
     }
 
     fft1_6->compute(work1_6,work1_6,1);
-    fft2_6->compute(work2_6,work2_6,1);
+    fft1_6->compute(work2_6,work2_6,1);
 
     double s2 = scaleinv*scaleinv;
 

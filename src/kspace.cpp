@@ -34,9 +34,10 @@ KSpace::KSpace(LAMMPS *lmp, int narg, char **arg) : Pointers(lmp)
   virial[0] = virial[1] = virial[2] = virial[3] = virial[4] = virial[5] = 0.0;
 
   triclinic_support = 1;
-  ewaldflag = pppmflag = msmflag = dispersionflag = tip4pflag = 0;
+  ewaldflag = pppmflag = msmflag = dispersionflag = tip4pflag = dipoleflag = 0;
   compute_flag = 1;
   group_group_enable = 0;
+  stagger_flag = 0;
 
   order = 5;
   gridflag = 0;
@@ -162,6 +163,8 @@ void KSpace::pair_check()
     error->all(FLERR,"KSpace style is incompatible with Pair style");
   if (tip4pflag && force->pair->tip4pflag == 0)
     error->all(FLERR,"KSpace style is incompatible with Pair style");
+  if (dipoleflag && force->pair->dipoleflag == 0)
+    error->all(FLERR,"KSpace style is incompatible with Pair style");
 }
 
 /* ----------------------------------------------------------------------
@@ -188,12 +191,12 @@ void KSpace::ev_setup(int eflag, int vflag)
 
   // reallocate per-atom arrays if necessary
 
-  if (eflag_atom && atom->nlocal > maxeatom) {
+  if (eflag_atom && atom->nmax > maxeatom) {
     maxeatom = atom->nmax;
     memory->destroy(eatom);
     memory->create(eatom,maxeatom,"kspace:eatom");
   }
-  if (vflag_atom && atom->nlocal > maxvatom) {
+  if (vflag_atom && atom->nmax > maxvatom) {
     maxvatom = atom->nmax;
     memory->destroy(vatom);
     memory->create(vatom,maxvatom,6,"kspace:vatom");
@@ -205,10 +208,12 @@ void KSpace::ev_setup(int eflag, int vflag)
   if (vflag_global) for (i = 0; i < 6; i++) virial[i] = 0.0;
   if (eflag_atom) {
     n = atom->nlocal;
+    if (tip4pflag) n += atom->nghost;
     for (i = 0; i < n; i++) eatom[i] = 0.0;
   }
   if (vflag_atom) {
     n = atom->nlocal;
+    if (tip4pflag) n += atom->nghost;
     for (i = 0; i < n; i++) {
       vatom[i][0] = 0.0;
       vatom[i][1] = 0.0;

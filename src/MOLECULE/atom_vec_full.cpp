@@ -596,6 +596,7 @@ int AtomVecFull::pack_exchange(int i, double *buf)
   buf[m++] = tag[i];
   buf[m++] = type[i];
   buf[m++] = mask[i];
+  buf[m] = 0.0;      // for valgrind
   *((tagint *) &buf[m++]) = image[i];
 
   buf[m++] = q[i];
@@ -757,6 +758,7 @@ int AtomVecFull::pack_restart(int i, double *buf)
   buf[m++] = tag[i];
   buf[m++] = type[i];
   buf[m++] = mask[i];
+  buf[m] = 0.0;      // for valgrind
   *((tagint *) &buf[m++]) = image[i];
   buf[m++] = v[i][0];
   buf[m++] = v[i][1];
@@ -866,6 +868,8 @@ int AtomVecFull::unpack_restart(double *buf)
     improper_atom3[nlocal][k] = static_cast<int> (buf[m++]);
     improper_atom4[nlocal][k] = static_cast<int> (buf[m++]);
   }
+
+  nspecial[nlocal][0] = nspecial[nlocal][1] = nspecial[nlocal][2] = 0;
 
   double **extra = atom->extra;
   if (atom->nextra_store) {

@@ -27,11 +27,11 @@ namespace LAMMPS_NS {
 class ComputeMSD : public Compute {
  public:
   ComputeMSD(class LAMMPS *, int, char **);
-  ~ComputeMSD();
+  virtual ~ComputeMSD();
   void init();
-  void compute_vector();
+  virtual void compute_vector();
 
- private:
+ protected:
   int comflag,nmsd;
   double masstotal;
   char *id_fix;

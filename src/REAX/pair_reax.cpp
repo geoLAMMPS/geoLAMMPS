@@ -48,6 +48,7 @@ PairREAX::PairREAX(LAMMPS *lmp) : Pair(lmp)
   single_enable = 0;
   restartinfo = 0;
   one_coeff = 1;
+  manybody_flag = 1;
   no_virial_fdotr_compute = 1;
 
   nextra = 14;
@@ -486,10 +487,10 @@ void PairREAX::settings(int narg, char **arg)
   if (narg != 0 && narg !=4) error->all(FLERR,"Illegal pair_style command");
 
   if (narg == 4) {
-    hbcut = force->numeric(arg[0]);
-    ihbnew = static_cast<int> (force->numeric(arg[1]));
-    itripstaball = static_cast<int> (force->numeric(arg[2]));
-    precision = force->numeric(arg[3]);
+    hbcut = force->numeric(FLERR,arg[0]);
+    ihbnew = static_cast<int> (force->numeric(FLERR,arg[1]));
+    itripstaball = static_cast<int> (force->numeric(FLERR,arg[2]));
+    precision = force->numeric(FLERR,arg[3]);
 
     if (hbcut <= 0.0 ||
         (ihbnew != 0 && ihbnew != 1) ||
@@ -531,7 +532,7 @@ void PairREAX::coeff(int narg, char **arg)
       error->all(FLERR,"Cannot currently use pair reax with pair hybrid");
       continue;
     }
-    map[i-2] = force->inumeric(arg[i]);
+    map[i-2] = force->inumeric(FLERR,arg[i]);
   }
 
   int n = atom->ntypes;

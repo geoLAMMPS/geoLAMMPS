@@ -527,6 +527,7 @@ int AtomVecAngle::pack_exchange(int i, double *buf)
   buf[m++] = tag[i];
   buf[m++] = type[i];
   buf[m++] = mask[i];
+  buf[m] = 0.0;      // for valgrind
   *((tagint *) &buf[m++]) = image[i];
 
   buf[m++] = molecule[i];
@@ -649,6 +650,7 @@ int AtomVecAngle::pack_restart(int i, double *buf)
   buf[m++] = tag[i];
   buf[m++] = type[i];
   buf[m++] = mask[i];
+  buf[m] = 0.0;      // for valgrind
   *((tagint *) &buf[m++]) = image[i];
   buf[m++] = v[i][0];
   buf[m++] = v[i][1];
@@ -720,6 +722,8 @@ int AtomVecAngle::unpack_restart(double *buf)
     angle_atom2[nlocal][k] = static_cast<int> (buf[m++]);
     angle_atom3[nlocal][k] = static_cast<int> (buf[m++]);
   }
+
+  nspecial[nlocal][0] = nspecial[nlocal][1] = nspecial[nlocal][2] = 0;
 
   double **extra = atom->extra;
   if (atom->nextra_store) {

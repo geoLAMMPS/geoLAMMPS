@@ -66,11 +66,12 @@ Pair::Pair(LAMMPS *lmp) : Pointers(lmp)
   single_extra = 0;
   svector = NULL;
 
-  ewaldflag = pppmflag = msmflag = dispersionflag = tip4pflag = 0;
+  ewaldflag = pppmflag = msmflag = dispersionflag = tip4pflag = dipoleflag = 0;
 
   // pair_modify settings
 
   compute_flag = 1;
+  manybody_flag = 0;
   offset_flag = 0;
   mix_flag = GEOMETRIC;
   tail_flag = 0;
@@ -194,10 +195,26 @@ void Pair::init()
   if (tail_flag && domain->nonperiodic && comm->me == 0)
     error->warning(FLERR,"Using pair tail corrections with nonperiodic system");
 
-  if (!allocated) error->all(FLERR,"All pair coeffs are not set");
+  // for manybody potentials
+  // check if bonded exclusions could invalidate the neighbor list
+
+  if (manybody_flag && atom->molecular) {
+    int flag = 0;
+    if (atom->nbonds > 0 && force->special_lj[1] == 0.0 && 
+        force->special_coul[1] == 0.0) flag = 1;
+    if (atom->nangles > 0 && force->special_lj[2] == 0.0 && 
+        force->special_coul[2] == 0.0) flag = 1;
+    if (atom->ndihedrals > 0 && force->special_lj[3] == 0.0 && 
+        force->special_coul[3] == 0.0) flag = 1;
+    if (flag && comm->me == 0)
+      error->warning(FLERR,"Using a manybody potential with "
+                     "bonds/angles/dihedrals and special_bond exclusions");
+  }
 
   // I,I coeffs must be set
   // init_one() will check if I,J is set explicitly or inferred by mixing
+
+  if (!allocated) error->all(FLERR,"All pair coeffs are not set");
 
   for (i = 1; i <= atom->ntypes; i++)
     if (setflag[i][i] == 0) error->all(FLERR,"All pair coeffs are not set");
@@ -342,7 +359,8 @@ void Pair::init_tables(double cut_coul, double *cut_respa)
     r = sqrtf(rsq_lookup.f);
     if (msmflag) {
       egamma = 1.0 - (r/cut_coul)*force->kspace->gamma(r/cut_coul);
-      fgamma = 1.0 + (rsq_lookup.f/cut_coulsq)*force->kspace->dgamma(r/cut_coul);
+      fgamma = 1.0 + (rsq_lookup.f/cut_coulsq)*
+        force->kspace->dgamma(r/cut_coul);
     } else {
       grij = g_ewald * r;
       expm2 = exp(-grij*grij);
@@ -438,7 +456,8 @@ void Pair::init_tables(double cut_coul, double *cut_respa)
     r = sqrtf(rsq_lookup.f);
     if (msmflag) {
       egamma = 1.0 - (r/cut_coul)*force->kspace->gamma(r/cut_coul);
-      fgamma = 1.0 + (rsq_lookup.f/cut_coulsq)*force->kspace->dgamma(r/cut_coul);
+      fgamma = 1.0 + (rsq_lookup.f/cut_coulsq)*
+        force->kspace->dgamma(r/cut_coul);
     } else {
       grij = g_ewald * r;
       expm2 = exp(-grij*grij);
