@@ -30,6 +30,7 @@ class FixPour : public Fix {
   friend class PairGranHooke;
   friend class PairGranHookeOMP;
   friend class PairGranHookeHistory;
+  friend class PairGranHookeHistory2;
   friend class PairGranHookeHistoryOMP;
   friend class PairGranHookeCuda;
   friend class PairGranShmHistory; //~ Added this [KH - 23 November 2012]
@@ -63,7 +64,6 @@ class FixPour : public Fix {
   int *recvcounts,*displs;
   int nfreq,nfirst,ninserted,nper;
   double lo_current,hi_current;
-  class FixShearHistory *fix_history;
   class RanPark *random;
 
   int overlap(int);
