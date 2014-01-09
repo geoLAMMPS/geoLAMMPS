@@ -54,7 +54,17 @@ class FixShearHistory : public Fix {
  protected:
   int *npartner;                // # of touching partners of each atom
   int **partner;                // tags for the partners
-  double ***shearpartner;       // num_quants shear values with the partner
+
+  /*~ The number of shear quantities is not necessarily 3, but can
+    be several different values. In here, define arrays with differing
+    numbers of shear quantities. There are no space implications as
+    memory will be allocated for only one of these later on (using new)
+    [KH - 9 January 2014]*/
+  double (**shearpartner3)[3]; //~ hooke/history or hertz/history
+  double (**shearpartner4)[4]; //~ shm/history
+  double (**shearpartner16)[16]; //~ hooke/history or hertz/history with rolling
+  double (**shearpartner17)[17]; //~ shm/history with rolling
+
   int num_quants;               // the number of extra quantities for each partner (i.e. contact) modified GM
   int maxtouch;                 // max # of touching partners for my atoms
 
@@ -64,9 +74,14 @@ class FixShearHistory : public Fix {
   int pgsize,oneatom;           // copy of settings in Neighbor
   MyPage<int> *ipage;           // pages of partner atom IDs
 
-  /*~ Modified this to allow the number of shear quantities to be
-    varied [KH - 8 January 2014]*/
-  MyPage<double> *dpage;     // pages of shear history with partners
+  /*~ As before, the number of shear quantities can vary [KH - 9 January 
+    2014]*/
+  MyPage<double[3]> *dpage3;     // pages of shear history with partners
+  MyPage<double[4]> *dpage4;
+  MyPage<double[16]> *dpage16;
+  MyPage<double[17]> *dpage17;
+
+  char *stringshearpartner, *stringdpage;
 };
 
 }

@@ -39,7 +39,15 @@ void Neighbor::granular_nsq_no_newton(NeighList *list)
   NeighList *listgranhistory;
   int num_quants; // added in, modified GM
   int *npartner,**partner;
-  double ***shearpartner; //~ Removed fixed 3 quants [KH - 8 January 2014]
+  
+  /*~ The number of shear quantities is not necessarily 3, but can
+    be several different values as discussed in fix_shear_history.h
+    [KH - 9 January 2014]*/
+  double (**shearpartner3)[3]; //~ hooke/history or hertz/history
+  double (**shearpartner4)[4]; //~ shm/history
+  double (**shearpartner16)[16]; //~ hooke/history or hertz/history with rolling
+  double (**shearpartner17)[17]; //~ shm/history with rolling
+
   int **firsttouch;
   double **firstshear;
   MyPage<int> *ipage_touch;
@@ -67,13 +75,31 @@ void Neighbor::granular_nsq_no_newton(NeighList *list)
   if (fix_history) {
     npartner = fix_history->npartner;
     partner = fix_history->partner;
-    shearpartner = fix_history->shearpartner;
     num_quants = fix_history->num_quants; // added in, modified GM
     listgranhistory = list->listgranhistory;
     firsttouch = listgranhistory->firstneigh;
     firstshear = listgranhistory->firstdouble;
     ipage_touch = listgranhistory->ipage;
     dpage_shear = listgranhistory->dpage;
+
+    //~ Use a switch-case structure [KH - 9 January 2014]
+    switch (num_quants) {
+    case 4: //~ 4 is the most likely num_quants
+      shearpartner4 = fix_history->shearpartner4;
+      break;
+    case 3: //~ 3 is next most likely
+      shearpartner3 = fix_history->shearpartner3;
+      break;
+    case 16:
+      shearpartner16 = fix_history->shearpartner16;
+      break;
+    case 17:
+      shearpartner17 = fix_history->shearpartner17;
+      break;
+    default:
+      //~ If no cases matched, there is a problem
+      error->all(FLERR,"Incorrect number of shear quantities");
+    }
   }
 
   int inum = 0;
@@ -114,23 +140,85 @@ void Neighbor::granular_nsq_no_newton(NeighList *list)
         neighptr[n] = j;
 
         if (fix_history) {
-          if (rsq < radsum*radsum) {
-            for (m = 0; m < npartner[i]; m++)
-              if (partner[i][m] == tag[j]) break;
-            if (m < npartner[i]) {
-              touchptr[n] = 1;
-	      for (int kk = 0; kk < num_quants; kk++) // put the loop in, modified GM
-                shearptr[nn++] = shearpartner[i][m][kk];
-            } else {
-              touchptr[n] = 0;
-	      for (int kk = 0; kk < num_quants; kk++) // put the loop in, modified GM
-                shearptr[nn++] = 0.0;
-            }
-          } else {
-            touchptr[n] = 0;
-	    for (int kk = 0; kk < num_quants; kk++) // put the loop in, modified GM
-	      shearptr[nn++] = 0.0;
-          }
+	  //~ Use a switch-case structure [KH - 9 January 2014]
+	  switch (num_quants) {
+	  case 4: //~ 4 is the most likely num_quants
+	    if (rsq < radsum*radsum) {
+	      for (m = 0; m < npartner[i]; m++)
+		if (partner[i][m] == tag[j]) break;
+	      if (m < npartner[i]) {
+		touchptr[n] = 1;
+		for (int kk = 0; kk < 4; kk++)
+		  shearptr[nn++] = shearpartner4[i][m][kk];
+	      } else {
+		touchptr[n] = 0;
+		for (int kk = 0; kk < 4; kk++)
+		  shearptr[nn++] = 0.0;
+	      }
+	    } else {
+	      touchptr[n] = 0;
+	      for (int kk = 0; kk < 4; kk++)
+		shearptr[nn++] = 0.0;
+	    }
+	    break;
+	  case 3: //~ 3 is next most likely
+ 	    if (rsq < radsum*radsum) {
+	      for (m = 0; m < npartner[i]; m++)
+		if (partner[i][m] == tag[j]) break;
+	      if (m < npartner[i]) {
+		touchptr[n] = 1;
+		for (int kk = 0; kk < 3; kk++)
+		  shearptr[nn++] = shearpartner3[i][m][kk];
+	      } else {
+		touchptr[n] = 0;
+		for (int kk = 0; kk < 3; kk++)
+		  shearptr[nn++] = 0.0;
+	      }
+	    } else {
+	      touchptr[n] = 0;
+	      for (int kk = 0; kk < 3; kk++)
+		shearptr[nn++] = 0.0;
+	    }
+	    break;
+	  case 16:
+    	    if (rsq < radsum*radsum) {
+	      for (m = 0; m < npartner[i]; m++)
+		if (partner[i][m] == tag[j]) break;
+	      if (m < npartner[i]) {
+		touchptr[n] = 1;
+		for (int kk = 0; kk < 16; kk++)
+		  shearptr[nn++] = shearpartner16[i][m][kk];
+	      } else {
+		touchptr[n] = 0;
+		for (int kk = 0; kk < 16; kk++)
+		  shearptr[nn++] = 0.0;
+	      }
+	    } else {
+	      touchptr[n] = 0;
+	      for (int kk = 0; kk < 16; kk++)
+		shearptr[nn++] = 0.0;
+	    }
+	    break;
+	  case 17:
+    	    if (rsq < radsum*radsum) {
+	      for (m = 0; m < npartner[i]; m++)
+		if (partner[i][m] == tag[j]) break;
+	      if (m < npartner[i]) {
+		touchptr[n] = 1;
+		for (int kk = 0; kk < 17; kk++)
+		  shearptr[nn++] = shearpartner17[i][m][kk];
+	      } else {
+		touchptr[n] = 0;
+		for (int kk = 0; kk < 17; kk++)
+		  shearptr[nn++] = 0.0;
+	      }
+	    } else {
+	      touchptr[n] = 0;
+	      for (int kk = 0; kk < 17; kk++)
+		shearptr[nn++] = 0.0;
+	    }
+	    break;
+	  }
         }
 
         n++;
@@ -265,7 +353,13 @@ void Neighbor::granular_bin_no_newton(NeighList *list)
   NeighList *listgranhistory;
   int num_quants; // added in, modified GM
   int *npartner,**partner;
-  double ***shearpartner; //~ Removed fixed 3 quants [KH - 8 January 2014]
+  
+  //~ As in granular_nsq_no_newton [KH - 9 January 2014]
+  double (**shearpartner3)[3]; //~ hooke/history or hertz/history
+  double (**shearpartner4)[4]; //~ shm/history
+  double (**shearpartner16)[16]; //~ hooke/history or hertz/history with rolling
+  double (**shearpartner17)[17]; //~ shm/history with rolling
+
   int **firsttouch;
   double **firstshear;
   MyPage<int> *ipage_touch;
@@ -297,13 +391,31 @@ void Neighbor::granular_bin_no_newton(NeighList *list)
   if (fix_history) {
     npartner = fix_history->npartner;
     partner = fix_history->partner;
-    shearpartner = fix_history->shearpartner;
     num_quants = fix_history->num_quants; // added in, modified GM
     listgranhistory = list->listgranhistory;
     firsttouch = listgranhistory->firstneigh;
     firstshear = listgranhistory->firstdouble;
     ipage_touch = listgranhistory->ipage;
     dpage_shear = listgranhistory->dpage;
+
+    //~ Use a switch-case structure [KH - 9 January 2014]
+    switch (num_quants) {
+    case 4: //~ 4 is the most likely num_quants
+      shearpartner4 = fix_history->shearpartner4;
+      break;
+    case 3: //~ 3 is next most likely
+      shearpartner3 = fix_history->shearpartner3;
+      break;
+    case 16:
+      shearpartner16 = fix_history->shearpartner16;
+      break;
+    case 17:
+      shearpartner17 = fix_history->shearpartner17;
+      break;
+    default:
+      //~ If no cases matched, there is a problem
+      error->all(FLERR,"Incorrect number of shear quantities");
+    }
   }
 
   int inum = 0;
@@ -349,23 +461,85 @@ void Neighbor::granular_bin_no_newton(NeighList *list)
           neighptr[n] = j;
 
           if (fix_history) {
-            if (rsq < radsum*radsum) {
-              for (m = 0; m < npartner[i]; m++)
-                if (partner[i][m] == tag[j]) break;
-              if (m < npartner[i]) {
-                touchptr[n] = 1;
-		for (int kk = 0; kk < num_quants; kk++) // put the loop in, modified GM
-		  shearptr[nn++] = shearpartner[i][m][kk];
-              } else {
-                touchptr[n] = 0;
-		for (int kk = 0; kk < num_quants; kk++) // put the loop in, modified GM
+	    //~ Use a switch-case structure [KH - 9 January 2014]
+	    switch (num_quants) {
+	    case 4: //~ 4 is the most likely num_quants
+	      if (rsq < radsum*radsum) {
+		for (m = 0; m < npartner[i]; m++)
+		  if (partner[i][m] == tag[j]) break;
+		if (m < npartner[i]) {
+		  touchptr[n] = 1;
+		  for (int kk = 0; kk < 4; kk++)
+		    shearptr[nn++] = shearpartner4[i][m][kk];
+		} else {
+		  touchptr[n] = 0;
+		  for (int kk = 0; kk < 4; kk++)
+		    shearptr[nn++] = 0.0;
+		}
+	      } else {
+		touchptr[n] = 0;
+		for (int kk = 0; kk < 4; kk++)
 		  shearptr[nn++] = 0.0;
-              }
-            } else {
-              touchptr[n] = 0;
-	      for (int kk = 0; kk < num_quants; kk++) // put the loop in, modified GM
-		shearptr[nn++] = 0.0;
-            }
+	      }
+	      break;
+	    case 3: //~ 3 is next most likely
+	      if (rsq < radsum*radsum) {
+		for (m = 0; m < npartner[i]; m++)
+		  if (partner[i][m] == tag[j]) break;
+		if (m < npartner[i]) {
+		  touchptr[n] = 1;
+		  for (int kk = 0; kk < 3; kk++)
+		    shearptr[nn++] = shearpartner3[i][m][kk];
+		} else {
+		  touchptr[n] = 0;
+		  for (int kk = 0; kk < 3; kk++)
+		    shearptr[nn++] = 0.0;
+		}
+	      } else {
+		touchptr[n] = 0;
+		for (int kk = 0; kk < 3; kk++)
+		  shearptr[nn++] = 0.0;
+	      }
+	      break;
+	    case 16:
+	      if (rsq < radsum*radsum) {
+		for (m = 0; m < npartner[i]; m++)
+		  if (partner[i][m] == tag[j]) break;
+		if (m < npartner[i]) {
+		  touchptr[n] = 1;
+		  for (int kk = 0; kk < 16; kk++)
+		    shearptr[nn++] = shearpartner16[i][m][kk];
+		} else {
+		  touchptr[n] = 0;
+		  for (int kk = 0; kk < 16; kk++)
+		    shearptr[nn++] = 0.0;
+		}
+	      } else {
+		touchptr[n] = 0;
+		for (int kk = 0; kk < 16; kk++)
+		  shearptr[nn++] = 0.0;
+	      }
+	      break;
+	    case 17:
+	      if (rsq < radsum*radsum) {
+		for (m = 0; m < npartner[i]; m++)
+		  if (partner[i][m] == tag[j]) break;
+		if (m < npartner[i]) {
+		  touchptr[n] = 1;
+		  for (int kk = 0; kk < 17; kk++)
+		    shearptr[nn++] = shearpartner17[i][m][kk];
+		} else {
+		  touchptr[n] = 0;
+		  for (int kk = 0; kk < 17; kk++)
+		    shearptr[nn++] = 0.0;
+		}
+	      } else {
+		touchptr[n] = 0;
+		for (int kk = 0; kk < 17; kk++)
+		  shearptr[nn++] = 0.0;
+	      }
+	      break;
+	    }
           }
 
           n++;
