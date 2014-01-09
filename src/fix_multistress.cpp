@@ -94,7 +94,7 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, nar
   nevery = 1; //~ Set how often to run the end_of_step function
 
   //~ Set flags to indicate that the dimensions of the box change
-  box_change = no_change_box = 1;
+  no_change_box = 1;
 
   MPI_Comm_rank(world,&me); //~ Identify the processor rank
 
