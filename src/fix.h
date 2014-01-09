@@ -26,9 +26,11 @@ class Fix : protected Pointers {
   int restart_global;            // 1 if Fix saves global state, 0 if not
   int restart_peratom;           // 1 if Fix saves peratom state, 0 if not
   int force_reneighbor;          // 1 if Fix forces reneighboring, 0 if not
-  int box_change;                // 1 if Fix changes box, 0 if not
+
   int box_change_size;           // 1 if Fix changes box size, 0 if not
   int box_change_shape;          // 1 if Fix changes box shape, 0 if not
+  int box_change_domain;         // 1 if Fix changes proc sub-domains, 0 if not
+
   bigint next_reneighbor;        // next timestep to force a reneighboring
   int thermo_energy;             // 1 if fix_modify enabled ThEng, 0 if not
   int nevery;                    // how often to call an end_of_step fix
@@ -72,6 +74,7 @@ class Fix : protected Pointers {
 
   int comm_forward;              // size of forward communication (0 if none)
   int comm_reverse;              // size of reverse communication (0 if none)
+  int comm_border;               // size of border communication (0 if none)
 
   double virial[6];              // accumlated virial
   double **vatom;                // accumulated per-atom virial
@@ -109,6 +112,8 @@ class Fix : protected Pointers {
   virtual void copy_arrays(int, int, int) {}
   virtual void set_arrays(int) {}
   virtual void update_arrays(int, int) {}
+  virtual int pack_border(int, int *, double *) {return 0;}
+  virtual int unpack_border(int, int, double *) {return 0;}
   virtual int pack_exchange(int, double *) {return 0;}
   virtual int unpack_exchange(int, double *) {return 0;}
   virtual int pack_restart(int, double *) {return 0;}

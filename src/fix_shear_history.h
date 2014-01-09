@@ -81,7 +81,7 @@ class FixShearHistory : public Fix {
   MyPage<double[16]> *dpage16;
   MyPage<double[17]> *dpage17;
 
-  char *stringshearpartner, *stringdpage;
+  void allocate_pages();
 };
 
 }

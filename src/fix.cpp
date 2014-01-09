@@ -49,9 +49,7 @@ Fix::Fix(LAMMPS *lmp, int narg, char **arg) : Pointers(lmp)
   restart_global = 0;
   restart_peratom = 0;
   force_reneighbor = 0;
-  box_change = 0;
-  box_change_size = 0;
-  box_change_shape = 0;
+  box_change_size = box_change_shape = box_change_domain = 0;
   thermo_energy = 0;
   rigid_flag = 0;
   virial_flag = 0;
@@ -65,7 +63,7 @@ Fix::Fix(LAMMPS *lmp, int narg, char **arg) : Pointers(lmp)
   scalar_flag = vector_flag = array_flag = 0;
   peratom_flag = local_flag = 0;
 
-  comm_forward = comm_reverse = 0;
+  comm_forward = comm_reverse = comm_border = 0;
   restart_reset = 0;
 
   maxvatom = 0;

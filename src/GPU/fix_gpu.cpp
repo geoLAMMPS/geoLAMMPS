@@ -19,13 +19,15 @@
 #include "pair.h"
 #include "respa.h"
 #include "input.h"
-#include "error.h"
 #include "timer.h"
 #include "modify.h"
+#include "update.h"
 #include "domain.h"
 #include "universe.h"
 #include "gpu_extra.h"
 #include "neighbor.h"
+#include "citeme.h"
+#include "error.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -41,11 +43,32 @@ extern void lmp_clear_device();
 extern double lmp_gpu_forces(double **f, double **tor, double *eatom,
                              double **vatom, double *virial, double &ecoul);
 
+static const char cite_gpu_package[] =
+  "GPU package (short-range and long-range):\n\n"
+  "@Article{Brown11,\n"
+  " author = {W. M. Brown, P. Wang, S. J. Plimpton, A. N. Tharrington},\n"
+  " title = {Implementing Molecular Dynamics on Hybrid High Performance Computers - Short Range Forces},\n"
+  " journal = {Comp.~Phys.~Comm.},\n"
+  " year =    2011,\n"
+  " volume =  182,\n"
+  " pages =   {898--911}\n"
+  "}\n\n"
+  "@Article{Brown12,\n"
+  " author = {W. M. Brown, A. Kohlmeyer, S. J. Plimpton, A. N. Tharrington},\n"
+  " title = {Implementing Molecular Dynamics on Hybrid High Performance Computers - Particle-Particle Particle-Mesh},\n"
+  " journal = {Comp.~Phys.~Comm.},\n"
+  " year =    2012,\n"
+  " volume =  183,\n"
+  " pages =   {449--459}\n"
+  "}\n\n"
+
 /* ---------------------------------------------------------------------- */
 
 FixGPU::FixGPU(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg)
 {
+  if (lmp->citeme) lmp->citeme->add(cite_gpu_package);
+
   if (lmp->cuda)
     error->all(FLERR,"Cannot use fix GPU with USER-CUDA mode enabled");
 
@@ -123,6 +146,7 @@ int FixGPU::setmask()
   int mask = 0;
   mask |= POST_FORCE;
   mask |= MIN_POST_FORCE;
+  mask |= POST_FORCE_RESPA;
   return mask;
 }
 
@@ -135,11 +159,27 @@ void FixGPU::init()
   if (_gpu_mode == GPU_NEIGH || _gpu_mode == GPU_HYB_NEIGH)
     if (force->pair_match("hybrid",1) != NULL ||
         force->pair_match("hybrid/overlay",1) != NULL)
-      error->all(FLERR,"Cannot use pair hybrid with GPU neighbor builds");
+      error->all(FLERR,"Cannot use pair hybrid with GPU neighbor list builds");
   if (_particle_split < 0)
     if (force->pair_match("hybrid",1) != NULL ||
         force->pair_match("hybrid/overlay",1) != NULL)
-      error->all(FLERR,"Fix GPU split must be positive for hybrid pair styles");
+      error->all(FLERR,"GPU 'split' must be positive for hybrid pair styles");
+
+  // r-RESPA support
+
+  if (strstr(update->integrate_style,"respa")) {
+    _nlevels_respa = ((Respa *) update->integrate)->nlevels;
+
+    // need to check that gpu accelerated styles are at the outmost levels
+    
+    if ((force->pair_match("/gpu",0) != NULL) &&
+        (((Respa *) update->integrate)->level_pair != _nlevels_respa-1))
+      error->all(FLERR,"GPU pair style must be at outermost respa level");
+
+    if ((force->kspace_match("/gpu",0) != NULL) &&
+        (((Respa *) update->integrate)->level_kspace != _nlevels_respa-1))
+      error->all(FLERR,"GPU Kspace style must be at outermost respa level");
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -150,7 +190,14 @@ void FixGPU::setup(int vflag)
     if (neighbor->exclude_setting()!=0)
       error->all(FLERR,
                  "Cannot use neigh_modify exclude with GPU neighbor builds");
-  post_force(vflag);
+
+  if (strstr(update->integrate_style,"verlet"))
+    post_force(vflag);
+  else {
+    ((Respa *) update->integrate)->copy_flevel_f(_nlevels_respa-1);
+    post_force_respa(vflag,_nlevels_respa-1,0);
+    ((Respa *) update->integrate)->copy_f_flevel(_nlevels_respa-1);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -188,6 +235,13 @@ void FixGPU::post_force(int vflag)
 void FixGPU::min_post_force(int vflag)
 {
   post_force(vflag);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixGPU::post_force_respa(int vflag, int ilevel, int iloop)
+{
+  if (ilevel == _nlevels_respa-1) post_force(vflag);
 }
 
 /* ---------------------------------------------------------------------- */

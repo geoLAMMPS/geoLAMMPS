@@ -124,9 +124,16 @@ void FixShearHistory::init()
   int dim;
   computeflag = (int *) pair->extract("computeflag",dim);
 
-  // create pages if first time or if neighbor pgsize/oneatom has changed
-  // note that latter could cause shear history info to be discarded
+  allocate_pages();
+}
 
+/* ----------------------------------------------------------------------
+  create pages if first time or if neighbor pgsize/oneatom has changed
+  note that latter could cause shear history info to be discarded
+------------------------------------------------------------------------- */
+
+void FixShearHistory::allocate_pages()
+{
   int create = 0;
   if (ipage == NULL) create = 1;
   if (pgsize != neighbor->pgsize) create = 1;
@@ -210,10 +217,13 @@ void FixShearHistory::pre_exchange()
   int *touch,**firsttouch;
   double *shear,*allshear,**firstshear;
 
+  // nlocal may include atoms added since last neigh build
+
+  int nlocal = atom->nlocal;
+
   // zero npartner for all current atoms
   // clear 2 page data structures
 
-  int nlocal = atom->nlocal;
   for (i = 0; i < nlocal; i++) npartner[i] = 0;
 
   ipage->reset();
@@ -236,6 +246,7 @@ void FixShearHistory::pre_exchange()
 
   // 1st loop over neighbor list
   // calculate npartner for each owned atom
+  // nlocal_neigh = nlocal when neigh list was built, may be smaller than nlocal
 
   int *tag = atom->tag;
   NeighList *list = pair->list;
@@ -245,6 +256,9 @@ void FixShearHistory::pre_exchange()
   firstneigh = list->firstneigh;
   firsttouch = list->listgranhistory->firstneigh;
   firstshear = list->listgranhistory->firstdouble;
+
+  int nlocal_neigh = 0;
+  if (inum) nlocal_neigh = ilist[inum-1] + 1;
 
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
@@ -257,7 +271,7 @@ void FixShearHistory::pre_exchange()
         npartner[i]++;
         j = jlist[jj];
         j &= NEIGHMASK;
-        if (j < nlocal) npartner[j]++;
+        if (j < nlocal_neigh) npartner[j]++;
       }
     }
   }
@@ -440,9 +454,11 @@ void FixShearHistory::pre_exchange()
   }
 
   // set maxtouch = max # of partners of any owned atom
+  // bump up comm->maxexchange_fix if necessary
 
   maxtouch = 0;
   for (i = 0; i < nlocal; i++) maxtouch = MAX(maxtouch,npartner[i]);
+  comm->maxexchange_fix = MAX(comm->maxexchange_fix,4*maxtouch+1);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -712,9 +728,13 @@ int FixShearHistory::pack_restart(int i, double *buf)
 
 void FixShearHistory::unpack_restart(int nlocal, int nth)
 {
-  double **extra = atom->extra;
+  // ipage = NULL if being called from granular pair style init()
+
+  if (ipage == NULL) allocate_pages();
 
   // skip to Nth set of extra values
+
+  double **extra = atom->extra;
 
   int m = 0;
   for (int i = 0; i < nth; i++) m += static_cast<int> (extra[nlocal][m]);
@@ -769,7 +789,7 @@ void FixShearHistory::unpack_restart(int nlocal, int nth)
 
 int FixShearHistory::maxsize_restart()
 {
-  // maxtouch_all = max touching partners across all procs
+  // maxtouch_all = max # of touching partners across all procs
 
   int maxtouch_all;
   MPI_Allreduce(&maxtouch,&maxtouch_all,1,MPI_INT,MPI_MAX,world);
