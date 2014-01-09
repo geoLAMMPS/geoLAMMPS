@@ -349,7 +349,7 @@ void FixShearHistory::pre_exchange()
 	  for (int kk = 0; kk < 4; kk++)
 	    shearpartner4[i][m][kk] = shear[kk];
 	  npartner[i]++;
-	  if (j < nlocal) {
+	  if (j < nlocal_neigh) {
 	    m = npartner[j];
 	    partner[j][m] = tag[i];
 	    for (int kk = 0; kk < 4; kk++) {
@@ -382,7 +382,7 @@ void FixShearHistory::pre_exchange()
 	  for (int kk = 0; kk < 3; kk++)
 	    shearpartner3[i][m][kk] = shear[kk];
 	  npartner[i]++;
-	  if (j < nlocal) {
+	  if (j < nlocal_neigh) {
 	    m = npartner[j];
 	    partner[j][m] = tag[i];
 	    for (int kk = 0; kk < 3; kk++)
@@ -411,7 +411,7 @@ void FixShearHistory::pre_exchange()
 	  for (int kk = 0; kk < 16; kk++)
 	    shearpartner16[i][m][kk] = shear[kk];
 	  npartner[i]++;
-	  if (j < nlocal) {
+	  if (j < nlocal_neigh) {
 	    m = npartner[j];
 	    partner[j][m] = tag[i];
 	    for (int kk = 0; kk < 16; kk++)
@@ -440,7 +440,7 @@ void FixShearHistory::pre_exchange()
 	  for (int kk = 0; kk < 17; kk++)
 	    shearpartner17[i][m][kk] = shear[kk];
 	  npartner[i]++;
-	  if (j < nlocal) {
+	  if (j < nlocal_neigh) {
 	    m = npartner[j];
 	    partner[j][m] = tag[i];
 	    for (int kk = 0; kk < 17; kk++)
