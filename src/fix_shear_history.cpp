@@ -455,10 +455,10 @@ void FixShearHistory::pre_exchange()
 
   // set maxtouch = max # of partners of any owned atom
   // bump up comm->maxexchange_fix if necessary
-
+  //~ Hard-coded 4 replaced with (num_quants+1) [KH - 9 January 2014]
   maxtouch = 0;
   for (i = 0; i < nlocal; i++) maxtouch = MAX(maxtouch,npartner[i]);
-  comm->maxexchange_fix = MAX(comm->maxexchange_fix,4*maxtouch+1);
+  comm->maxexchange_fix = MAX(comm->maxexchange_fix,(num_quants+1)*maxtouch+1);
 }
 
 /* ---------------------------------------------------------------------- */
