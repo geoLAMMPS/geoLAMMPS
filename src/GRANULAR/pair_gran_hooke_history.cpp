@@ -364,9 +364,9 @@ void PairGranHookeHistory::compute(int eflag, int vflag)
 
         // tangential forces = shear + tangential velocity damping
 
-        shear[0] = - (kt*vtr1*dt + meff*gammat*vtr1);
-        shear[1] = - (kt*vtr2*dt + meff*gammat*vtr2);
-        shear[2] = - (kt*vtr3*dt + meff*gammat*vtr3);
+        shear[0] -= (kt*vtr1*dt + meff*gammat*vtr1);
+        shear[1] -= (kt*vtr2*dt + meff*gammat*vtr2);
+        shear[2] -= (kt*vtr3*dt + meff*gammat*vtr3);
 
         // rescale frictional displacements and forces if needed
 
