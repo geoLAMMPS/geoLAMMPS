@@ -653,7 +653,7 @@ double FixCrushing::reduce_radius(int i, double **localdata, int nrows)
 {
   double *radius = atom->radius;
   double oldradius = radius[i];
-  double mindist = -1.0; //~ The amount by which to reduce the radius
+  double mindist = 0.0; //~ The amount by which to reduce the radius
 
   if (redtype == 1) {
     //~ Reduce the diameter to just lose contact with neighbouring particles 
