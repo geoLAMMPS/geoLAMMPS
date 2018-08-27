@@ -1192,7 +1192,7 @@ void Pair::ev_tally_xyz_full(int i, double evdwl, double ecoul,
    Calculates the stress tensor for each grain - see Potyondy and 
    Cundall (2004) for details of the formula used. Called by granular pairs
 ------------------------------------------------------------------------- */
-void Pair::ev_tally_gran(int i, int j, int nlocal,
+void Pair::ev_tally_gran(int i, int j, int nlocal, int newton_pair,
 			double fx, double fy, double fz,
 			double xi, double yi, double zi, double radi,
 			double xj, double yj, double zj, double radj)
@@ -1219,7 +1219,7 @@ void Pair::ev_tally_gran(int i, int j, int nlocal,
     if (vflag_either)
     {
         if (vflag_atom) {
-          if (i < nlocal)
+          if (newton_pair || i < nlocal)
           {
             //volume of the particle
             if(domain->dimension == 3)
@@ -1235,7 +1235,7 @@ void Pair::ev_tally_gran(int i, int j, int nlocal,
             vatom[i][4] += (cx-xi) * fz / volume;
             vatom[i][5] += (cy-yi) * fz / volume;
           }
-          if (j < nlocal)
+          if (newton_pair || j < nlocal)
            {
             //volume of the particle
             if(domain->dimension == 3)

@@ -405,7 +405,7 @@ void PairGranShmHistory::compute(int eflag, int vflag)
 	//~ Assign current polyhertz value to shear[3] [KH - 23 November 2012]
 	shear[3] = polyhertz;
 
-        if (evflag) ev_tally_gran(i,j,nlocal,fx,fy,fz,x[i][0],x[i][1],x[i][2],
+        if (evflag) ev_tally_gran(i,j,nlocal,newton_pair,fx,fy,fz,x[i][0],x[i][1],x[i][2],
 				  radius[i],x[j][0],x[j][1],x[j][2],radius[j]);
       }
     }

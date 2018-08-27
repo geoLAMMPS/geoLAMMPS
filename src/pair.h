@@ -256,7 +256,7 @@ class Pair : protected Pointers {
   void ev_tally_full(int, double, double, double, double, double, double);
   void ev_tally_xyz_full(int, double, double,
                          double, double, double, double, double, double);
-  void ev_tally_gran(int, int, int, double,
+  void ev_tally_gran(int, int, int, int, double,
                      double, double, double, double, double, double, double, double, double, double);
   void ev_tally4(int, int, int, int, double,
                  double *, double *, double *, double *, double *, double *);
