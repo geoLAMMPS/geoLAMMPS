@@ -90,6 +90,9 @@ ComputePairLocal::ComputePairLocal(LAMMPS *lmp, int narg, char **arg) :
   if (cutstyle == RADIUS && !atom->radius_flag)
     error->all(FLERR,"Compute pair/local requires atom attribute radius");
 
+  if (cutstyle == TYPE) //~ Added this warning [KH - 07 Nov. 2018]
+    error->warning(FLERR,"For writing out contact forces, the 'cutoff radius' option should be active in ComputePairLocal")
+  
   // set singleflag if need to call pair->single()
 
   singleflag = 0;
@@ -225,13 +228,8 @@ int ComputePairLocal::compute_pairs(int flag)
 
       if (!(mask[j] & groupbit)) continue;
 
-      /*~ Modified the code below so that contact forces are written
-	correctly without duplication when ghost atoms are present
-	for which the atom tags are required [KH - 10 January 2013]*/
-      if (j >= nlocal && tag[i] > tag[j]) continue;
-
       // itag = jtag is possible for long cutoffs that include images of self
-      /* Commented out in merge [KH - 03 October 2014]
+
       if (newton_pair == 0 && j >= nlocal) {
         jtag = tag[j];
         if (itag > jtag) {
@@ -245,7 +243,7 @@ int ComputePairLocal::compute_pairs(int flag)
             if (x[j][1] == ytmp && x[j][0] < xtmp) continue;
           }
         }
-	}*/
+      }
 
       delx = xtmp - x[j][0];
       dely = ytmp - x[j][1];
