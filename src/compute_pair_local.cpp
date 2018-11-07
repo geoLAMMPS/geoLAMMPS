@@ -91,7 +91,7 @@ ComputePairLocal::ComputePairLocal(LAMMPS *lmp, int narg, char **arg) :
     error->all(FLERR,"Compute pair/local requires atom attribute radius");
 
   if (cutstyle == TYPE) //~ Added this warning [KH - 07 Nov. 2018]
-    error->warning(FLERR,"For writing out contact forces, the 'cutoff radius' option should be active in ComputePairLocal")
+    error->warning(FLERR,"For writing out contact forces, the 'cutoff radius' option should be active in ComputePairLocal");
   
   // set singleflag if need to call pair->single()
 
