@@ -32,6 +32,7 @@
 #include "input.h"
 #include "variable.h"
 #include "error.h"
+#include "neighbor.h"
 #include "math_extra.h" //~ These five header files needed for rolling resistance model [KH - 5 November 2013]
 #include "fix_old_omega.h"
 #include "math_special.h"

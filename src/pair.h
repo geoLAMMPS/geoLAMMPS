@@ -15,7 +15,6 @@
 #define LMP_PAIR_H
 
 #include "pointers.h"
-#include "accelerator_kokkos.h"
 
 namespace LAMMPS_NS {
 
@@ -150,7 +149,7 @@ class Pair : protected Pointers {
 
   virtual double single(int, int, int, int,
                         double, double, double,
-			double& fforce) {
+                        double& fforce) {
     fforce = 0.0;
     return 0.0;
   }
@@ -176,10 +175,6 @@ class Pair : protected Pointers {
 
   virtual int pack_forward_comm(int, int *, double *, int, int *) {return 0;}
   virtual void unpack_forward_comm(int, int, double *) {}
-  virtual int pack_forward_comm_kokkos(int, DAT::tdual_int_2d, 
-                                       int, DAT::tdual_xfloat_1d &, 
-                                       int, int *) {return 0;};
-  virtual void unpack_forward_comm_kokkos(int, int, DAT::tdual_xfloat_1d &) {}
   virtual int pack_reverse_comm(int, int, double *) {return 0;}
   virtual void unpack_reverse_comm(int, int *, double *) {}
   virtual double memory_usage();

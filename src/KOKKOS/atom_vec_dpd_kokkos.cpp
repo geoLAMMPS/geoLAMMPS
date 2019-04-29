@@ -19,7 +19,7 @@
 #include "modify.h"
 #include "fix.h"
 #include "atom_masks.h"
-#include "memory.h"
+#include "memory_kokkos.h"
 #include "error.h"
 
 using namespace LAMMPS_NS;
@@ -67,24 +67,24 @@ void AtomVecDPDKokkos::grow(int n)
   sync(Device,ALL_MASK);
   modified(Device,ALL_MASK);
 
-  memory->grow_kokkos(atomKK->k_tag,atomKK->tag,nmax,"atom:tag");
-  memory->grow_kokkos(atomKK->k_type,atomKK->type,nmax,"atom:type");
-  memory->grow_kokkos(atomKK->k_mask,atomKK->mask,nmax,"atom:mask");
-  memory->grow_kokkos(atomKK->k_image,atomKK->image,nmax,"atom:image");
+  memoryKK->grow_kokkos(atomKK->k_tag,atomKK->tag,nmax,"atom:tag");
+  memoryKK->grow_kokkos(atomKK->k_type,atomKK->type,nmax,"atom:type");
+  memoryKK->grow_kokkos(atomKK->k_mask,atomKK->mask,nmax,"atom:mask");
+  memoryKK->grow_kokkos(atomKK->k_image,atomKK->image,nmax,"atom:image");
 
-  memory->grow_kokkos(atomKK->k_x,atomKK->x,nmax,3,"atom:x");
-  memory->grow_kokkos(atomKK->k_v,atomKK->v,nmax,3,"atom:v");
-  memory->grow_kokkos(atomKK->k_f,atomKK->f,nmax,3,"atom:f");
+  memoryKK->grow_kokkos(atomKK->k_x,atomKK->x,nmax,3,"atom:x");
+  memoryKK->grow_kokkos(atomKK->k_v,atomKK->v,nmax,3,"atom:v");
+  memoryKK->grow_kokkos(atomKK->k_f,atomKK->f,nmax,3,"atom:f");
 
 
-  memory->grow_kokkos(atomKK->k_rho,atomKK->rho,nmax,"atom:rho");
-  memory->grow_kokkos(atomKK->k_dpdTheta,atomKK->dpdTheta,nmax,"atom:dpdTheta");
-  memory->grow_kokkos(atomKK->k_uCond,atomKK->uCond,nmax,"atom:uCond");
-  memory->grow_kokkos(atomKK->k_uMech,atomKK->uMech,nmax,"atom:uMech");
-  memory->grow_kokkos(atomKK->k_uChem,atomKK->uChem,nmax,"atom:uChem");
-  memory->grow_kokkos(atomKK->k_uCG,atomKK->uCG,nmax,"atom:uCG");
-  memory->grow_kokkos(atomKK->k_uCGnew,atomKK->uCGnew,nmax,"atom:uCGnew");
-  memory->grow_kokkos(atomKK->k_duChem,atomKK->duChem,nmax,"atom:duChem");
+  memoryKK->grow_kokkos(atomKK->k_rho,atomKK->rho,nmax,"atom:rho");
+  memoryKK->grow_kokkos(atomKK->k_dpdTheta,atomKK->dpdTheta,nmax,"atom:dpdTheta");
+  memoryKK->grow_kokkos(atomKK->k_uCond,atomKK->uCond,nmax,"atom:uCond");
+  memoryKK->grow_kokkos(atomKK->k_uMech,atomKK->uMech,nmax,"atom:uMech");
+  memoryKK->grow_kokkos(atomKK->k_uChem,atomKK->uChem,nmax,"atom:uChem");
+  memoryKK->grow_kokkos(atomKK->k_uCG,atomKK->uCG,nmax,"atom:uCG");
+  memoryKK->grow_kokkos(atomKK->k_uCGnew,atomKK->uCGnew,nmax,"atom:uCGnew");
+  memoryKK->grow_kokkos(atomKK->k_duChem,atomKK->duChem,nmax,"atom:duChem");
 
   if (atom->nextra_grow)
     for (int iextra = 0; iextra < atom->nextra_grow; iextra++)
@@ -335,7 +335,7 @@ int AtomVecDPDKokkos::pack_comm_kokkos(const int &n,
     }
   }
 
-	return n*size_forward;
+        return n*size_forward;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -368,7 +368,7 @@ struct AtomVecDPDKokkos_PackCommSelf {
       _dpdTheta(dpdTheta.view<DeviceType>()),
       _uCond(uCond.view<DeviceType>()),
       _uMech(uMech.view<DeviceType>()),
-      _uChem(uChem.view<DeviceType>()),      
+      _uChem(uChem.view<DeviceType>()),
       _nfirst(nfirst),_list(list.view<DeviceType>()),_iswap(iswap),
       _xprd(xprd),_yprd(yprd),_zprd(zprd),
       _xy(xy),_xz(xz),_yz(yz) {
@@ -397,14 +397,14 @@ struct AtomVecDPDKokkos_PackCommSelf {
       _dpdTheta(i+_nfirst) = _dpdTheta(j);
       _uCond(i+_nfirst) = _uCond(j);
       _uMech(i+_nfirst) = _uMech(j);
-      _uChem(i+_nfirst) = _uChem(j); 
+      _uChem(i+_nfirst) = _uChem(j);
   }
 };
 
 /* ---------------------------------------------------------------------- */
 
 int AtomVecDPDKokkos::pack_comm_self(const int &n, const DAT::tdual_int_2d &list, const int & iswap,
-										const int nfirst, const int &pbc_flag, const int* const pbc) {
+                                                                                const int nfirst, const int &pbc_flag, const int* const pbc) {
   if(commKK->forward_comm_on_host) {
     sync(Host,X_MASK|DPDTHETA_MASK|UCOND_MASK|UMECH_MASK|UCHEM_MASK);
     modified(Host,X_MASK|DPDTHETA_MASK|UCOND_MASK|UMECH_MASK|UCHEM_MASK);
@@ -478,7 +478,7 @@ int AtomVecDPDKokkos::pack_comm_self(const int &n, const DAT::tdual_int_2d &list
       }
     }
   }
-	return n*3;
+        return n*3;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -656,7 +656,7 @@ int AtomVecDPDKokkos::pack_comm_vel(int n, int *list, double *buf,
         buf[m++] = h_dpdTheta(j);
         buf[m++] = h_uCond(j);
         buf[m++] = h_uMech(j);
-        buf[m++] = h_uChem(j); 
+        buf[m++] = h_uChem(j);
       }
     }
   }

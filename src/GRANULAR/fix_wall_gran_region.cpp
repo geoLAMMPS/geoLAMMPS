@@ -30,6 +30,8 @@
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
+#include "comm.h"
+#include "neighbor.h"
 //~ Added compute header files for energy tracing [KH - 27 May 2017]
 #include "compute.h"
 #include "compute_energy_gran.h"
