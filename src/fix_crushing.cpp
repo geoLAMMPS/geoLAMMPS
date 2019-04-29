@@ -619,7 +619,7 @@ void FixCrushing::end_of_step()
     domain->image_check();
     domain->box_too_small_check();
     modify->setup_pre_neighbor();
-    neighbor->build();
+    neighbor->build(1);
     modify->setup_post_neighbor();
     neighbor->ncalls = 0;
     
