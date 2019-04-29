@@ -167,7 +167,7 @@ class Pair : protected Pointers {
   virtual void free_disp_tables();
 
   virtual void write_restart(FILE *) {}
-  virtual void read_restart(FILE *) {}
+  virtual void read_restart(FILE *);
   virtual void write_restart_settings(FILE *) {}
   virtual void read_restart_settings(FILE *) {}
   virtual void write_data(FILE *) {}
@@ -334,6 +334,10 @@ New coding for the pair style would need to be done.
 E: Pair style requires a KSpace style
 
 No kspace style is defined.
+
+E: BUG: restartinfo=1 but no restart support in pair style
+
+UNDOCUMENTED
 
 E: Cannot yet use compute tally with Kokkos
 

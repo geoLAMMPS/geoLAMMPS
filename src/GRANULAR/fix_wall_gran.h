@@ -153,6 +153,10 @@ E: Fix wall/gran requires atom style sphere
 
 Self-explanatory.
 
+E: Invalid fix wall/gran interaction style
+
+UNDOCUMENTED
+
 E: Cannot use wall in periodic dimension
 
 Self-explanatory.
@@ -169,7 +173,11 @@ E: Invalid shear direction for fix wall/gran
 
 Self-explanatory.
 
-E: Fix wall/gran is incompatible with Pair style
+E: Cannot wiggle or shear with fix wall/gran/region
+
+UNDOCUMENTED
+
+U: Fix wall/gran is incompatible with Pair style
 
 Must use a granular pair style to define the parameters needed for
 this fix.
