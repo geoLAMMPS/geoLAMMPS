@@ -15,8 +15,8 @@
    Contributing author: Kevin Hanley (Imperial)
 ------------------------------------------------------------------------- */
 
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #include "fix_energy_boundary.h"
 #include "update.h"
 #include "memory.h"
