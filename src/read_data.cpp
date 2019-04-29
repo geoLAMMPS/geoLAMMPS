@@ -17,10 +17,10 @@
 
 #include "lmptype.h"
 #include <mpi.h>
-#include <math.h>
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
+#include <cmath>
+#include <cstring>
+#include <cstdlib>
+#include <cctype>
 #include "read_data.h"
 #include "atom.h"
 #include "atom_vec.h"
@@ -120,11 +120,14 @@ void ReadData::command(int narg, char **arg)
 {
   if (narg < 1) error->all(FLERR,"Illegal read_data command");
 
+  MPI_Barrier(world);
+  double time1 = MPI_Wtime();
+
   // optional args
 
   addflag = NONE;
   coeffflag = 1;
-  id_offset = 0;
+  id_offset = mol_offset = 0;
   offsetflag = shiftflag = 0;
   toffset = boffset = aoffset = doffset = ioffset = 0;
   shift[0] = shift[1] = shift[2] = 0.0;
@@ -145,11 +148,21 @@ void ReadData::command(int narg, char **arg)
       if (strcmp(arg[iarg+1],"append") == 0) addflag = APPEND;
       else if (strcmp(arg[iarg+1],"merge") == 0) addflag = MERGE;
       else {
+        if (atom->molecule_flag && (iarg+3 > narg))
+          error->all(FLERR,"Illegal read_data command");
         addflag = VALUE;
         bigint offset = force->bnumeric(FLERR,arg[iarg+1]);
         if (offset > MAXTAGINT)
-          error->all(FLERR,"Read data add offset is too big");
+          error->all(FLERR,"Read data add atomID offset is too big");
         id_offset = offset;
+
+        if (atom->molecule_flag) {
+          offset = force->bnumeric(FLERR,arg[iarg+2]);
+          if (offset > MAXTAGINT)
+            error->all(FLERR,"Read data add molID offset is too big");
+          mol_offset = offset;
+          iarg++;
+        }
       }
       iarg += 2;
     } else if (strcmp(arg[iarg],"offset") == 0) {
@@ -310,14 +323,18 @@ void ReadData::command(int narg, char **arg)
     update->ntimestep = 0;
   }
 
-  // compute atomID offset for addflag = MERGE
+  // compute atomID and optionally moleculeID offset for addflag = APPEND
 
   if (addflag == APPEND) {
     tagint *tag = atom->tag;
+    tagint *molecule = atom->molecule;
     int nlocal = atom->nlocal;
-    tagint max = 0;
-    for (int i = 0; i < nlocal; i++) max = MAX(max,tag[i]);
-    MPI_Allreduce(&max,&id_offset,1,MPI_LMP_TAGINT,MPI_MAX,world);
+    tagint maxid = 0, maxmol = 0;
+    for (int i = 0; i < nlocal; i++) maxid = MAX(maxid,tag[i]);
+    if (atom->molecule_flag)
+      for (int i = 0; i < nlocal; i++) maxmol = MAX(maxmol,molecule[i]);
+    MPI_Allreduce(&maxid,&id_offset,1,MPI_LMP_TAGINT,MPI_MAX,world);
+    MPI_Allreduce(&maxmol,&mol_offset,1,MPI_LMP_TAGINT,MPI_MAX,world);
   }
 
   // set up pointer to hold original styles while we replace them with "zero"
@@ -382,7 +399,8 @@ void ReadData::command(int narg, char **arg)
 
   // values in this data file
 
-  natoms = ntypes = 0;
+  natoms = 0;
+  ntypes = 0;
   nbonds = nangles = ndihedrals = nimpropers = 0;
   nbondtypes = nangletypes = ndihedraltypes = nimpropertypes = 0;
 
@@ -692,7 +710,7 @@ void ReadData::command(int narg, char **arg)
 
       } else {
         char str[128];
-        sprintf(str,"Unknown identifier in data file: %s",keyword);
+        snprintf(str,128,"Unknown identifier in data file: %s",keyword);
         error->all(FLERR,str);
       }
 
@@ -743,7 +761,7 @@ void ReadData::command(int narg, char **arg)
   }
 
   // init per-atom fix/compute/variable values for created atoms
-  
+
   atom->data_fix_compute_variable(nlocal_previous,atom->nlocal);
 
   // assign atoms added by this data file to specified group
@@ -858,9 +876,9 @@ void ReadData::command(int narg, char **arg)
   if (domain->nonperiodic == 2) {
     if (domain->triclinic) domain->x2lamda(atom->nlocal);
     domain->reset_box();
-    comm->init();
-    comm->exchange();
-    if (atom->map_style) atom->map_set();
+    Irregular *irregular = new Irregular(lmp);
+    irregular->migrate_atoms(1);
+    delete irregular;
     if (domain->triclinic) domain->lamda2x(atom->nlocal);
 
     bigint natoms;
@@ -872,7 +890,7 @@ void ReadData::command(int narg, char **arg)
   }
 
   // restore old styles, when reading with nocoeff flag given
-  
+
   if (coeffflag == 0) {
     if (force->pair) delete force->pair;
     force->pair = saved_pair;
@@ -890,6 +908,18 @@ void ReadData::command(int narg, char **arg)
     force->improper = saved_improper;
 
     force->kspace = saved_kspace;
+  }
+
+  // total time
+
+  MPI_Barrier(world);
+  double time2 = MPI_Wtime();
+
+  if (comm->me == 0) {
+    if (screen)
+      fprintf(screen,"  read_data CPU = %g secs\n",time2-time1);
+    if (logfile)
+      fprintf(logfile,"  read_data CPU = %g secs\n",time2-time1);
   }
 }
 
@@ -979,18 +1009,29 @@ void ReadData::header(int firstpass)
       if (!avec_ellipsoid)
         error->all(FLERR,"No ellipsoids allowed with this atom style");
       sscanf(line,BIGINT_FORMAT,&nellipsoids);
+      if (addflag == NONE) atom->nellipsoids = nellipsoids;
+      else if (firstpass) atom->nellipsoids += nellipsoids;
+
     } else if (strstr(line,"lines")) {
       if (!avec_line)
         error->all(FLERR,"No lines allowed with this atom style");
       sscanf(line,BIGINT_FORMAT,&nlines);
+      if (addflag == NONE) atom->nlines = nlines;
+      else if (firstpass) atom->nlines += nlines;
+
     } else if (strstr(line,"triangles")) {
       if (!avec_tri)
         error->all(FLERR,"No triangles allowed with this atom style");
       sscanf(line,BIGINT_FORMAT,&ntris);
+      if (addflag == NONE) atom->ntris = ntris;
+      else if (firstpass) atom->ntris += ntris;
+
     } else if (strstr(line,"bodies")) {
       if (!avec_body)
         error->all(FLERR,"No bodies allowed with this atom style");
       sscanf(line,BIGINT_FORMAT,&nbodies);
+      if (addflag == NONE) atom->nbodies = nbodies;
+      else if (firstpass) atom->nbodies += nbodies;
 
     } else if (strstr(line,"bonds")) {
       sscanf(line,BIGINT_FORMAT,&nbonds);
@@ -1070,6 +1111,10 @@ void ReadData::header(int firstpass)
   // error check on total system size
 
   if (atom->natoms < 0 || atom->natoms >= MAXBIGINT ||
+      atom->nellipsoids < 0 || atom->nellipsoids >= MAXBIGINT ||
+      atom->nlines < 0 || atom->nlines >= MAXBIGINT ||
+      atom->ntris < 0 || atom->ntris >= MAXBIGINT ||
+      atom->nbodies < 0 || atom->nbodies >= MAXBIGINT ||
       atom->nbonds < 0 || atom->nbonds >= MAXBIGINT ||
       atom->nangles < 0 || atom->nangles >= MAXBIGINT ||
       atom->ndihedrals < 0 || atom->ndihedrals >= MAXBIGINT ||
@@ -1137,7 +1182,7 @@ void ReadData::atoms()
     nchunk = MIN(natoms-nread,CHUNK);
     eof = comm->read_lines_from_file(fp,nchunk,MAXLINE,buffer);
     if (eof) error->all(FLERR,"Unexpected end of data file");
-    atom->data_atoms(nchunk,buffer,id_offset,toffset,shiftflag,shift);
+    atom->data_atoms(nchunk,buffer,id_offset,mol_offset,toffset,shiftflag,shift);
     nread += nchunk;
   }
 
@@ -1159,6 +1204,10 @@ void ReadData::atoms()
   // check that atom IDs are valid
 
   atom->tag_check();
+
+  // check that bonus data has been reserved as needed
+
+  atom->bonus_check();
 
   // create global mapping of atoms
 
@@ -1234,7 +1283,7 @@ void ReadData::bonds(int firstpass)
   int *count = NULL;
   if (firstpass) {
     memory->create(count,nlocal,"read_data:count");
-    for (int i = 0; i < nlocal; i++) count[i] = 0;
+    memset(count,0,nlocal*sizeof(int));
   }
 
   // read and process bonds
@@ -1317,7 +1366,7 @@ void ReadData::angles(int firstpass)
   int *count = NULL;
   if (firstpass) {
     memory->create(count,nlocal,"read_data:count");
-    for (int i = 0; i < nlocal; i++) count[i] = 0;
+    memset(count,0,nlocal*sizeof(int));
   }
 
   // read and process angles
@@ -1400,7 +1449,7 @@ void ReadData::dihedrals(int firstpass)
   int *count = NULL;
   if (firstpass) {
     memory->create(count,nlocal,"read_data:count");
-    for (int i = 0; i < nlocal; i++) count[i] = 0;
+    memset(count,0,nlocal*sizeof(int));
   }
 
   // read and process dihedrals
@@ -1421,7 +1470,7 @@ void ReadData::dihedrals(int firstpass)
 
   if (firstpass) {
     int max = 0;
-    for (int i = 0; i < nlocal; i++) max = MAX(max,count[i]);
+    for (int i = nlocal_previous; i < nlocal; i++) max = MAX(max,count[i]);
     int maxall;
     MPI_Allreduce(&max,&maxall,1,MPI_INT,MPI_MAX,world);
     if (addflag == NONE) maxall += atom->extra_dihedral_per_atom;
@@ -1483,7 +1532,7 @@ void ReadData::impropers(int firstpass)
   int *count = NULL;
   if (firstpass) {
     memory->create(count,nlocal,"read_data:count");
-    for (int i = 0; i < nlocal; i++) count[i] = 0;
+    memset(count,0,nlocal*sizeof(int));
   }
 
   // read and process impropers
@@ -1630,13 +1679,13 @@ void ReadData::bodies(int firstpass)
           eof = fgets(&buffer[m],MAXLINE,fp);
           if (eof == NULL) error->one(FLERR,"Unexpected end of data file");
           ncount = atom->count_words(&buffer[m],copy);
-	  if (ncount == 0)
-	    error->one(FLERR,"Too few values in body lines in data file");
-	  nword += ncount;
+          if (ncount == 0)
+            error->one(FLERR,"Too few values in body lines in data file");
+          nword += ncount;
           m += strlen(&buffer[m]);
           onebody++;
         }
-        if (nword > ninteger) 
+        if (nword > ninteger)
           error->one(FLERR,"Too many values in body lines in data file");
 
         nword = 0;
@@ -1644,13 +1693,13 @@ void ReadData::bodies(int firstpass)
           eof = fgets(&buffer[m],MAXLINE,fp);
           if (eof == NULL) error->one(FLERR,"Unexpected end of data file");
           ncount = atom->count_words(&buffer[m],copy);
-	  if (ncount == 0)
-	    error->one(FLERR,"Too few values in body lines in data file");
-	  nword += ncount;
+          if (ncount == 0)
+            error->one(FLERR,"Too few values in body lines in data file");
+          nword += ncount;
           m += strlen(&buffer[m]);
           onebody++;
         }
-        if (nword > ndouble) 
+        if (nword > ndouble)
           error->one(FLERR,"Too many values in body lines in data file");
 
         if (onebody+1 > MAXBODY)
@@ -1905,7 +1954,7 @@ void ReadData::open(char *file)
   else {
 #ifdef LAMMPS_GZIP
     char gunzip[128];
-    sprintf(gunzip,"gzip -c -d %s",file);
+    snprintf(gunzip,128,"gzip -c -d %s",file);
 
 #ifdef _WIN32
     fp = _popen(gunzip,"rb");
@@ -1920,7 +1969,7 @@ void ReadData::open(char *file)
 
   if (fp == NULL) {
     char str[128];
-    sprintf(str,"Cannot open file %s",file);
+    snprintf(str,128,"Cannot open file %s",file);
     error->one(FLERR,str);
   }
 }
@@ -1949,7 +1998,7 @@ void ReadData::parse_keyword(int first)
     }
     while (eof == 0 && done == 0) {
       int blank = strspn(line," \t\n\r");
-      if ((blank == strlen(line)) || (line[blank] == '#')) {
+      if ((blank == (int)strlen(line)) || (line[blank] == '#')) {
         if (fgets(line,MAXLINE,fp) == NULL) eof = 1;
       } else done = 1;
     }

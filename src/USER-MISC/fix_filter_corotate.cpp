@@ -17,8 +17,8 @@
    ------------------------------------------------------------------------- */
 
 #include <mpi.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cstring>
+#include <cstdlib>
 #include "fix_filter_corotate.h"
 #include "atom.h"
 #include "atom_vec.h"
@@ -217,7 +217,6 @@ FixFilterCorotate::~FixFilterCorotate()
   memory->destroy(dn2dx);
   memory->destroy(dn3dx);
 
-  atom->delete_callback(id,2);
   atom->delete_callback(id,0);
 
   // delete locally stored arrays
@@ -592,14 +591,13 @@ void FixFilterCorotate::pre_neighbor()
       double c = (del2[0])*(del3[1]) - (del2[1])*(del3[0]);
       int signum = sgn(a*(del1[0]) + b*(del1[1]) + c*(del1[2]));
 
-      if (fabs(signum)!= 1)
+      if (abs(signum) != 1)
         error->all(FLERR,"Wrong orientation in cluster of size 4"
           "in fix filter/corotate!");
       clist_q0[i][8] *= signum;
       clist_q0[i][11] *= signum;
 
-    } else if (N == 5)
-    {
+    } else if (N == 5) {
       oxy = atom->map(shake_atom[m][0]);
       atom1 = atom->map(shake_atom[m][1]);
       atom2 = atom->map(shake_atom[m][2]);
@@ -666,14 +664,12 @@ void FixFilterCorotate::pre_neighbor()
       double c = (del2[0])*(del3[1]) - (del2[1])*(del3[0]);
       int signum = sgn(a*(del1[0]) + b*(del1[1]) + c*(del1[2]));
 
-      if (fabs(signum)!= 1)
+      if (abs(signum)!= 1)
         error->all(FLERR,"Wrong orientation in cluster of size 5"
           "in fix filter/corotate!");
       clist_q0[i][8] *= signum;
       clist_q0[i][11] *= signum;
-    }
-    else
-    {
+    } else {
       error->all(FLERR,"Fix filter/corotate cluster with size > 5"
         "not yet configured...");
     }
@@ -705,7 +701,7 @@ double FixFilterCorotate::compute_array(int,int)
   return 1;
 }
 
-void FixFilterCorotate::pre_force_respa(int vflag, int ilevel, int iloop)
+void FixFilterCorotate::pre_force_respa(int /*vflag*/, int ilevel, int /*iloop*/)
 {
   if (ilevel == nlevels_respa-1)
   {
@@ -717,7 +713,7 @@ void FixFilterCorotate::pre_force_respa(int vflag, int ilevel, int iloop)
   }
 }
 
-void FixFilterCorotate::post_force_respa(int vflag, int ilevel, int iloop)
+void FixFilterCorotate::post_force_respa(int /*vflag*/, int ilevel, int /*iloop*/)
 {
   if (ilevel == nlevels_respa-1)
   {
@@ -1527,7 +1523,10 @@ void FixFilterCorotate::general_cluster(int index, int index_in_list)
 
   //derivative:
   //dn1dx:
-  double sum1[3][3*N];
+
+  double **sum1;
+  memory->create(sum1,3,3*N,"filter_corotate:sum1");
+
   for (int i=0; i<3; i++)
     for (int j=0; j<3*N; j++)
       sum1[i][j] = 0;
@@ -1564,10 +1563,12 @@ void FixFilterCorotate::general_cluster(int index, int index_in_list)
       dn1dx[i][j] = norm1*sum;
     }
   }
+  memory->destroy(sum1);
 
   //dn2dx: norm2 * I3mn2n2T * (I3mn1n1T*sum2 - rkn1pn1rk*dn1dx)
 
-  double sum2[3][3*N];
+  double **sum2;
+  memory->create(sum2,3,3*N,"filter_corotate:sum2");
   for (int i=0; i<3; i++)
     for (int j=0; j<3*N; j++)
       sum2[i][j] = 0;
@@ -1618,7 +1619,8 @@ void FixFilterCorotate::general_cluster(int index, int index_in_list)
   //dn2dx: norm2 * I3mn2n2T * (I3mn1n1T*sum2 - rkn1pn1rk*dn1dx)
   //sum3 = (I3mn1n1T*sum2 - rkn1pn1rk*dn1dx)
 
-  double sum3[3][3*N];
+  double **sum3;
+  memory->create(sum3,3,3*N,"filter_corotate:sum3");
   for (int i=0; i<3; i++)
     for (int j=0; j<3*N; j++) {
       double sum = 0;
@@ -1627,6 +1629,7 @@ void FixFilterCorotate::general_cluster(int index, int index_in_list)
       sum3[i][j] = sum;
     }
 
+  memory->destroy(sum2);
   //dn2dx = norm2 * I3mn2n2T * sum3
   for (int i=0; i<3; i++)
     for (int j=0; j<3*N; j++) {
@@ -1636,6 +1639,7 @@ void FixFilterCorotate::general_cluster(int index, int index_in_list)
       dn2dx[i][j] = norm2*sum;
     }
 
+  memory->destroy(sum3);
   //dn3dx = norm3 * I3mn3n3T * cross
   double I3mn3n3T[3][3];   //(I_3 - n3n3T)
   for (int i=0; i<3; i++) {
@@ -1644,7 +1648,8 @@ void FixFilterCorotate::general_cluster(int index, int index_in_list)
     I3mn3n3T[i][i] += 1.0;
   }
 
-  double cross[3][3*N];
+  double **cross;
+  memory->create(cross,3,3*N,"filter_corotate:cross");
 
   for (int j=0; j<3*N; j++) {
     cross[0][j] = dn1dx[1][j]*n2[2] -dn1dx[2][j]*n2[1] +
@@ -1663,6 +1668,7 @@ void FixFilterCorotate::general_cluster(int index, int index_in_list)
       dn3dx[i][j] = norm3*sum;
     }
 
+  memory->destroy(cross);
   for (int l=0; l<N; l++)
     for (int i=0; i<3; i++)
       for (int j=0; j<3*N; j++)
@@ -1689,7 +1695,7 @@ void FixFilterCorotate::general_cluster(int index, int index_in_list)
 }
 
 int FixFilterCorotate::pack_forward_comm(int n, int *list, double *buf,
-                                         int pbc_flag, int *pbc)
+                                         int /*pbc_flag*/, int * /*pbc*/)
 {
   int i,j,m;
   double**f = atom->f;
@@ -1829,7 +1835,7 @@ double FixFilterCorotate::memory_usage()
  *  copy values within local atom-based arrays
  * ------------------------------------------------------------------------- */
 
-void FixFilterCorotate::copy_arrays(int i, int j, int delflag)
+void FixFilterCorotate::copy_arrays(int i, int j, int /*delflag*/)
 {
   int flag = shake_flag[j] = shake_flag[i];
   if (flag == 1) {

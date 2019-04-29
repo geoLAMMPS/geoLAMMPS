@@ -11,9 +11,9 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
 #include "fix_nve_sphere_omp.h"
 #include "atom.h"
 #include "atom_vec.h"
@@ -37,7 +37,7 @@ enum{NODLM,DLM};
 
 /* ---------------------------------------------------------------------- */
 
-void FixNVESphereOMP::initial_integrate(int vflag)
+void FixNVESphereOMP::initial_integrate(int /* vflag */)
 {
   double * const * const x = atom->x;
   double * const * const v = atom->v;

@@ -43,8 +43,10 @@ class RegCylinder : public Region {
   double c1,c2;
   double radius;
   double lo,hi;
+  int c1style,c1var;
+  int c2style,c2var;
   int rstyle,rvar;
-  char *rstr;
+  char *c1str,*c2str,*rstr;
 
   void variable_check();
 
@@ -56,6 +58,10 @@ class RegCylinder : public Region {
 #endif
 
 /* ERROR/WARNING messages:
+
+E: Invalid region cylinder open setting
+
+UNDOCUMENTED
 
 E: Illegal ... command
 

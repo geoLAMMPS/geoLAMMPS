@@ -15,9 +15,10 @@
    Contributing author: Trung Dac Nguyen (ORNL)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "pair_lj_sf_dipole_sf_gpu.h"
 #include "atom.h"
 #include "atom_vec.h"
@@ -32,7 +33,6 @@
 #include "universe.h"
 #include "update.h"
 #include "domain.h"
-#include <string.h>
 #include "gpu_extra.h"
 
 using namespace LAMMPS_NS;
@@ -88,8 +88,7 @@ PairLJSFDipoleSFGPU::~PairLJSFDipoleSFGPU()
 
 void PairLJSFDipoleSFGPU::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   int nall = atom->nlocal + atom->nghost;
   int inum, host_start;
@@ -202,8 +201,7 @@ void PairLJSFDipoleSFGPU::cpu_compute(int start, int inum, int eflag, int vflag,
   int *jlist;
 
   evdwl = ecoul = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;

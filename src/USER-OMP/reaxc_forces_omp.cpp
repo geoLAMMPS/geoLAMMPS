@@ -1,12 +1,12 @@
 /*----------------------------------------------------------------------
   PuReMD - Purdue ReaxFF Molecular Dynamics Program
   Website: https://www.cs.purdue.edu/puremd
-  
+
   Copyright (2010) Purdue University
-  
-  Contributing authors: 
+
+  Contributing authors:
   H. M. Aktulga, J. Fogarty, S. Pandit, A. Grama
-  Corresponding author: 
+  Corresponding author:
   Hasan Metin Aktulga, Michigan State University, hma@cse.msu.edu
 
   Please cite the related publication:
@@ -64,7 +64,7 @@ void Init_Force_FunctionsOMP( control_params *control )
   Interaction_Functions[2] = Atom_EnergyOMP; //Dummy_Interaction;
   Interaction_Functions[3] = Valence_AnglesOMP; //Dummy_Interaction;
   Interaction_Functions[4] = Torsion_AnglesOMP; //Dummy_Interaction;
-  if( control->hbond_cut > 0 )
+  if (control->hbond_cut > 0)
     Interaction_Functions[5] = Hydrogen_BondsOMP;
   else Interaction_Functions[5] = Dummy_Interaction;
   Interaction_Functions[6] = Dummy_Interaction; //empty
@@ -79,7 +79,7 @@ void Init_Force_FunctionsOMP( control_params *control )
 void Compute_Bonded_ForcesOMP( reax_system *system, control_params *control,
                             simulation_data *data, storage *workspace,
                             reax_list **lists, output_controls *out_control,
-                            MPI_Comm comm )
+                            MPI_Comm /* comm */)
 {
   int i;
 
@@ -105,7 +105,7 @@ void Compute_Bonded_ForcesOMP( reax_system *system, control_params *control,
 void Compute_NonBonded_ForcesOMP( reax_system *system, control_params *control,
                                simulation_data *data, storage *workspace,
                                reax_list **lists, output_controls *out_control,
-                               MPI_Comm comm )
+                               MPI_Comm /* comm */)
 {
   /* van der Waals and Coulomb interactions */
 #ifdef OMP_TIMING
@@ -113,12 +113,12 @@ void Compute_NonBonded_ForcesOMP( reax_system *system, control_params *control,
   startTimeBase = MPI_Wtime();
 #endif
 
-  if( control->tabulate == 0 )
+  if (control->tabulate == 0)
     vdW_Coulomb_Energy_OMP( system, control, data, workspace,
-			    lists, out_control );
+                            lists, out_control );
   else
     Tabulated_vdW_Coulomb_Energy_OMP( system, control, data, workspace,
-				      lists, out_control );
+                                      lists, out_control );
 
 #ifdef OMP_TIMING
   endTimeBase = MPI_Wtime();
@@ -133,7 +133,7 @@ void Compute_NonBonded_ForcesOMP( reax_system *system, control_params *control,
    Saves enormous time & space! */
 void Compute_Total_ForceOMP( reax_system *system, control_params *control,
                           simulation_data *data, storage *workspace,
-                          reax_list **lists, mpi_datatypes *mpi_data )
+                          reax_list **lists, mpi_datatypes * /* mpi_data */)
 {
 #ifdef OMP_TIMING
   double startTimeBase,endTimeBase;
@@ -162,14 +162,14 @@ void Compute_Total_ForceOMP( reax_system *system, control_params *control,
     class ThrData *thr = pair_reax_ptr->getFixOMP()->get_thr(tid);
 
     pair_reax_ptr->ev_setup_thr_proxy(0, 1, natoms, system->pair_ptr->eatom,
- 				      system->pair_ptr->vatom, thr);
+                                      system->pair_ptr->vatom, thr);
 
 #if defined(_OPENMP)
 #pragma omp for schedule(guided)
 #endif
     for (i = 0; i < system->N; ++i) {
       for (j = 0; j < nthreads; ++j)
-	workspace->CdDelta[i] += workspace->CdDeltaReduction[system->N*j+i];
+        workspace->CdDelta[i] += workspace->CdDeltaReduction[system->N*j+i];
     }
 
 #if defined(_OPENMP)
@@ -180,21 +180,21 @@ void Compute_Total_ForceOMP( reax_system *system, control_params *control,
       end_j = End_Index(j, bonds);
 
       for (pk = start_j; pk < end_j; ++pk) {
- 	bo_jk = &( bonds->select.bond_list[pk].bo_data );
- 	for (k = 0; k < nthreads; ++k)
- 	  bo_jk->Cdbo += bo_jk->CdboReduction[k];
+        bo_jk = &( bonds->select.bond_list[pk].bo_data );
+        for (k = 0; k < nthreads; ++k)
+          bo_jk->Cdbo += bo_jk->CdboReduction[k];
       }
     }
 
 // #pragma omp for schedule(guided) //(dynamic,50)
 //     for (i = 0; i < system->N; ++i)
 //       for (pj = Start_Index(i, bonds); pj < End_Index(i, bonds); ++pj)
-//  	if (i < bonds->select.bond_list[pj].nbr) {
-//  	  if (control->virial == 0)
-// 	    Add_dBond_to_ForcesOMP( system, i, pj, workspace, lists );
-// 	  else
-//  	    Add_dBond_to_Forces_NPTOMP(system, i, pj, data, workspace, lists );
-//  	}
+//      if (i < bonds->select.bond_list[pj].nbr) {
+//        if (control->virial == 0)
+//          Add_dBond_to_ForcesOMP( system, i, pj, workspace, lists );
+//        else
+//          Add_dBond_to_Forces_NPTOMP(system, i, pj, data, workspace, lists );
+//      }
 
     if(control->virial == 0) {
 
@@ -202,11 +202,11 @@ void Compute_Total_ForceOMP( reax_system *system, control_params *control,
 #pragma omp for schedule(dynamic,50)
 #endif
       for (i = 0; i < system->N; ++i) {
-	const int startj = Start_Index(i, bonds);
-	const int endj  = End_Index(i, bonds);
-	for (pj = startj; pj < endj; ++pj)
-	  if (i < bonds->select.bond_list[pj].nbr)
-	    Add_dBond_to_ForcesOMP( system, i, pj, workspace, lists );
+        const int startj = Start_Index(i, bonds);
+        const int endj  = End_Index(i, bonds);
+        for (pj = startj; pj < endj; ++pj)
+          if (i < bonds->select.bond_list[pj].nbr)
+            Add_dBond_to_ForcesOMP( system, i, pj, workspace, lists );
       }
 
     } else {
@@ -215,11 +215,11 @@ void Compute_Total_ForceOMP( reax_system *system, control_params *control,
 #pragma omp for schedule(dynamic,50)
 #endif
       for (i = 0; i < system->N; ++i) {
-	const int startj = Start_Index(i, bonds);
-	const int endj  = End_Index(i, bonds);
-	for (pj = startj; pj < endj; ++pj)
-	  if (i < bonds->select.bond_list[pj].nbr)
-	    Add_dBond_to_Forces_NPTOMP(system, i, pj, data, workspace, lists );
+        const int startj = Start_Index(i, bonds);
+        const int endj  = End_Index(i, bonds);
+        for (pj = startj; pj < endj; ++pj)
+          if (i < bonds->select.bond_list[pj].nbr)
+            Add_dBond_to_Forces_NPTOMP(system, i, pj, data, workspace, lists );
       }
 
     } // if(virial == 0)
@@ -231,7 +231,7 @@ void Compute_Total_ForceOMP( reax_system *system, control_params *control,
 #endif
     for (i = 0; i < system->N; ++i) {
       for (j = 0; j < nthreads; ++j)
- 	rvec_Add( workspace->f[i], workspace->forceReduction[system->N*j+i] );
+        rvec_Add( workspace->f[i], workspace->forceReduction[system->N*j+i] );
     }
 
 
@@ -262,8 +262,8 @@ void Compute_Total_ForceOMP( reax_system *system, control_params *control,
 
 /* ---------------------------------------------------------------------- */
 
-void Validate_ListsOMP( reax_system *system, storage *workspace, reax_list **lists,
-                     int step, int n, int N, int numH, MPI_Comm comm )
+void Validate_ListsOMP(reax_system *system, storage * /*workspace*/, reax_list **lists,
+                       int step, int n, int N, int numH, MPI_Comm /*comm*/)
 {
   int i, comp, Hindex;
   reax_list *bonds, *hbonds;
@@ -275,7 +275,7 @@ void Validate_ListsOMP( reax_system *system, storage *workspace, reax_list **lis
   {
 
   /* bond list */
-  if( N > 0 ) {
+  if (N > 0) {
     bonds = *lists + BONDS;
 
 #if defined(_OPENMP)
@@ -284,21 +284,22 @@ void Validate_ListsOMP( reax_system *system, storage *workspace, reax_list **lis
     for( i = 0; i < N; ++i ) {
       system->my_atoms[i].num_bonds = MAX(Num_Entries(i,bonds)*2, MIN_BONDS);
 
-      if( i < N-1 )
+      if (i < N-1)
         comp = Start_Index(i+1, bonds);
       else comp = bonds->num_intrs;
 
-      if( End_Index(i, bonds) > comp ) {
-        fprintf( stderr, "step%d-bondchk failed: i=%d end(i)=%d str(i+1)=%d\n",
-                 step, i, End_Index(i,bonds), comp );
-        MPI_Abort( comm, INSUFFICIENT_MEMORY );
+      if (End_Index(i, bonds) > comp) {
+        char errmsg[256];
+        snprintf(errmsg, 256, "step%d-bondchk failed: i=%d end(i)=%d str(i+1)=%d\n",
+                  step, i, End_Index(i,bonds), comp );
+        system->error_ptr->one(FLERR,errmsg);
       }
     }
   }
 
 
   /* hbonds list */
-  if( numH > 0 ) {
+  if (numH > 0) {
     hbonds = *lists + HBONDS;
 
 #if defined(_OPENMP)
@@ -306,18 +307,19 @@ void Validate_ListsOMP( reax_system *system, storage *workspace, reax_list **lis
 #endif
     for( i = 0; i < n; ++i ) {
       Hindex = system->my_atoms[i].Hindex;
-      if( Hindex > -1 ) {
+      if (Hindex > -1) {
         system->my_atoms[i].num_hbonds =
           (int)(MAX( Num_Entries(Hindex, hbonds)*saferzone, MIN_HBONDS ));
 
-        if( Hindex < numH-1 )
+        if (Hindex < numH-1)
           comp = Start_Index(Hindex+1, hbonds);
         else comp = hbonds->num_intrs;
 
-        if( End_Index(Hindex, hbonds) > comp ) {
-          fprintf(stderr,"step%d-hbondchk failed: H=%d end(H)=%d str(H+1)=%d\n",
+        if (End_Index(Hindex, hbonds) > comp) {
+          char errmsg[256];
+          snprintf(errmsg, 256, "step%d-hbondchk failed: H=%d end(H)=%d str(H+1)=%d\n",
                   step, Hindex, End_Index(Hindex,hbonds), comp );
-          MPI_Abort( comm, INSUFFICIENT_MEMORY );
+          system->error_ptr->one(FLERR, errmsg);
         }
       }
     }
@@ -328,9 +330,9 @@ void Validate_ListsOMP( reax_system *system, storage *workspace, reax_list **lis
 
 
 void Init_Forces_noQEq_OMP( reax_system *system, control_params *control,
-			    simulation_data *data, storage *workspace,
-			    reax_list **lists, output_controls *out_control,
-			    MPI_Comm comm ) {
+                            simulation_data *data, storage *workspace,
+                            reax_list **lists, output_controls * /* out_control */,
+                            MPI_Comm comm ) {
 #ifdef OMP_TIMING
   double startTimeBase, endTimeBase;
   startTimeBase = MPI_Wtime();
@@ -393,88 +395,88 @@ void Init_Forces_noQEq_OMP( reax_system *system, control_params *control,
     for( pj = start_i; pj < end_i; ++pj ) {
       nbr_pj = &( far_nbrs->select.far_nbr_list[pj] );
       if (nbr_pj->d <= cutoff) {
-	j = nbr_pj->nbr;
-	atom_j = &(system->my_atoms[j]);
-	type_j = atom_j->type;
-	sbp_j = &(system->reax_param.sbp[type_j]);
-	twbp = &(system->reax_param.tbp[type_i][type_j]);
+        j = nbr_pj->nbr;
+        atom_j = &(system->my_atoms[j]);
+        type_j = atom_j->type;
+        sbp_j = &(system->reax_param.sbp[type_j]);
+        twbp = &(system->reax_param.tbp[type_i][type_j]);
 
 // #pragma omp critical
-// 	{
-// 	  btop_i = End_Index(i, bonds);
-// 	  if( BOp(workspace, bonds, control->bo_cut, i, btop_i, nbr_pj, sbp_i, sbp_j, twbp) ) {
+//      {
+//        btop_i = End_Index(i, bonds);
+//        if (BOp(workspace, bonds, control->bo_cut, i, btop_i, nbr_pj, sbp_i, sbp_j, twbp)) {
 //             num_bonds++;
 //             btop_i++;
 //             Set_End_Index(i, btop_i, bonds);
-// 	  }
-	
-// 	}
-	
-	// Trying to minimize time spent in critical section by moving initial part of BOp()
-	// outside of critical section.
+//        }
 
-	// Start top portion of BOp()
-	double C12, C34, C56;
-	double BO, BO_s, BO_pi, BO_pi2;
-	double bo_cut = control->bo_cut;
+//      }
 
-	if( sbp_i->r_s > 0.0 && sbp_j->r_s > 0.0 ) {
-	  C12 = twbp->p_bo1 * pow( nbr_pj->d / twbp->r_s, twbp->p_bo2 );
-	  BO_s = (1.0 + bo_cut) * exp( C12 );
-	}
-	else BO_s = C12 = 0.0;
-	
-	if( sbp_i->r_pi > 0.0 && sbp_j->r_pi > 0.0 ) {
-	  C34 = twbp->p_bo3 * pow( nbr_pj->d / twbp->r_p, twbp->p_bo4 );
-	  BO_pi = exp( C34 );
-	}
-	else BO_pi = C34 = 0.0;
-	
-	if( sbp_i->r_pi_pi > 0.0 && sbp_j->r_pi_pi > 0.0 ) {
-	  C56 = twbp->p_bo5 * pow( nbr_pj->d / twbp->r_pp, twbp->p_bo6 );
-	  BO_pi2= exp( C56 );
-	}
-	else BO_pi2 = C56 = 0.0;
-	
-	/* Initially BO values are the uncorrected ones, page 1 */
-	BO = BO_s + BO_pi + BO_pi2;
-	// End top portion of BOp()
-	
-	if(BO >= bo_cut) {
-	  int btop_j;
-	
-	  // Update indices in critical section
+        // Trying to minimize time spent in critical section by moving initial part of BOp()
+        // outside of critical section.
+
+        // Start top portion of BOp()
+        double C12, C34, C56;
+        double BO, BO_s, BO_pi, BO_pi2;
+        double bo_cut = control->bo_cut;
+
+        if (sbp_i->r_s > 0.0 && sbp_j->r_s > 0.0) {
+          C12 = twbp->p_bo1 * pow( nbr_pj->d / twbp->r_s, twbp->p_bo2 );
+          BO_s = (1.0 + bo_cut) * exp( C12 );
+        }
+        else BO_s = C12 = 0.0;
+
+        if (sbp_i->r_pi > 0.0 && sbp_j->r_pi > 0.0) {
+          C34 = twbp->p_bo3 * pow( nbr_pj->d / twbp->r_p, twbp->p_bo4 );
+          BO_pi = exp( C34 );
+        }
+        else BO_pi = C34 = 0.0;
+
+        if (sbp_i->r_pi_pi > 0.0 && sbp_j->r_pi_pi > 0.0) {
+          C56 = twbp->p_bo5 * pow( nbr_pj->d / twbp->r_pp, twbp->p_bo6 );
+          BO_pi2= exp( C56 );
+        }
+        else BO_pi2 = C56 = 0.0;
+
+        /* Initially BO values are the uncorrected ones, page 1 */
+        BO = BO_s + BO_pi + BO_pi2;
+        // End top portion of BOp()
+
+        if(BO >= bo_cut) {
+          int btop_j;
+
+          // Update indices in critical section
 #if defined(_OPENMP)
 #pragma omp critical
 #endif
- 	  {
-	    btop_i = End_Index( i, bonds );
-	    btop_j = End_Index( j, bonds );
-	    Set_End_Index( j, btop_j+1, bonds );
-	    Set_End_Index( i, btop_i+1, bonds );
- 	  } // omp critical
-	
-	  // Finish remaining BOp() work
-	  BOp_OMP(workspace, bonds, bo_cut,
-		  i , btop_i, nbr_pj, sbp_i, sbp_j, twbp, btop_j,
-		  C12, C34, C56, BO, BO_s, BO_pi, BO_pi2);
-	
- 	  bond_data * ibond = &(bonds->select.bond_list[btop_i]);
- 	  bond_order_data * bo_ij = &(ibond->bo_data);
-	
- 	  bond_data * jbond = &(bonds->select.bond_list[btop_j]);
- 	  bond_order_data * bo_ji = &(jbond->bo_data);
-	
-	  workspace->total_bond_order[i]      += bo_ij->BO;
-	  tmp_bond_order[reductionOffset + j] += bo_ji->BO;
-	
-	  rvec_Add(workspace->dDeltap_self[i],      bo_ij->dBOp);
-	  rvec_Add(tmp_ddelta[reductionOffset + j], bo_ji->dBOp);
-	
-	  btop_i++;
-	  num_bonds++;
-	} // if(BO>=bo_cut)
-	
+          {
+            btop_i = End_Index( i, bonds );
+            btop_j = End_Index( j, bonds );
+            Set_End_Index( j, btop_j+1, bonds );
+            Set_End_Index( i, btop_i+1, bonds );
+          } // omp critical
+
+          // Finish remaining BOp() work
+          BOp_OMP(workspace, bonds, bo_cut,
+                  i , btop_i, nbr_pj, sbp_i, sbp_j, twbp, btop_j,
+                  C12, C34, C56, BO, BO_s, BO_pi, BO_pi2);
+
+          bond_data * ibond = &(bonds->select.bond_list[btop_i]);
+          bond_order_data * bo_ij = &(ibond->bo_data);
+
+          bond_data * jbond = &(bonds->select.bond_list[btop_j]);
+          bond_order_data * bo_ji = &(jbond->bo_data);
+
+          workspace->total_bond_order[i]      += bo_ij->BO;
+          tmp_bond_order[reductionOffset + j] += bo_ji->BO;
+
+          rvec_Add(workspace->dDeltap_self[i],      bo_ij->dBOp);
+          rvec_Add(tmp_ddelta[reductionOffset + j], bo_ji->dBOp);
+
+          btop_i++;
+          num_bonds++;
+        } // if(BO>=bo_cut)
+
       } // if(cutoff)
 
     } // for(pj)
@@ -516,49 +518,49 @@ void Init_Forces_noQEq_OMP( reax_system *system, control_params *control,
        {
 
        if (ihb == 1 || ihb == 2) {
-	 start_i = Start_Index(i, far_nbrs);
-	 end_i   = End_Index(i, far_nbrs);
-	
-	 for (pj = start_i; pj < end_i; ++pj) {
-	   nbr_pj = &( far_nbrs->select.far_nbr_list[pj] );
-	   j = nbr_pj->nbr;
-	   atom_j = &(system->my_atoms[j]);
-	   type_j = atom_j->type;
-	   if(type_j < 0) continue;
-	   sbp_j = &(system->reax_param.sbp[type_j]);
-	   jhb = sbp_j->p_hbond;
+         start_i = Start_Index(i, far_nbrs);
+         end_i   = End_Index(i, far_nbrs);
 
-	   if (nbr_pj->d <= control->hbond_cut) {
-	     int iflag = 0;
-	     int jflag = 0;
-	
-	     if(ihb==1 && jhb==2) iflag = 1;
-	     else if(j<system->n && ihb == 2 && jhb == 1) jflag = 1;
-	
-	     if(iflag || jflag) {
-		 if(iflag) {
-		   ihb_top = End_Index(atom_i->Hindex, hbonds);
-		   Set_End_Index(atom_i->Hindex, ihb_top+1, hbonds);
-		 } else if(jflag) {
-		   jhb_top = End_Index(atom_j->Hindex, hbonds);
-		   Set_End_Index(atom_j->Hindex, jhb_top+1, hbonds);
-		 }
+         for (pj = start_i; pj < end_i; ++pj) {
+           nbr_pj = &( far_nbrs->select.far_nbr_list[pj] );
+           j = nbr_pj->nbr;
+           atom_j = &(system->my_atoms[j]);
+           type_j = atom_j->type;
+           if(type_j < 0) continue;
+           sbp_j = &(system->reax_param.sbp[type_j]);
+           jhb = sbp_j->p_hbond;
 
-	       if(iflag) {
-		 hbonds->select.hbond_list[ihb_top].nbr = j;
-		 hbonds->select.hbond_list[ihb_top].scl = 1;
-		 hbonds->select.hbond_list[ihb_top].ptr = nbr_pj;
-	       } else if(jflag) {
-		 hbonds->select.hbond_list[jhb_top].nbr = i;
-		 hbonds->select.hbond_list[jhb_top].scl = -1;
-		 hbonds->select.hbond_list[jhb_top].ptr = nbr_pj;
-	       }
-	
-	       num_hbonds++;
-	     } // if(iflag || jflag)
+           if (nbr_pj->d <= control->hbond_cut) {
+             int iflag = 0;
+             int jflag = 0;
 
-	   }
-	 }
+             if(ihb==1 && jhb==2) iflag = 1;
+             else if(j<system->n && ihb == 2 && jhb == 1) jflag = 1;
+
+             if(iflag || jflag) {
+                 if(iflag) {
+                   ihb_top = End_Index(atom_i->Hindex, hbonds);
+                   Set_End_Index(atom_i->Hindex, ihb_top+1, hbonds);
+                 } else if(jflag) {
+                   jhb_top = End_Index(atom_j->Hindex, hbonds);
+                   Set_End_Index(atom_j->Hindex, jhb_top+1, hbonds);
+                 }
+
+               if(iflag) {
+                 hbonds->select.hbond_list[ihb_top].nbr = j;
+                 hbonds->select.hbond_list[ihb_top].scl = 1;
+                 hbonds->select.hbond_list[ihb_top].ptr = nbr_pj;
+               } else if(jflag) {
+                 hbonds->select.hbond_list[jhb_top].nbr = i;
+                 hbonds->select.hbond_list[jhb_top].scl = -1;
+                 hbonds->select.hbond_list[jhb_top].ptr = nbr_pj;
+               }
+
+               num_hbonds++;
+             } // if(iflag || jflag)
+
+           }
+         }
        }
 
        } // omp critical
@@ -601,44 +603,17 @@ void Compute_ForcesOMP( reax_system *system, control_params *control,
   MPI_Comm comm = mpi_data->world;
 
   // Init Forces
-#if defined(LOG_PERFORMANCE)
-  double t_start = 0;
-  if( system->my_rank == MASTER_NODE )
-    t_start = Get_Time( );
-#endif
-
   Init_Forces_noQEq_OMP( system, control, data, workspace,
-			 lists, out_control, comm );
-
-#if defined(LOG_PERFORMANCE)
-  //MPI_Barrier( comm );
-  if( system->my_rank == MASTER_NODE )
-    Update_Timing_Info( &t_start, &(data->timing.init_forces) );
-#endif
+                      lists, out_control, comm );
 
   // Bonded Interactions
   Compute_Bonded_ForcesOMP( system, control, data, workspace,
                          lists, out_control, mpi_data->world );
 
-#if defined(LOG_PERFORMANCE)
-  if( system->my_rank == MASTER_NODE )
-    Update_Timing_Info( &t_start, &(data->timing.bonded) );
-#endif
-
   // Nonbonded Interactions
   Compute_NonBonded_ForcesOMP( system, control, data, workspace,
                             lists, out_control, mpi_data->world );
 
-#if defined(LOG_PERFORMANCE)
-  if( system->my_rank == MASTER_NODE )
-    Update_Timing_Info( &t_start, &(data->timing.nonb) );
-#endif
-
   // Total Force
   Compute_Total_ForceOMP( system, control, data, workspace, lists, mpi_data );
-
-#if defined(LOG_PERFORMANCE)
-  if( system->my_rank == MASTER_NODE )
-    Update_Timing_Info( &t_start, &(data->timing.bonded) );
-#endif
 }

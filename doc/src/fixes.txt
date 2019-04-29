@@ -20,10 +20,13 @@ Fixes :h1
    fix_ave_time
    fix_aveforce
    fix_balance
+   fix_bocs
    fix_bond_break
    fix_bond_create
    fix_bond_swap
+   fix_bond_react
    fix_box_relax
+   fix_client_md
    fix_cmap
    fix_colvars
    fix_controller
@@ -37,12 +40,14 @@ Fixes :h1
    fix_dt_reset
    fix_efield
    fix_ehex
+   fix_electron_stopping
    fix_enforce2d
    fix_eos_cv
    fix_eos_table
    fix_eos_table_rx
    fix_evaporate
    fix_external
+   fix_ffl
    fix_filter_corotate
    fix_flow_gauss
    fix_freeze
@@ -53,12 +58,15 @@ Fixes :h1
    fix_grem
    fix_halt
    fix_heat
+   fix_hyper_global
+   fix_hyper_local
    fix_imd
    fix_indent
    fix_ipi
    fix_langevin
    fix_langevin_drude
    fix_langevin_eff
+   fix_langevin_spin
    fix_latte
    fix_lb_fluid
    fix_lb_momentum
@@ -68,6 +76,7 @@ Fixes :h1
    fix_lineforce
    fix_manifoldforce
    fix_meso
+   fix_meso_move
    fix_meso_stationary
    fix_momentum
    fix_move
@@ -88,6 +97,7 @@ Fixes :h1
    fix_nve
    fix_nve_asphere
    fix_nve_asphere_noforce
+   fix_nve_awpmd
    fix_nve_body
    fix_nve_dot
    fix_nve_dotc_langevin
@@ -97,6 +107,7 @@ Fixes :h1
    fix_nve_manifold_rattle
    fix_nve_noforce
    fix_nve_sphere
+   fix_nve_spin
    fix_nve_tri
    fix_nvk
    fix_nvt_asphere
@@ -110,24 +121,28 @@ Fixes :h1
    fix_phonon
    fix_pimd
    fix_planeforce
+   fix_plumed
    fix_poems
    fix_pour
+   fix_precession_spin
    fix_press_berendsen
    fix_print
    fix_property_atom
-   fix_python
+   fix_python_invoke
+   fix_python_move
    fix_qbmsst
    fix_qeq
    fix_qeq_comb
    fix_qeq_reax
    fix_qmmm
    fix_qtb
-   fix_reax_bonds
+   fix_reaxc_bonds
    fix_reaxc_species
    fix_recenter
    fix_restrain
    fix_rhok
    fix_rigid
+   fix_rigid_meso
    fix_rx
    fix_saed_vtk
    fix_setforce
@@ -161,6 +176,8 @@ Fixes :h1
    fix_viscosity
    fix_viscous
    fix_wall
+   fix_wall_body_polygon
+   fix_wall_body_polyhedron
    fix_wall_ees
    fix_wall_gran
    fix_wall_gran_region

@@ -21,7 +21,12 @@ ComputeStyle(voronoi/atom,ComputeVoronoi)
 #define LMP_COMPUTE_VORONOI_H
 
 #include "compute.h"
-#include "voro++.hh"
+
+namespace voro {
+  class container;
+  class container_poly;
+  class voronoicell_neighbor;
+}
 
 namespace LAMMPS_NS {
 
@@ -81,6 +86,14 @@ Self-explanatory.
 E: Illegal compute voronoi/atom command (occupation and (surface or edges))
 
 Self-explanatory.
+
+E: Compute voronoi/atom occupation requires an atom map, see atom_modify
+
+UNDOCUMENTED
+
+E: Compute voronoi/atom occupation requires atom IDs
+
+UNDOCUMENTED
 
 E: Variable name for voronoi radius does not exist
 

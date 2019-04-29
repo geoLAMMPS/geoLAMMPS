@@ -11,9 +11,9 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include "atom_vec_tri.h"
 #include "math_extra.h"
 #include "atom.h"
@@ -1443,7 +1443,7 @@ void AtomVecTri::data_atom(double *coord, imageint imagetmp, char **values)
   tri[nlocal] = atoi(values[3]);
   if (tri[nlocal] == 0) tri[nlocal] = -1;
   else if (tri[nlocal] == 1) tri[nlocal] = 0;
-  else error->one(FLERR,"Invalid atom type in Atoms section of data file");
+  else error->one(FLERR,"Invalid triflag in Atoms section of data file");
 
   rmass[nlocal] = atof(values[4]);
   if (rmass[nlocal] <= 0.0)

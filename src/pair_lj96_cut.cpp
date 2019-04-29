@@ -15,10 +15,10 @@
    Contributing author: Chuanfu Luo (luochuanfu@gmail.com)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "pair_lj96_cut.h"
 #include "atom.h"
 #include "comm.h"
@@ -73,8 +73,7 @@ void PairLJ96Cut::compute(int eflag, int vflag)
   int *ilist,*jlist,*numneigh,**firstneigh;
 
   evdwl = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;
@@ -308,8 +307,7 @@ void PairLJ96Cut::compute_outer(int eflag, int vflag)
   int *ilist,*jlist,*numneigh,**firstneigh;
 
   evdwl = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;
@@ -678,8 +676,8 @@ void PairLJ96Cut::write_data_all(FILE *fp)
 
 /* ---------------------------------------------------------------------- */
 
-double PairLJ96Cut::single(int i, int j, int itype, int jtype, double rsq,
-                           double factor_coul, double factor_lj,
+double PairLJ96Cut::single(int /*i*/, int /*j*/, int itype, int jtype, double rsq,
+                           double /*factor_coul*/, double factor_lj,
                            double &fforce)
 {
   double r2inv,r3inv,r6inv,forcelj,philj;

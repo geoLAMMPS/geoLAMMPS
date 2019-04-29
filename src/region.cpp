@@ -11,9 +11,9 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include "region.h"
 #include "update.h"
 #include "domain.h"
@@ -28,9 +28,9 @@ using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-Region::Region(LAMMPS *lmp, int narg, char **arg) : 
+Region::Region(LAMMPS *lmp, int /*narg*/, char **arg) :
   Pointers(lmp),
-  id(NULL), style(NULL), contact(NULL), list(NULL), 
+  id(NULL), style(NULL), contact(NULL), list(NULL),
   xstr(NULL), ystr(NULL), zstr(NULL), tstr(NULL)
 {
   int n = strlen(arg[0]) + 1;
@@ -143,15 +143,6 @@ int Region::match(double x, double y, double z)
 }
 
 /* ----------------------------------------------------------------------
-   generate error if Kokkos function defaults to base class
-------------------------------------------------------------------------- */
-
-void Region::match_all_kokkos(int, DAT::tdual_int_1d)
-{
-  error->all(FLERR,"Can only use Kokkos supported regions with Kokkos package");
-}
-
-/* ----------------------------------------------------------------------
    generate list of contact points for interior or exterior regions
    if region has variable shape, invoke shape_update() once per timestep
    if region is dynamic:
@@ -183,8 +174,7 @@ int Region::surface(double x, double y, double z, double cutoff)
   if (!openflag) {
     if (interior) ncontact = surface_interior(xnear,cutoff);
     else ncontact = surface_exterior(xnear,cutoff);
-  }
-  else{
+  } else {
     // one of surface_int/ext() will return 0
     // so no need to worry about offset of contact indices
     ncontact = surface_exterior(xnear,cutoff) + surface_interior(xnear,cutoff);

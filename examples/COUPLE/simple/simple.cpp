@@ -19,15 +19,16 @@
 //         in.lammps = LAMMPS input script
 // See README for compilation instructions
 
-#include "stdio.h"
-#include "stdlib.h"
-#include "string.h"
-#include "mpi.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <mpi.h>
 
-#include "lammps.h"         // these are LAMMPS include files
-#include "input.h"
-#include "atom.h"
-#include "library.h"
+// these are LAMMPS include files
+#include <lammps/lammps.h>
+#include <lammps/input.h>
+#include <lammps/atom.h>
+#include <lammps/library.h>
 
 using namespace LAMMPS_NS;
 
@@ -109,11 +110,11 @@ int main(int narg, char **arg)
     int natoms = static_cast<int> (lmp->atom->natoms);
     x = new double[3*natoms];
     v = new double[3*natoms];
-    lammps_gather_atoms(lmp,"x",1,3,x);
-    lammps_gather_atoms(lmp,"v",1,3,v);
+    lammps_gather_atoms(lmp,(char *) "x",1,3,x);
+    lammps_gather_atoms(lmp,(char *) "v",1,3,v);
     double epsilon = 0.1;
     x[0] += epsilon;
-    lammps_scatter_atoms(lmp,"x",1,3,x);
+    lammps_scatter_atoms(lmp,(char *) "x",1,3,x);
 
     // these 2 lines are the same
 
@@ -124,21 +125,22 @@ int main(int narg, char **arg)
   // extract force on single atom two different ways
 
   if (lammps == 1) {
-    double **f = (double **) lammps_extract_atom(lmp,"f");
+    double **f = (double **) lammps_extract_atom(lmp,(char *) "f");
     printf("Force on 1 atom via extract_atom: %g\n",f[0][0]);
 
-    double *fx = (double *) lammps_extract_variable(lmp,"fx","all");
+    double *fx = (double *) 
+      lammps_extract_variable(lmp,(char *) "fx",(char *) "all");
     printf("Force on 1 atom via extract_variable: %g\n",fx[0]);
   }
 
   // use commands_string() and commands_list() to invoke more commands
 
-  char *strtwo = "run 10\nrun 20";
+  char *strtwo = (char *) "run 10\nrun 20";
   if (lammps == 1) lammps_commands_string(lmp,strtwo);
 
   char *cmds[2];
-  cmds[0] = "run 10";
-  cmds[1] = "run 20";
+  cmds[0] = (char *) "run 10";
+  cmds[1] = (char *) "run 20";
   if (lammps == 1) lammps_commands_list(lmp,2,cmds);
 
   // delete all atoms

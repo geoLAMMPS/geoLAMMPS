@@ -11,17 +11,22 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #include "delete_atoms.h"
 #include "atom.h"
 #include "atom_vec.h"
+#include "atom_vec_ellipsoid.h"
+#include "atom_vec_line.h"
+#include "atom_vec_tri.h"
+#include "atom_vec_body.h"
 #include "molecule.h"
 #include "comm.h"
 #include "domain.h"
 #include "force.h"
 #include "group.h"
 #include "region.h"
+#include "modify.h"
 #include "neighbor.h"
 #include "neigh_list.h"
 #include "neigh_request.h"
@@ -67,7 +72,8 @@ void DeleteAtoms::command(int narg, char **arg)
 
   if (allflag) {
     int igroup = group->find("all");
-    if ((igroup >= 0) && modify->check_rigid_group_overlap(group->bitmask[igroup]))
+    if ((igroup >= 0) &&
+        modify->check_rigid_group_overlap(group->bitmask[igroup]))
       error->warning(FLERR,"Attempting to delete atoms in rigid bodies");
   } else {
     if (modify->check_rigid_list_overlap(dlist))
@@ -104,23 +110,54 @@ void DeleteAtoms::command(int narg, char **arg)
     memory->destroy(dlist);
   }
 
-  // if non-molecular system and compress flag set,
+  // if non-molecular system and compress flag set:
   // reset atom tags to be contiguous
   // set all atom IDs to 0, call tag_extend()
 
-  if (atom->molecular == 0 && compress_flag) {
-    tagint *tag = atom->tag;
-    int nlocal = atom->nlocal;
-    for (int i = 0; i < nlocal; i++) tag[i] = 0;
-    atom->tag_extend();
+  if (compress_flag) {
+    if (atom->molecular == 0) {
+      tagint *tag = atom->tag;
+      int nlocal = atom->nlocal;
+      for (int i = 0; i < nlocal; i++) tag[i] = 0;
+      atom->tag_extend();
+    } else if (comm->me == 0)
+        error->warning(FLERR,"Ignoring 'compress yes' for molecular system");
   }
 
   // reset atom->natoms and also topology counts
-  // reset atom->map if it exists
-  // set nghost to 0 so old ghosts of deleted atoms won't be mapped
 
   bigint nblocal = atom->nlocal;
   MPI_Allreduce(&nblocal,&atom->natoms,1,MPI_LMP_BIGINT,MPI_SUM,world);
+
+  // reset bonus data counts
+
+  AtomVecEllipsoid *avec_ellipsoid =
+    (AtomVecEllipsoid *) atom->style_match("ellipsoid");
+  AtomVecLine *avec_line = (AtomVecLine *) atom->style_match("line");
+  AtomVecTri *avec_tri = (AtomVecTri *) atom->style_match("tri");
+  AtomVecBody *avec_body = (AtomVecBody *) atom->style_match("body");
+  bigint nlocal_bonus;
+
+  if (atom->nellipsoids > 0) {
+    nlocal_bonus = avec_ellipsoid->nlocal_bonus;
+    MPI_Allreduce(&nlocal_bonus,&atom->nellipsoids,1,MPI_LMP_BIGINT,MPI_SUM,world);
+  }
+  if (atom->nlines > 0) {
+    nlocal_bonus = avec_line->nlocal_bonus;
+    MPI_Allreduce(&nlocal_bonus,&atom->nlines,1,MPI_LMP_BIGINT,MPI_SUM,world);
+  }
+  if (atom->ntris > 0) {
+    nlocal_bonus = avec_tri->nlocal_bonus;
+    MPI_Allreduce(&nlocal_bonus,&atom->ntris,1,MPI_LMP_BIGINT,MPI_SUM,world);
+  }
+  if (atom->nbodies > 0) {
+    nlocal_bonus = avec_body->nlocal_bonus;
+    MPI_Allreduce(&nlocal_bonus,&atom->nbodies,1,MPI_LMP_BIGINT,MPI_SUM,world);
+  }
+
+  // reset atom->map if it exists
+  // set nghost to 0 so old ghosts of deleted atoms won't be mapped
+
   if (atom->map_style) {
     atom->nghost = 0;
     atom->map_init();
@@ -310,7 +347,7 @@ void DeleteAtoms::delete_overlap(int narg, char **arg)
   comm->exchange();
   comm->borders();
   if (domain->triclinic) domain->lamda2x(atom->nlocal+atom->nghost);
-  neighbor->build();
+  neighbor->build(1);
 
   // build neighbor list this command needs based on earlier request
 

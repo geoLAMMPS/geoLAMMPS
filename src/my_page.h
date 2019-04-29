@@ -48,11 +48,11 @@ methods:
 #ifndef LAMMPS_MY_PAGE_H
 #define LAMMPS_MY_PAGE_H
 
-#if defined(LMP_USER_INTEL) && !defined(LAMMPS_MEMALIGN)
+#if defined(LMP_USER_INTEL) && !defined(LAMMPS_MEMALIGN) && !defined(_WIN32)
 #define LAMMPS_MEMALIGN 64
 #endif
 
-#include <stdlib.h>
+#include <cstdlib>
 namespace LAMMPS_NS {
 
 template<class T>

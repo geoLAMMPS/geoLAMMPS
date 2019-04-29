@@ -31,10 +31,10 @@
    High Performance Computing Applications, to appear.
  ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "fix_qeq_reax_omp.h"
 #include "pair_reaxc_omp.h"
 #include "atom.h"
@@ -275,7 +275,7 @@ void FixQEqReaxOMP::init_storage()
 
 /* ---------------------------------------------------------------------- */
 
-void FixQEqReaxOMP::pre_force(int vflag)
+void FixQEqReaxOMP::pre_force(int /* vflag */)
 {
 
 #ifdef OMP_TIMING

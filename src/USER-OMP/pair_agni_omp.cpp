@@ -12,9 +12,9 @@
    Contributing author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <string.h>
-#include <stdint.h>
+#include <cmath>
+#include <cstring>
+#include <stdint.h> // <cstdint> requires C++-11
 #include "pair_agni_omp.h"
 #include "atom.h"
 #include "comm.h"
@@ -42,9 +42,7 @@ PairAGNIOMP::PairAGNIOMP(LAMMPS *lmp) :
 
 void PairAGNIOMP::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) {
-    ev_setup(eflag,vflag);
-  } else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   const int nall = atom->nlocal + atom->nghost;
   const int nthreads = comm->nthreads;

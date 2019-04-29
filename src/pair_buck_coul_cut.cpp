@@ -15,9 +15,9 @@
    Contributing author: Eduardo Bringa (LLNL)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include "pair_buck_coul_cut.h"
 #include "atom.h"
 #include "comm.h"
@@ -42,7 +42,9 @@ PairBuckCoulCut::PairBuckCoulCut(LAMMPS *lmp) : Pair(lmp)
 
 PairBuckCoulCut::~PairBuckCoulCut()
 {
-  if (!copymode) {
+  if (copymode) return;
+
+  if (allocated) {
     memory->destroy(setflag);
     memory->destroy(cutsq);
 
@@ -71,8 +73,7 @@ void PairBuckCoulCut::compute(int eflag, int vflag)
   int *ilist,*jlist,*numneigh,**firstneigh;
 
   evdwl = ecoul = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;

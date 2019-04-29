@@ -12,7 +12,7 @@
    Contributing author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
+#include <cmath>
 #include "pair_lubricate_omp.h"
 #include "atom.h"
 #include "comm.h"
@@ -31,10 +31,6 @@
 #include "suffix.h"
 using namespace LAMMPS_NS;
 using namespace MathConst;
-
-// same as fix_deform.cpp
-
-enum{NO_REMAP,X_REMAP,V_REMAP};
 
 // same as fix_wall.cpp
 
@@ -58,9 +54,7 @@ PairLubricateOMP::~PairLubricateOMP()
 
 void PairLubricateOMP::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) {
-    ev_setup(eflag,vflag);
-  } else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   const int nall = atom->nlocal + atom->nghost;
   const int nthreads = comm->nthreads;

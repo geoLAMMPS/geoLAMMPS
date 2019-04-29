@@ -12,7 +12,7 @@
    Contributing author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
+#include <cmath>
 #include "pair_gran_hertz_history_omp.h"
 #include "fix_neigh_history.h"
 #include "atom.h"
@@ -40,9 +40,7 @@ PairGranHertzHistoryOMP::PairGranHertzHistoryOMP(LAMMPS *lmp) :
 
 void PairGranHertzHistoryOMP::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) {
-    ev_setup(eflag,vflag);
-  } else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   const int nall = atom->nlocal + atom->nghost;
   const int nthreads = comm->nthreads;

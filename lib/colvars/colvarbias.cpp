@@ -8,6 +8,7 @@
 // Colvars repository at GitHub.
 
 #include "colvarmodule.h"
+#include "colvarproxy.h"
 #include "colvarvalue.h"
 #include "colvarbias.h"
 #include "colvargrid.h"
@@ -232,6 +233,12 @@ void colvarbias::communicate_forces()
   for (i = 0; i < num_variables(); i++) {
     previous_colvar_forces[i] = colvar_forces[i];
   }
+}
+
+
+int colvarbias::end_of_step()
+{
+  return COLVARS_OK;
 }
 
 

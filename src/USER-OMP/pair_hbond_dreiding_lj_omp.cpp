@@ -12,7 +12,7 @@
    Contributing author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
+#include <cmath>
 #include "pair_hbond_dreiding_lj_omp.h"
 #include "atom.h"
 #include "atom_vec.h"
@@ -57,9 +57,7 @@ PairHbondDreidingLJOMP::~PairHbondDreidingLJOMP()
 
 void PairHbondDreidingLJOMP::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) {
-    ev_setup(eflag,vflag);
-  } else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   const int nall = atom->nlocal + atom->nghost;
   const int nthreads = comm->nthreads;

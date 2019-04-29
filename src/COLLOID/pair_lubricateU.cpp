@@ -16,10 +16,10 @@
 ------------------------------------------------------------------------- */
 
 #include <mpi.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "pair_lubricateU.h"
 #include "atom.h"
 #include "atom_vec.h"
@@ -116,8 +116,7 @@ void PairLubricateU::compute(int eflag, int vflag)
   int nghost = atom->nghost;
   int nall = nlocal + nghost;
 
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   // skip compute() if called from integrate::setup()
   // this is b/c do not want compute() to update velocities twice on a restart
@@ -2010,7 +2009,7 @@ void PairLubricateU::copy_uo_vec(int inum, double **f, double **torque,
 /* ---------------------------------------------------------------------- */
 
 int PairLubricateU::pack_forward_comm(int n, int *list, double *buf,
-                                      int pbc_flag, int *pbc)
+                                      int /*pbc_flag*/, int * /*pbc*/)
 {
   int i,j,m;
 

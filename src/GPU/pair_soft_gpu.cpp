@@ -15,9 +15,10 @@
    Contributing author: Trung Dac Nguyen (ORNL)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "pair_soft_gpu.h"
 #include "atom.h"
 #include "atom_vec.h"
@@ -32,7 +33,6 @@
 #include "universe.h"
 #include "update.h"
 #include "domain.h"
-#include <string.h>
 #include "gpu_extra.h"
 #include "math_const.h"
 
@@ -86,8 +86,7 @@ PairSoftGPU::~PairSoftGPU()
 
 void PairSoftGPU::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   int nall = atom->nlocal + atom->nghost;
   int inum, host_start;
@@ -182,8 +181,8 @@ double PairSoftGPU::memory_usage()
 
 /* ---------------------------------------------------------------------- */
 
-void PairSoftGPU::cpu_compute(int start, int inum, int eflag, int vflag,
-                               int *ilist, int *numneigh, int **firstneigh) {
+void PairSoftGPU::cpu_compute(int start, int inum, int eflag, int /* vflag */,
+                              int *ilist, int *numneigh, int **firstneigh) {
   int i,j,ii,jj,jnum,itype,jtype;
   double xtmp,ytmp,ztmp,delx,dely,delz,evdwl,fpair;
   double r,rsq,arg,factor_lj;

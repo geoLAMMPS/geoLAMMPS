@@ -67,7 +67,8 @@ class RSTMarkup(Markup):
         text = text.replace('*', '\\*')
         text = text.replace('^', '\\^')
         text = text.replace('|', '\\|')
-        text = re.sub(r'([^"])_', r'\1\\_', text)
+        text = re.sub(r'([^"])_([ \t\n\r\f])', r'\1\\\\_\2', text)
+        text = re.sub(r'([^"])_([^ \t\n\r\f])', r'\1\\_\2', text)
         return text
 
     def unescape_rst_chars(self, text):
@@ -148,15 +149,18 @@ class RSTFormatting(Formatting):
         return "\n----------\n\n" + content.strip()
 
     def image(self, content, file, link=None):
-        if link and (link.lower().endswith('.jpg') or
-                         link.lower().endswith('.jpeg') or
-                         link.lower().endswith('.png') or
-                         link.lower().endswith('.gif')):
-            converted = ".. thumbnail:: " + self.markup.unescape_rst_chars(link) + "\n"
-        else:
-            converted = ".. image:: " + self.markup.unescape_rst_chars(file) + "\n"
-            if link:
-                converted += "   :target: " + self.markup.unescape_rst_chars(link) + "\n"
+        # 2017-12-07: commented out to disable thumbnail processing due to dropping
+        #             support for obsolete sphinxcontrib.images extension
+        #
+        #if link and (link.lower().endswith('.jpg') or
+        #                 link.lower().endswith('.jpeg') or
+        #                 link.lower().endswith('.png') or
+        #                 link.lower().endswith('.gif')):
+        #    converted = ".. thumbnail:: " + self.markup.unescape_rst_chars(link) + "\n"
+        #else:
+        converted = ".. image:: " + self.markup.unescape_rst_chars(file) + "\n"
+        if link:
+            converted += "   :target: " + self.markup.unescape_rst_chars(link) + "\n"
 
         if "c" in self.current_command_list:
             converted += "   :align: center\n"
@@ -391,6 +395,8 @@ class Txt2RstConverter(TxtConverter):
         parser = argparse.ArgumentParser(description='converts a text file with simple formatting & markup into '
                                                      'Restructured Text for Sphinx.')
         parser.add_argument('-x', metavar='file-to-skip', dest='skip_files', action='append')
+        parser.add_argument('--verbose', '-v', dest='verbose', action='store_true')
+        parser.add_argument('--output-directory', '-o', dest='output_dir')
         parser.add_argument('files',  metavar='file', nargs='+', help='one or more files to convert')
         return parser
 

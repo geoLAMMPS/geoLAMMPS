@@ -15,15 +15,15 @@
    Contributing author: Stan Moore (SNL)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "bond_harmonic_kokkos.h"
 #include "atom_kokkos.h"
 #include "neighbor_kokkos.h"
 #include "domain.h"
 #include "comm.h"
 #include "force.h"
-#include "memory.h"
+#include "memory_kokkos.h"
 #include "error.h"
 #include "atom_masks.h"
 
@@ -48,8 +48,8 @@ template<class DeviceType>
 BondHarmonicKokkos<DeviceType>::~BondHarmonicKokkos()
 {
   if (!copymode) {
-    memory->destroy_kokkos(k_eatom,eatom);
-    memory->destroy_kokkos(k_vatom,vatom);
+    memoryKK->destroy_kokkos(k_eatom,eatom);
+    memoryKK->destroy_kokkos(k_vatom,vatom);
   }
 }
 
@@ -61,22 +61,21 @@ void BondHarmonicKokkos<DeviceType>::compute(int eflag_in, int vflag_in)
   eflag = eflag_in;
   vflag = vflag_in;
 
-  if (eflag || vflag) ev_setup(eflag,vflag,0);
-  else evflag = 0;
+  ev_init(eflag,vflag,0);
 
   // reallocate per-atom arrays if necessary
 
   if (eflag_atom) {
-    //if(k_eatom.dimension_0()<maxeatom) { // won't work without adding zero functor
-      memory->destroy_kokkos(k_eatom,eatom);
-      memory->create_kokkos(k_eatom,eatom,maxeatom,"improper:eatom");
+    //if(k_eatom.extent(0)<maxeatom) { // won't work without adding zero functor
+      memoryKK->destroy_kokkos(k_eatom,eatom);
+      memoryKK->create_kokkos(k_eatom,eatom,maxeatom,"improper:eatom");
       d_eatom = k_eatom.template view<DeviceType>();
     //}
   }
   if (vflag_atom) {
-    //if(k_vatom.dimension_0()<maxvatom) { // won't work without adding zero functor
-      memory->destroy_kokkos(k_vatom,vatom);
-      memory->create_kokkos(k_vatom,vatom,maxvatom,6,"improper:vatom");
+    //if(k_vatom.extent(0)<maxvatom) { // won't work without adding zero functor
+      memoryKK->destroy_kokkos(k_vatom,vatom);
+      memoryKK->create_kokkos(k_vatom,vatom,maxvatom,6,"improper:vatom");
       d_vatom = k_vatom.template view<DeviceType>();
     //}
   }
@@ -220,7 +219,33 @@ void BondHarmonicKokkos<DeviceType>::coeff(int narg, char **arg)
   k_r0.template modify<LMPHostType>();
   k_k.template sync<DeviceType>();
   k_r0.template sync<DeviceType>();
+}
 
+/* ----------------------------------------------------------------------
+   proc 0 reads coeffs from restart file, bcasts them
+------------------------------------------------------------------------- */
+
+template<class DeviceType>
+void BondHarmonicKokkos<DeviceType>::read_restart(FILE *fp)
+{
+  BondHarmonic::read_restart(fp);
+
+  int n = atom->nbondtypes;
+  Kokkos::DualView<F_FLOAT*,DeviceType> k_k("BondHarmonic::k",n+1);
+  Kokkos::DualView<F_FLOAT*,DeviceType> k_r0("BondHarmonic::r0",n+1);
+
+  d_k = k_k.template view<DeviceType>();
+  d_r0 = k_r0.template view<DeviceType>();
+
+  for (int i = 1; i <= n; i++) {
+    k_k.h_view[i] = k[i];
+    k_r0.h_view[i] = r0[i];
+  }
+
+  k_k.template modify<LMPHostType>();
+  k_r0.template modify<LMPHostType>();
+  k_k.template sync<DeviceType>();
+  k_r0.template sync<DeviceType>();
 }
 
 /* ----------------------------------------------------------------------
@@ -314,7 +339,7 @@ void BondHarmonicKokkos<DeviceType>::ev_tally(EV_FLOAT &ev, const int &i, const 
 
 namespace LAMMPS_NS {
 template class BondHarmonicKokkos<LMPDeviceType>;
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 template class BondHarmonicKokkos<LMPHostType>;
 #endif
 }

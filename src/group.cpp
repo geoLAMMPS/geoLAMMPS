@@ -12,10 +12,10 @@
 ------------------------------------------------------------------------- */
 
 #include <mpi.h>
-#include <math.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 #include "group.h"
 #include "domain.h"
 #include "atom.h"
@@ -40,7 +40,7 @@ using namespace LAMMPS_NS;
 #define MAX_GROUP 32
 #define EPSILON 1.0e-6
 
-enum{TYPE,MOLECULE,ID};
+enum{NONE,TYPE,MOLECULE,ID};
 enum{LT,LE,GT,GE,EQ,NEQ,BETWEEN};
 
 #define BIG 1.0e20
@@ -188,6 +188,12 @@ void Group::assign(int narg, char **arg)
       if (domain->regions[iregion]->match(x[i][0],x[i][1],x[i][2]))
         mask[i] |= bit;
 
+  // create an empty group
+
+  } else if (strcmp(arg[1],"empty") == 0) {
+
+    ; // nothing to do here
+
   // style = type, molecule, id
   // add to group if atom matches type/molecule/id or condition
 
@@ -196,10 +202,16 @@ void Group::assign(int narg, char **arg)
 
     if (narg < 3) error->all(FLERR,"Illegal group command");
 
-    int category;
+    int category=NONE;
     if (strcmp(arg[1],"type") == 0) category = TYPE;
     else if (strcmp(arg[1],"molecule") == 0) category = MOLECULE;
     else if (strcmp(arg[1],"id") == 0) category = ID;
+
+    if ((category == MOLECULE) && (!atom->molecular))
+      error->all(FLERR,"Group command requires atom attribute molecule");
+
+    if ((category == ID) && (!atom->tag_enable))
+      error->all(FLERR,"Group command requires atom IDs");
 
     // args = logical condition
 
@@ -356,10 +368,13 @@ void Group::assign(int narg, char **arg)
   } else if (strcmp(arg[1],"include") == 0) {
 
     if (narg != 3) error->all(FLERR,"Illegal group command");
-    if (strcmp(arg[2],"molecule") != 0)
-      error->all(FLERR,"Illegal group command");
+    if (strcmp(arg[2],"molecule") == 0) {
+      if (!atom->molecular)
+        error->all(FLERR,"Group command requires atom attribute molecule");
 
-    add_molecules(igroup,bit);
+      add_molecules(igroup,bit);
+
+    } else error->all(FLERR,"Illegal group command");
 
   // style = subtract
 
@@ -623,7 +638,7 @@ int Group::find_unused()
    do not include molID = 0
 ------------------------------------------------------------------------- */
 
-void Group::add_molecules(int igroup, int bit)
+void Group::add_molecules(int /*igroup*/, int bit)
 {
   // hash = unique molecule IDs of atoms already in group
 
@@ -747,6 +762,18 @@ void Group::read_restart(FILE *fp)
 // ----------------------------------------------------------------------
 // computations on a group of atoms
 // ----------------------------------------------------------------------
+
+/* ----------------------------------------------------------------------
+   count atoms in group all
+------------------------------------------------------------------------- */
+
+bigint Group::count_all()
+{
+  bigint nme = atom->nlocal;
+  bigint nall;
+  MPI_Allreduce(&nme,&nall,1,MPI_LMP_BIGINT,MPI_SUM,world);
+  return nall;
+}
 
 /* ----------------------------------------------------------------------
    count atoms in group
@@ -1684,18 +1711,18 @@ void Group::omega(double *angmom, double inertia[3][3], double *w)
   if (determinant > EPSILON) {
 
     inverse[0][0] = inertia[1][1]*inertia[2][2] - inertia[1][2]*inertia[2][1];
-    inverse[0][1] = -(inertia[0][1]*inertia[2][2] - 
+    inverse[0][1] = -(inertia[0][1]*inertia[2][2] -
                       inertia[0][2]*inertia[2][1]);
     inverse[0][2] = inertia[0][1]*inertia[1][2] - inertia[0][2]*inertia[1][1];
 
-    inverse[1][0] = -(inertia[1][0]*inertia[2][2] - 
+    inverse[1][0] = -(inertia[1][0]*inertia[2][2] -
                       inertia[1][2]*inertia[2][0]);
     inverse[1][1] = inertia[0][0]*inertia[2][2] - inertia[0][2]*inertia[2][0];
-    inverse[1][2] = -(inertia[0][0]*inertia[1][2] - 
+    inverse[1][2] = -(inertia[0][0]*inertia[1][2] -
                       inertia[0][2]*inertia[1][0]);
 
     inverse[2][0] = inertia[1][0]*inertia[2][1] - inertia[1][1]*inertia[2][0];
-    inverse[2][1] = -(inertia[0][0]*inertia[2][1] - 
+    inverse[2][1] = -(inertia[0][0]*inertia[2][1] -
                       inertia[0][1]*inertia[2][0]);
     inverse[2][2] = inertia[0][0]*inertia[1][1] - inertia[0][1]*inertia[1][0];
 
@@ -1729,25 +1756,25 @@ void Group::omega(double *angmom, double inertia[3][3], double *w)
     ez[0] = evectors[0][2];
     ez[1] = evectors[1][2];
     ez[2] = evectors[2][2];
-  
+
     // enforce 3 evectors as a right-handed coordinate system
     // flip 3rd vector if needed
-  
+
     MathExtra::cross3(ex,ey,cross);
     if (MathExtra::dot3(cross,ez) < 0.0) MathExtra::negate3(ez);
-  
+
     // if any principal moment < scaled EPSILON, set to 0.0
-  
+
     double max;
     max = MAX(idiag[0],idiag[1]);
     max = MAX(max,idiag[2]);
-    
+
     if (idiag[0] < EPSILON*max) idiag[0] = 0.0;
     if (idiag[1] < EPSILON*max) idiag[1] = 0.0;
     if (idiag[2] < EPSILON*max) idiag[2] = 0.0;
-    
+
     // calculate omega using diagonalized inertia matrix
-    
+
     MathExtra::angmom_to_omega(angmom,ex,ey,ez,idiag,w);
   }
 }

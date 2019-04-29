@@ -35,7 +35,7 @@
 // NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// Questions? Contact  H. Carter Edwards (hcedwar@sandia.gov)
+// Questions? Contact Christian R. Trott (crtrott@sandia.gov)
 //
 // ************************************************************************
 //@HEADER
@@ -48,6 +48,10 @@
 #include <Kokkos_Macros.hpp>
 #if defined( KOKKOS_ATOMIC_HPP ) && ! defined( KOKKOS_ATOMIC_FETCH_SUB_HPP )
 #define KOKKOS_ATOMIC_FETCH_SUB_HPP
+
+#if defined(KOKKOS_ENABLE_CUDA)
+#include<Cuda/Kokkos_Cuda_Version_9_8_Compatibility.hpp>
+#endif
 
 namespace Kokkos {
 
@@ -65,6 +69,20 @@ int atomic_fetch_sub( volatile int * const dest , const int val )
 __inline__ __device__
 unsigned int atomic_fetch_sub( volatile unsigned int * const dest , const unsigned int val )
 { return atomicSub((unsigned int*)dest,val); }
+
+__inline__ __device__
+unsigned int atomic_fetch_sub( volatile int64_t * const dest , const int64_t val )
+{ return atomic_fetch_add(dest,-val); }
+
+__inline__ __device__
+unsigned int atomic_fetch_sub( volatile float * const dest , const float val )
+{ return atomicAdd((float*)dest,-val); }
+
+#if ( 600 <= __CUDA_ARCH__ )
+__inline__ __device__
+unsigned int atomic_fetch_sub( volatile double * const dest , const double val )
+{ return atomicAdd((double*)dest,-val); }
+#endif
 
 template < typename T >
 __inline__ __device__
@@ -117,7 +135,12 @@ T atomic_fetch_sub( volatile T * const dest ,
   T return_val;
   // This is a way to (hopefully) avoid dead lock in a warp
   int done = 0;
-  unsigned int active = __ballot(1);
+#ifdef KOKKOS_IMPL_CUDA_SYNCWARP_NEEDS_MASK
+  unsigned int mask = KOKKOS_IMPL_CUDA_ACTIVEMASK;
+  unsigned int active = KOKKOS_IMPL_CUDA_BALLOT_MASK(mask,1);
+#else
+  unsigned int active = KOKKOS_IMPL_CUDA_BALLOT(1);
+#endif
   unsigned int done_active = 0;
   while (active!=done_active) {
     if(!done) {
@@ -128,7 +151,11 @@ T atomic_fetch_sub( volatile T * const dest ,
         done = 1;
       }
     }
-    done_active = __ballot(done);
+#ifdef KOKKOS_IMPL_CUDA_SYNCWARP_NEEDS_MASK
+    done_active = KOKKOS_IMPL_CUDA_BALLOT_MASK(mask,done);
+#else
+    done_active = KOKKOS_IMPL_CUDA_BALLOT(done);
+#endif
   }
   return return_val;
 }
@@ -262,9 +289,29 @@ T atomic_fetch_sub( volatile T * const dest , const T val )
   return retval;
 }
 
+#elif defined( KOKKOS_ENABLE_SERIAL_ATOMICS )
+
+template< typename T >
+T atomic_fetch_sub( volatile T * const dest_v , const T val )
+{
+  T* dest = const_cast<T*>(dest_v);
+  T retval = *dest;
+  *dest -= val;
+  return retval;
+}
+
 #endif
 #endif
 #endif // !defined ROCM_ATOMICS
+
+// dummy for non-CUDA Kokkos headers being processed by NVCC
+#if defined(__CUDA_ARCH__) && !defined(KOKKOS_ENABLE_CUDA)
+template< typename T >
+__inline__ __device__
+T atomic_fetch_sub(volatile T* const, Kokkos::Impl::identity_t<T>) {
+  return T();
+}
+#endif
 
 // Simpler version of atomic_fetch_sub without the fetch
 template <typename T>

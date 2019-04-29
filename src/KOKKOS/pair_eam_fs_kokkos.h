@@ -23,7 +23,8 @@ PairStyle(eam/fs/kk/host,PairEAMFSKokkos<LMPHostType>)
 #ifndef LMP_PAIR_EAM_FS_KOKKOS_H
 #define LMP_PAIR_EAM_FS_KOKKOS_H
 
-#include <stdio.h>
+#include <cstdio>
+#include "kokkos_base.h"
 #include "pair_kokkos.h"
 #include "pair_eam.h"
 #include "neigh_list_kokkos.h"
@@ -49,7 +50,7 @@ struct TagPairEAMFSKernelC{};
 // Cannot use virtual inheritance on the GPU
 
 template<class DeviceType>
-class PairEAMFSKokkos : public PairEAM {
+class PairEAMFSKokkos : public PairEAM, public KokkosBase {
  public:
   enum {EnabledNeighFlags=FULL|HALFTHREAD|HALF};
   enum {COUL_FLAG=0};
@@ -59,7 +60,7 @@ class PairEAMFSKokkos : public PairEAM {
 
   PairEAMFSKokkos(class LAMMPS *);
   virtual ~PairEAMFSKokkos();
-  virtual void compute(int, int);
+  void compute(int, int);
   void init_style();
   void *extract(const char *, int &) { return NULL; }
   void coeff(int, char **);
@@ -107,11 +108,11 @@ class PairEAMFSKokkos : public PairEAM {
       const F_FLOAT &epair, const F_FLOAT &fpair, const F_FLOAT &delx,
                   const F_FLOAT &dely, const F_FLOAT &delz) const;
 
-  virtual int pack_forward_comm_kokkos(int, DAT::tdual_int_2d, int, DAT::tdual_xfloat_1d&,
-                               int, int *);
-  virtual void unpack_forward_comm_kokkos(int, int, DAT::tdual_xfloat_1d&);
-  virtual int pack_forward_comm(int, int *, double *, int, int *);
-  virtual void unpack_forward_comm(int, int, double *);
+  int pack_forward_comm_kokkos(int, DAT::tdual_int_2d, int, DAT::tdual_xfloat_1d&,
+                       int, int *);
+  void unpack_forward_comm_kokkos(int, int, DAT::tdual_xfloat_1d&);
+  int pack_forward_comm(int, int *, double *, int, int *);
+  void unpack_forward_comm(int, int, double *);
   int pack_reverse_comm(int, int, double *);
   void unpack_reverse_comm(int, int *, double *);
 
@@ -128,10 +129,19 @@ class PairEAMFSKokkos : public PairEAM {
   typename ArrayTypes<DeviceType>::t_efloat_1d d_eatom;
   typename ArrayTypes<DeviceType>::t_virial_array d_vatom;
 
+  int need_dup;
+  Kokkos::Experimental::ScatterView<F_FLOAT*, typename DAT::t_ffloat_1d::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterDuplicated> dup_rho;
+  Kokkos::Experimental::ScatterView<F_FLOAT*[3], typename DAT::t_f_array::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterDuplicated> dup_f;
+  Kokkos::Experimental::ScatterView<E_FLOAT*, typename DAT::t_efloat_1d::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterDuplicated> dup_eatom;
+  Kokkos::Experimental::ScatterView<F_FLOAT*[6], typename DAT::t_virial_array::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterDuplicated> dup_vatom;
+  Kokkos::Experimental::ScatterView<F_FLOAT*, typename DAT::t_ffloat_1d::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterNonDuplicated> ndup_rho;
+  Kokkos::Experimental::ScatterView<F_FLOAT*[3], typename DAT::t_f_array::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterNonDuplicated> ndup_f;
+  Kokkos::Experimental::ScatterView<E_FLOAT*, typename DAT::t_efloat_1d::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterNonDuplicated> ndup_eatom;
+  Kokkos::Experimental::ScatterView<F_FLOAT*[6], typename DAT::t_virial_array::array_layout,DeviceType,Kokkos::Experimental::ScatterSum,Kokkos::Experimental::ScatterNonDuplicated> ndup_vatom;
+
   DAT::tdual_ffloat_1d k_rho;
   DAT::tdual_ffloat_1d k_fp;
   typename AT::t_ffloat_1d d_rho;
-  typename AT::t_ffloat_1d v_rho;
   typename AT::t_ffloat_1d d_fp;
   HAT::t_ffloat_1d h_rho;
   HAT::t_ffloat_1d h_fp;
@@ -148,7 +158,7 @@ class PairEAMFSKokkos : public PairEAM {
   t_ffloat_2d_n7_randomread d_rhor_spline;
   t_ffloat_2d_n7_randomread d_z2r_spline;
 
-  virtual void file2array();
+  void file2array();
   void file2array_fs();
   void array2spline();
   void interpolate(int, double, double *, t_host_ffloat_2d_n7, int);

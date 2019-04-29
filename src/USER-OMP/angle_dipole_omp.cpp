@@ -25,7 +25,7 @@
 
 #include "math_const.h"
 
-#include <math.h>
+#include <cmath>
 
 #include "suffix.h"
 using namespace LAMMPS_NS;
@@ -45,10 +45,7 @@ AngleDipoleOMP::AngleDipoleOMP(class LAMMPS *lmp)
 
 void AngleDipoleOMP::compute(int eflag, int vflag)
 {
-
-  if (eflag || vflag) {
-    ev_setup(eflag,vflag);
-  } else evflag = 0;
+  ev_init(eflag,vflag);
 
   if (!force->newton_bond)
     error->all(FLERR,"'newton' flag for bonded interactions must be 'on'");
@@ -126,7 +123,7 @@ void AngleDipoleOMP::eval(int nfrom, int nto, ThrData * const thr)
     torque[iDip][0] += delTx;
     torque[iDip][1] += delTy;
     torque[iDip][2] += delTz;
-	
+
     // Force couple that counterbalances dipolar torque
     fx = dely*delTz - delz*delTy; // direction (fi): - r x (-T)
     fy = delz*delTx - delx*delTz;

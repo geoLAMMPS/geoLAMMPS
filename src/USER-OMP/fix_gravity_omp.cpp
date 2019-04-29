@@ -15,10 +15,10 @@
    Contributing author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "fix_gravity_omp.h"
 #include "atom.h"
 #include "update.h"
@@ -42,7 +42,7 @@ FixGravityOMP::FixGravityOMP(LAMMPS *lmp, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-void FixGravityOMP::post_force(int vflag)
+void FixGravityOMP::post_force(int /* vflag */)
 {
   // update gravity due to variables
 
@@ -106,7 +106,7 @@ void FixGravityOMP::post_force(int vflag)
 
 /* ---------------------------------------------------------------------- */
 
-void FixGravityOMP::post_force_respa(int vflag, int ilevel, int iloop)
+void FixGravityOMP::post_force_respa(int vflag, int ilevel, int /* iloop */)
 {
   if (ilevel == ilevel_respa) post_force(vflag);
 }

@@ -12,7 +12,7 @@
    Contributing author: W. Michael Brown (Intel)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
+#include <cmath>
 #include "pair_lj_charmm_coul_charmm_intel.h"
 #include "atom.h"
 #include "comm.h"
@@ -66,9 +66,9 @@ void PairLJCharmmCoulCharmmIntel::compute(int eflag, int vflag,
                                         IntelBuffers<flt_t,acc_t> *buffers,
                                         const ForceConst<flt_t> &fc)
 {
-  if (eflag || vflag) {
-    ev_setup(eflag,vflag);
-  } else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
+  if (vflag_atom)
+    error->all(FLERR,"USER-INTEL package does not support per-atom stress");
 
   const int inum = list->inum;
   const int nthreads = comm->nthreads;
@@ -136,9 +136,9 @@ void PairLJCharmmCoulCharmmIntel::eval(const int offload, const int vflag,
   ATOM_T * _noalias const x = buffers->get_x(offload);
   flt_t * _noalias const q = buffers->get_q(offload);
 
+  const int * _noalias const ilist = list->ilist;
   const int * _noalias const numneigh = list->numneigh;
-  const int * _noalias const cnumneigh = buffers->cnumneigh(list);
-  const int * _noalias const firstneigh = buffers->firstneigh(list);
+  const int ** _noalias const firstneigh = (const int **)list->firstneigh;
 
   const flt_t * _noalias const special_coul = fc.special_coul;
   const flt_t * _noalias const special_lj = fc.special_lj;
@@ -185,10 +185,10 @@ void PairLJCharmmCoulCharmmIntel::eval(const int offload, const int vflag,
     in(special_lj,special_coul:length(0) alloc_if(0) free_if(0)) \
     in(cutsq,lj:length(0) alloc_if(0) free_if(0)) \
     in(firstneigh:length(0) alloc_if(0) free_if(0)) \
-    in(cnumneigh:length(0) alloc_if(0) free_if(0)) \
     in(numneigh:length(0) alloc_if(0) free_if(0)) \
     in(x:length(x_size) alloc_if(0) free_if(0)) \
     in(q:length(q_size) alloc_if(0) free_if(0)) \
+    in(ilist:length(0) alloc_if(0) free_if(0)) \
     in(overflow:length(0) alloc_if(0) free_if(0)) \
     in(ccachex,ccachey,ccachez,ccachew:length(0) alloc_if(0) free_if(0)) \
     in(ccachei,ccachej:length(0) alloc_if(0) free_if(0)) \
@@ -210,8 +210,10 @@ void PairLJCharmmCoulCharmmIntel::eval(const int offload, const int vflag,
                               f_stride, x, q);
 
     acc_t oevdwl, oecoul, ov0, ov1, ov2, ov3, ov4, ov5;
-    if (EFLAG) oevdwl = oecoul = (acc_t)0;
-    if (vflag) ov0 = ov1 = ov2 = ov3 = ov4 = ov5 = (acc_t)0;
+    if (EFLAG || vflag)
+      oevdwl = oecoul = ov0 = ov1 = ov2 = ov3 = ov4 = ov5 = (acc_t)0;
+    if (NEWTON_PAIR == 0 && inum != nlocal)
+      memset(f_start, 0, f_stride * sizeof(FORCE_T));
 
     // loop over neighbors of my atoms
     #if defined(_OPENMP)
@@ -238,16 +240,17 @@ void PairLJCharmmCoulCharmmIntel::eval(const int offload, const int vflag,
       int * _noalias const tj = ccachei + toffs;
       int * _noalias const tjtype = ccachej + toffs;
 
-      for (int i = iifrom; i < iito; i += iip) {
-        //        const int i = ilist[ii];
+      for (int ii = iifrom; ii < iito; ii += iip) {
+        const int i = ilist[ii];
         const int itype = x[i].w;
 
         const int ptr_off = itype * ntypes;
         const flt_t * _noalias const cutsqi = cutsq + ptr_off;
         const LJ_T * _noalias const lji = lj + ptr_off;
 
-        const int   * _noalias const jlist = firstneigh + cnumneigh[i];
-        const int jnum = numneigh[i];
+        const int   * _noalias const jlist = firstneigh[i];
+        int jnum = numneigh[i];
+        IP_PRE_neighbor_pad(jnum, offload);
 
         acc_t fxtmp,fytmp,fztmp,fwtmp;
         acc_t sevdwl, secoul, sv0, sv1, sv2, sv3, sv4, sv5;
@@ -297,19 +300,19 @@ void PairLJCharmmCoulCharmmIntel::eval(const int offload, const int vflag,
           const int sbindex = tj[jj] >> SBBITS & 3;
           const flt_t rsq = trsq[jj];
           const flt_t r2inv = (flt_t)1.0 / rsq;
-	  const flt_t r_inv = (flt_t)1.0 / sqrt(rsq);
-	  forcecoul = qqrd2e * qtmp * q[j] * r_inv;
-	  if (rsq > cut_coul_innersq) {
-	    const flt_t ccr = cut_coulsq - rsq;
-	    const flt_t switch1 = ccr * ccr * inv_denom_coul *
+          const flt_t r_inv = (flt_t)1.0 / sqrt(rsq);
+          forcecoul = qqrd2e * qtmp * q[j] * r_inv;
+          if (rsq > cut_coul_innersq) {
+            const flt_t ccr = cut_coulsq - rsq;
+            const flt_t switch1 = ccr * ccr * inv_denom_coul *
               (cut_coulsq + (flt_t)2.0 * rsq - (flt_t)3.0 * cut_coul_innersq);
-            forcecoul *= switch1; 
+            forcecoul *= switch1;
           }
 
           #ifdef INTEL_VMASK
           if (rsq < cut_ljsq) {
           #endif
-	    const int jtype = tjtype[jj];
+            const int jtype = tjtype[jj];
             flt_t r6inv = r2inv * r2inv * r2inv;
             forcelj = r6inv * (lji[jtype].x * r6inv - lji[jtype].y);
             if (EFLAG) evdwl = r6inv*(lji[jtype].z * r6inv - lji[jtype].w);
@@ -348,12 +351,12 @@ void PairLJCharmmCoulCharmmIntel::eval(const int offload, const int vflag,
           #else
           if (rsq > cut_ljsq) { forcelj = (flt_t)0.0; evdwl = (flt_t)0.0; }
           #endif
-	  if (sbindex) {
-  	    const flt_t factor_coul = special_coul[sbindex];
-	    forcecoul *= factor_coul;
-	    const flt_t factor_lj = special_lj[sbindex];
-	    forcelj *= factor_lj;
-	    if (EFLAG) evdwl *= factor_lj;
+          if (sbindex) {
+            const flt_t factor_coul = special_coul[sbindex];
+            forcecoul *= factor_coul;
+            const flt_t factor_lj = special_lj[sbindex];
+            forcelj *= factor_lj;
+            if (EFLAG) evdwl *= factor_lj;
           }
 
           const flt_t fpair = (forcecoul + forcelj) * r2inv;
@@ -400,16 +403,10 @@ void PairLJCharmmCoulCharmmIntel::eval(const int offload, const int vflag,
     IP_PRE_fdotr_reduce(NEWTON_PAIR, nall, nthreads, f_stride, vflag,
                         ov0, ov1, ov2, ov3, ov4, ov5);
 
-    if (EFLAG) {
+    if (EFLAG || vflag) {
       if (NEWTON_PAIR == 0) {
         oevdwl *= (acc_t)0.5;
         oecoul *= (acc_t)0.5;
-      }
-      ev_global[0] = oevdwl;
-      ev_global[1] = oecoul;
-    }
-    if (vflag) {
-      if (NEWTON_PAIR == 0) {
         ov0 *= (acc_t)0.5;
         ov1 *= (acc_t)0.5;
         ov2 *= (acc_t)0.5;
@@ -417,6 +414,8 @@ void PairLJCharmmCoulCharmmIntel::eval(const int offload, const int vflag,
         ov4 *= (acc_t)0.5;
         ov5 *= (acc_t)0.5;
       }
+      ev_global[0] = oevdwl;
+      ev_global[1] = oecoul;
       ev_global[2] = ov0;
       ev_global[3] = ov1;
       ev_global[4] = ov2;
@@ -484,22 +483,19 @@ void PairLJCharmmCoulCharmmIntel::pack_force_const(ForceConst<flt_t> &fc,
   int tp1 = atom->ntypes + 1;
 
   fc.set_ntypes(tp1, memory, _cop);
-  buffers->set_ntypes(tp1);
-  flt_t **cutneighsq = buffers->get_cutneighsq();
 
   // Repeat cutsq calculation because done after call to init_style
-  double cut, cutneigh;
   if (cut_lj > cut_coul)
     error->all(FLERR,
          "Intel varient of lj/charmm/coul/long expects lj cutoff<=coulombic");
   for (int i = 1; i <= atom->ntypes; i++) {
     for (int j = i; j <= atom->ntypes; j++) {
-      if (setflag[i][j] != 0 || (setflag[i][i] != 0 && setflag[j][j] != 0)) {
+      double cut;
+      if (setflag[i][j] != 0 || (setflag[i][i] != 0 && setflag[j][j] != 0))
         cut = init_one(i, j);
-        cutneigh = cut + neighbor->skin;
-        cutsq[i][j] = cutsq[j][i] = cut*cut;
-        cutneighsq[i][j] = cutneighsq[j][i] = cutneigh * cutneigh;
-      }
+      else
+        cut = 0.0;
+      cutsq[i][j] = cutsq[j][i] = cut*cut;
     }
   }
 
@@ -537,12 +533,10 @@ void PairLJCharmmCoulCharmmIntel::pack_force_const(ForceConst<flt_t> &fc,
   flt_t * special_coul = fc.special_coul;
   flt_t * cutsq = fc.cutsq[0];
   LJ_T * lj = fc.lj[0];
-  flt_t * ocutneighsq = cutneighsq[0];
   int tp1sq = tp1 * tp1;
   #pragma offload_transfer target(mic:_cop) \
     in(special_lj, special_coul: length(4) alloc_if(0) free_if(0)) \
-    in(cutsq,lj: length(tp1sq) alloc_if(0) free_if(0)) \
-    in(ocutneighsq: length(tp1sq) alloc_if(0) free_if(0))
+    in(cutsq,lj: length(tp1sq) alloc_if(0) free_if(0))
   #endif
 }
 

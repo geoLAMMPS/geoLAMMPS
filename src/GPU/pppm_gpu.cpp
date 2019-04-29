@@ -16,10 +16,10 @@
 ------------------------------------------------------------------------- */
 
 #include <mpi.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
+#include <cstring>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
 #include "pppm_gpu.h"
 #include "atom.h"
 #include "comm.h"
@@ -89,10 +89,8 @@ void PPPM_GPU_API(forces)(double **f);
 
 /* ---------------------------------------------------------------------- */
 
-PPPMGPU::PPPMGPU(LAMMPS *lmp, int narg, char **arg) : PPPM(lmp, narg, arg)
+PPPMGPU::PPPMGPU(LAMMPS *lmp) : PPPM(lmp)
 {
-  if (narg != 1) error->all(FLERR,"Illegal kspace_style pppm/gpu command");
-
   triclinic_support = 0;
   density_brick_gpu = vd_brick = NULL;
   kspace_split = false;
@@ -201,9 +199,7 @@ void PPPMGPU::compute(int eflag, int vflag)
   // set energy/virial flags
   // invoke allocate_peratom() if needed for first time
 
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = evflag_atom = eflag_global = vflag_global =
-        eflag_atom = vflag_atom = 0;
+  ev_init(eflag,vflag);
 
   // If need per-atom energies/virials, allocate per-atom arrays here
   // so that particle map on host can be done concurrently with GPU calculations
@@ -775,7 +771,7 @@ void PPPMGPU::compute_group_group(int groupbit_A, int groupbit_B, int AA_flag)
 
   // extend size of per-atom arrays if necessary
   // part2grid needs to be allocated
- 
+
   if (atom->nmax > nmax || part2grid == NULL) {
     memory->destroy(part2grid);
     nmax = atom->nmax;

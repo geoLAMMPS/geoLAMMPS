@@ -2,7 +2,7 @@
 
 :link(lws,http://lammps.sandia.gov)
 :link(ld,Manual.html)
-:link(lc,Section_commands.html#comm)
+:link(lc,Commands_all.html)
 
 :line
 
@@ -35,7 +35,7 @@ keyword = {parallel} or {perp} or {end} :l
 fix 1 active neb 10.0
 fix 2 all neb 1.0 perp 1.0 end last
 fix 2 all neb 1.0 perp 1.0 end first 1.0 end last 1.0
-fix 1 all neb 1.0 nudge ideal end last/efirst 1 :pre
+fix 1 all neb 1.0 parallel ideal end last/efirst 1 :pre
 
 [Description:]
 
@@ -43,9 +43,9 @@ Add nudging forces to atoms in the group for a multi-replica
 simulation run via the "neb"_neb.html command to perform a nudged
 elastic band (NEB) calculation for finding the transition state.
 Hi-level explanations of NEB are given with the "neb"_neb.html command
-and in "Section_howto 5"_Section_howto.html#howto_5 of the manual.
-The fix neb command must be used with the "neb" command and defines
-how inter-replica nudging forces are computed.  A NEB calculation is
+and on the "Howto replica"_Howto_replica.html doc page.  The fix neb
+command must be used with the "neb" command and defines how
+inter-replica nudging forces are computed.  A NEB calculation is
 divided in two stages. In the first stage n replicas are relaxed
 toward a MEP until convergence.  In the second stage, the climbing
 image scheme (see "(Henkelman2)"_#Henkelman2) is enabled, so that the
@@ -113,9 +113,9 @@ keeping the replicas equally spaced.
 
 :line
 
-The keyword {perp} specifies if and how a perpendicual nudging force
+The keyword {perp} specifies if and how a perpendicular nudging force
 is computed.  It adds a spring force perpendicular to the path in
-order to prevent the path from becoming too kinky.  It can
+order to prevent the path from becoming too strongly kinked.  It can
 significantly improve the convergence of the NEB calculation when the
 resolution is poor.  I.e. when few replicas are used; see
 "(Maras)"_#Maras1 for details.
@@ -138,17 +138,17 @@ By default, no additional forces act on the first and last replicas
 during the NEB relaxation, so these replicas simply relax toward their
 respective local minima.  By using the key word {end}, additional
 forces can be applied to the first and/or last replicas, to enable
-them to relax toward a MEP while constraining their energy.
+them to relax toward a MEP while constraining their energy E to the
+target energy ETarget.
 
-The interatomic force Fi for the specified replica becomes:
+If ETarget>E, the interatomic force Fi for the specified replica becomes:
 
 Fi = -Grad(V) + (Grad(V) dot T' + (E-ETarget)*Kspring3) T',  {when} Grad(V) dot T' < 0
 Fi = -Grad(V) + (Grad(V) dot T' + (ETarget- E)*Kspring3) T', {when} Grad(V) dot T' > 0
 :pre
 
-where E is the current energy of the replica and ETarget is the target
-energy.  The "spring" constant on the difference in energies is the
-specified {Kspring3} value.
+The "spring" constant on the difference in energies is the specified
+{Kspring3} value.
 
 When {estyle} is specified as {first}, the force is applied to the
 first replica.  When {estyle} is specified as {last}, the force is
@@ -168,7 +168,7 @@ The difference between these two {estyle} options is as follows.  When
 {estyle} is specified as {last/efirst}, no change is made to the
 inter-replica force applied to the intermediate replicas (neither
 first or last).  If the initial path is too far from the MEP, an
-intermediate repilica may relax "faster" and reach a lower energy than
+intermediate replica may relax "faster" and reach a lower energy than
 the last replica.  In this case the intermediate replica will be
 relaxing toward its own local minima.  This behavior can be prevented
 by specifying {estyle} as {last/efirst/middle} which will alter the
@@ -183,19 +183,18 @@ After converging a NEB calculation using an {estyle} of
 have a larger energy than the first replica. If this is not the case,
 the path is probably not a MEP.
 
-Finally, note that if the last replica converges toward a local
-minimum which has a larger energy than the energy of the first
-replica, a NEB calculation using an {estyle} of {last/efirst} or
-{last/efirst/middle} cannot reach final convergence.
+Finally, note that the last replica may never reach the target energy
+if it is stuck in a local minima which has a larger energy than the
+target energy.
 
 [Restart, fix_modify, output, run start/stop, minimize info:]
 
 No information about this fix is written to "binary restart
 files"_restart.html.  None of the "fix_modify"_fix_modify.html options
 are relevant to this fix.  No global or per-atom quantities are stored
-by this fix for access by various "output
-commands"_Section_howto.html#howto_15.  No parameter of this fix can
-be used with the {start/stop} keywords of the "run"_run.html command.
+by this fix for access by various "output commands"_Howto_output.html.
+No parameter of this fix can be used with the {start/stop} keywords of
+the "run"_run.html command.
 
 The forces due to this fix are imposed during an energy minimization,
 as invoked by the "minimize"_minimize.html command via the
@@ -204,8 +203,8 @@ as invoked by the "minimize"_minimize.html command via the
 [Restrictions:]
 
 This command can only be used if LAMMPS was built with the REPLICA
-package.  See the "Making LAMMPS"_Section_start.html#start_3 section
-for more info on packages.
+package.  See the "Build package"_Build_package.html doc
+page for more info.
 
 [Related commands:]
 
@@ -213,7 +212,7 @@ for more info on packages.
 
 [Default:]
 
-The option defaults are nudge = neigh, perp = 0.0, ends is not
+The option defaults are parallel = neigh, perp = 0.0, ends is not
 specified (no inter-replica force on the end replicas).
 
 :line

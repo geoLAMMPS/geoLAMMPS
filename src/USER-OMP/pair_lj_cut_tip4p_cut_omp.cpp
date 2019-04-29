@@ -12,7 +12,7 @@
    Contributing author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
+#include <cmath>
 #include "pair_lj_cut_tip4p_cut_omp.h"
 #include "atom.h"
 #include "domain.h"
@@ -62,8 +62,7 @@ PairLJCutTIP4PCutOMP::~PairLJCutTIP4PCutOMP()
 
 void PairLJCutTIP4PCutOMP::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   const int nlocal = atom->nlocal;
   const int nall = nlocal + atom->nghost;
@@ -424,7 +423,7 @@ void PairLJCutTIP4PCutOMP::eval(int iifrom, int iito, ThrData * const thr)
           }
 
           if (EFLAG) {
-        	ecoul = qqrd2e * qtmp * q[j] / r;
+            ecoul = qqrd2e * qtmp * q[j] / r;
             ecoul *= factor_coul;
           } else ecoul = 0.0;
 

@@ -16,9 +16,9 @@
 ------------------------------------------------------------------------- */
 
 #include <mpi.h>
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include "pair_table_rx.h"
 #include "atom.h"
 #include "force.h"
@@ -78,8 +78,7 @@ void PairTableRX::compute(int eflag, int vflag)
 
   evdwlOld = 0.0;
   evdwl = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;
@@ -439,7 +438,7 @@ void PairTableRX::coeff(int narg, char **arg)
 /* ---------------------------------------------------------------------- */
 
 double PairTableRX::single(int i, int j, int itype, int jtype, double rsq,
-                         double factor_coul, double factor_lj,
+                         double /*factor_coul*/, double factor_lj,
                          double &fforce)
 {
   int itable;

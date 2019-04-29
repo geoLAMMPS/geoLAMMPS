@@ -34,7 +34,7 @@ namespace LAMMPS_NS {
 
 class PPPMIntel : public PPPM {
  public:
-  PPPMIntel(class LAMMPS *, int, char **);
+  PPPMIntel(class LAMMPS *);
   virtual ~PPPMIntel();
   virtual void init();
   virtual void compute(int, int);
@@ -105,7 +105,7 @@ class PPPMIntel : public PPPM {
     }
   }
   FFT_SCALAR ***create3d_offset(FFT_SCALAR ***&, int, int, int,
-				int, int, int, const char *name);
+                                int, int, int, const char *name);
 };
 
 }

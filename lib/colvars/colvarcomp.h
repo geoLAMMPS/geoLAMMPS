@@ -20,52 +20,48 @@
 // simple_scalar_dist_functions (derived_class)
 
 
-#include <fstream>
-#include <cmath>
-
-
 #include "colvarmodule.h"
 #include "colvar.h"
 #include "colvaratoms.h"
 
 
-/// \brief Colvar component (base class); most implementations of
-/// \link cvc \endlink utilize one or more \link
-/// colvarmodule::atom \endlink or \link colvarmodule::atom_group
-/// \endlink objects to access atoms.
+/// \brief Colvar component (base class for collective variables)
 ///
 /// A \link cvc \endlink object (or an object of a
-/// cvc-derived class) specifies how to calculate a collective
-/// variable, its gradients and other related physical quantities
-/// which do not depend only on the numeric value (the \link colvar
-/// \endlink class already serves this purpose).
+/// cvc-derived class) implements the calculation of a collective
+/// variable, its gradients and any other related physical quantities
+/// that depend on microscopic degrees of freedom.
 ///
-/// No restriction is set to what kind of calculation a \link
-/// cvc \endlink object performs (usually calculate an
-/// analytical function of atomic coordinates).  The only constraint
-/// is that the value calculated is implemented as a \link colvarvalue
-/// \endlink object.  This serves to provide a unique way to calculate
-/// scalar and non-scalar collective variables, and specify if and how
-/// they can be combined together by the parent \link colvar \endlink
-/// object.
+/// No restriction is set to what kind of calculation a \link cvc \endlink
+/// object performs (usually an analytical function of atomic coordinates).
+/// The only constraints are that: \par
+///
+/// - The value is calculated by the \link calc_value() \endlink
+///   method, and is an object of \link colvarvalue \endlink class.  This
+///   provides a transparent way to treat scalar and non-scalar variables
+///   alike, and allows an automatic selection of the applicable algorithms.
+///
+/// - The object provides an implementation \link apply_force() \endlink to
+///   apply forces to atoms.  Typically, one or more \link cvm::atom_group
+///   \endlink objects are used, but this is not a requirement for as long as
+///   the \link cvc \endlink object communicates with the simulation program.
 ///
 /// <b> If you wish to implement a new collective variable component, you
 /// should write your own class by inheriting directly from \link
-/// cvc \endlink, or one of its derived classes (for instance,
-/// \link distance \endlink is frequently used, because it provides
+/// colvar::cvc \endlink, or one of its derived classes (for instance,
+/// \link colvar::distance \endlink is frequently used, because it provides
 /// useful data and function members for any colvar based on two
-/// atom groups).  The steps are: \par
-/// 1. add the name of this class under colvar.h \par
-/// 2. add a call to the parser in colvar.C, within the function colvar::colvar() \par
-/// 3. declare the class in colvarcomp.h \par
-/// 4. implement the class in one of the files colvarcomp_*.C
+/// atom groups).</b>
 ///
-/// </b>
-/// The cvm::atom and cvm::atom_group classes are available to
-/// transparently communicate with the simulation program.  However,
-/// they are not strictly needed, as long as all the degrees of
-/// freedom associated to the cvc are properly evolved by a simple
-/// call to e.g. apply_force().
+/// The steps are: \par
+/// 1. Declare the new class as a derivative of \link colvar::cvc \endlink
+///    in the file \link colvarcomp.h \endlink
+/// 2. Implement the new class in a file named colvarcomp_<something>.cpp
+/// 3. Declare the name of the new class inside the \link colvar \endlink class
+///    in \link colvar.h \endlink (see "list of available components")
+/// 4. Add a call for the new class in colvar::init_components()
+////   (file: colvar.cpp)
+///
 
 class colvar::cvc
   : public colvarparse, public colvardeps
@@ -86,6 +82,9 @@ public:
   /// this variable definition should be set within the constructor.
   std::string function_type;
 
+  /// Keyword used in the input to denote this CVC
+  std::string config_key;
+
   /// \brief Coefficient in the polynomial combination (default: 1.0)
   cvm::real sup_coeff;
   /// \brief Exponent in the polynomial combination (default: 1)
@@ -102,11 +101,13 @@ public:
 
   /// \brief Constructor
   ///
-  /// At least one constructor which reads a string should be defined
-  /// for every class inheriting from cvc \param conf Contents
-  /// of the configuration file pertaining to this \link cvc
-  /// \endlink
+  /// Calls the init() function of the class
   cvc(std::string const &conf);
+
+  /// An init function should be defined for every class inheriting from cvc
+  /// \param conf Contents of the configuration file pertaining to this \link
+  /// cvc \endlink
+  virtual int init(std::string const &conf);
 
   /// \brief Within the constructor, make a group parse its own
   /// options from the provided configuration string
@@ -155,7 +156,7 @@ public:
 
   /// \brief Calculate the atomic gradients, to be reused later in
   /// order to apply forces
-  virtual void calc_gradients() = 0;
+  virtual void calc_gradients() {}
 
   /// \brief Calculate the atomic fit gradients
   void calc_fit_gradients();
@@ -235,7 +236,7 @@ public:
   virtual colvarvalue dist2_rgrad(colvarvalue const &x1,
                                   colvarvalue const &x2) const;
 
-  /// \brief Wrapp value (for periodic/symmetric cvcs)
+  /// \brief Wrap value (for periodic/symmetric cvcs)
   virtual void wrap(colvarvalue &x) const;
 
   /// \brief Pointers to all atom groups, to let colvars collect info
@@ -836,49 +837,70 @@ protected:
   cvm::real     r0;
   /// \brief "Cutoff vector" for anisotropic calculation
   cvm::rvector  r0_vec;
-  /// \brief Wheter dist/r0 or \vec{dist}*\vec{1/r0_vec} should ne be
-  /// used
+  /// \brief Whether r/r0 or \vec{r}*\vec{1/r0_vec} should be used
   bool b_anisotropic;
   /// Integer exponent of the function numerator
   int en;
   /// Integer exponent of the function denominator
   int ed;
-  /// \brief If true, group2 will be treated as a single atom
-  /// (default: loop over all pairs of atoms in group1 and group2)
-  bool b_group2_center_only;
+
+  /// \brief If true, group2 will be treated as a single atom, stored in this
+  /// accessory group
+  cvm::atom_group *group2_center;
+
+  /// Tolerance for the pair list
+  cvm::real tolerance;
+
+  /// Frequency of update of the pair list
+  int pairlist_freq;
+
+  /// Pair list
+  bool *pairlist;
+
 public:
-  /// Constructor
+
   coordnum(std::string const &conf);
   coordnum();
-  virtual ~coordnum() {}
+  ~coordnum();
+
   virtual void calc_value();
   virtual void calc_gradients();
   virtual void apply_force(colvarvalue const &force);
-  template<bool b_gradients>
-  /// \brief Calculate a coordination number through the function
-  /// (1-x**n)/(1-x**m), x = |A1-A2|/r0 \param r0 "cutoff" for the
-  /// coordination number \param exp_num \i n exponent \param exp_den
-  /// \i m exponent \param A1 atom \param A2 atom
-  static cvm::real switching_function(cvm::real const &r0,
-                                      int const &exp_num, int const &exp_den,
-                                      cvm::atom &A1, cvm::atom &A2);
-
-  template<bool b_gradients>
-  /// \brief Calculate a coordination number through the function
-  /// (1-x**n)/(1-x**m), x = |(A1-A2)*(r0_vec)^-|1 \param r0_vec
-  /// vector of different cutoffs in the three directions \param
-  /// exp_num \i n exponent \param exp_den \i m exponent \param A1
-  /// atom \param A2 atom
-  static cvm::real switching_function(cvm::rvector const &r0_vec,
-                                      int const &exp_num, int const &exp_den,
-                                      cvm::atom &A1, cvm::atom &A2);
-
   virtual cvm::real dist2(colvarvalue const &x1,
                           colvarvalue const &x2) const;
   virtual colvarvalue dist2_lgrad(colvarvalue const &x1,
                                   colvarvalue const &x2) const;
   virtual colvarvalue dist2_rgrad(colvarvalue const &x1,
                                   colvarvalue const &x2) const;
+
+  enum {
+    ef_null = 0,
+    ef_gradients = 1,
+    ef_anisotropic = (1<<8),
+    ef_use_pairlist = (1<<9),
+    ef_rebuild_pairlist = (1<<10)
+  };
+
+  /// \brief Calculate a coordination number through the function
+  /// (1-x**n)/(1-x**m), where x = |A1-A2|/r0 \param r0, r0_vec "cutoff" for
+  /// the coordination number (scalar or vector depending on user choice)
+  /// \param en Numerator exponent \param ed Denominator exponent \param First
+  /// atom \param Second atom \param pairlist_elem pointer to pair flag for
+  /// this pair \param tolerance A pair is defined as having a larger
+  /// coordination than this number
+  template<int flags>
+  static cvm::real switching_function(cvm::real const &r0,
+                                      cvm::rvector const &r0_vec,
+                                      int en,
+                                      int ed,
+                                      cvm::atom &A1,
+                                      cvm::atom &A2,
+                                      bool **pairlist_elem,
+                                      cvm::real tolerance);
+
+  /// Main workhorse function
+  template<int flags> int compute_coordnum();
+
 };
 
 
@@ -889,7 +911,8 @@ class colvar::selfcoordnum
   : public colvar::cvc
 {
 protected:
-  /// First atom group
+
+  /// Selected atoms
   cvm::atom_group  *group1;
   /// \brief "Cutoff" for isotropic calculation (default)
   cvm::real     r0;
@@ -897,22 +920,18 @@ protected:
   int en;
   /// Integer exponent of the function denominator
   int ed;
+  cvm::real tolerance;
+  int pairlist_freq;
+  bool *pairlist;
+
 public:
-  /// Constructor
+
   selfcoordnum(std::string const &conf);
   selfcoordnum();
-  virtual ~selfcoordnum() {}
+  ~selfcoordnum();
   virtual void calc_value();
   virtual void calc_gradients();
   virtual void apply_force(colvarvalue const &force);
-  template<bool b_gradients>
-  /// \brief Calculate a coordination number through the function
-  /// (1-x**n)/(1-x**m), x = |A1-A2|/r0 \param r0 "cutoff" for the
-  /// coordination number \param exp_num \i n exponent \param exp_den
-  /// \i m exponent \param A1 atom \param A2 atom
-  static cvm::real switching_function(cvm::real const &r0,
-                                      int const &exp_num, int const &exp_den,
-                                      cvm::atom &A1, cvm::atom &A2);
 
   virtual cvm::real dist2(colvarvalue const &x1,
                           colvarvalue const &x2) const;
@@ -920,6 +939,9 @@ public:
                                   colvarvalue const &x2) const;
   virtual colvarvalue dist2_rgrad(colvarvalue const &x1,
                                   colvarvalue const &x2) const;
+
+  /// Main workhorse function
+  template<int flags> int compute_selfcoordnum();
 };
 
 
@@ -949,26 +971,6 @@ public:
   virtual void calc_value();
   virtual void calc_gradients();
   virtual void apply_force(colvarvalue const &force);
-  template<bool b_gradients>
-  /// \brief Calculate a coordination number through the function
-  /// (1-x**n)/(1-x**m), x = |A1-A2|/r0 \param r0 "cutoff" for the
-  /// coordination number \param exp_num \i n exponent \param exp_den
-  /// \i m exponent \param A1 atom \param A2 atom
-  static cvm::real switching_function(cvm::real const &r0,
-                                      int const &exp_num, int const &exp_den,
-                                      cvm::atom &A1, cvm::atom &A2);
-
-  /*
-  template<bool b_gradients>
-  /// \brief Calculate a coordination number through the function
-  /// (1-x**n)/(1-x**m), x = |(A1-A2)*(r0_vec)^-|1 \param r0_vec
-  /// vector of different cutoffs in the three directions \param
-  /// exp_num \i n exponent \param exp_den \i m exponent \param A1
-  /// atom \param A2 atom
-  static cvm::real switching_function(cvm::rvector const &r0_vec,
-                                      int const &exp_num, int const &exp_den,
-                                      cvm::atom &A1, cvm::atom &A2);
-  */
 
   virtual cvm::real dist2(colvarvalue const &x1,
                           colvarvalue const &x2) const;

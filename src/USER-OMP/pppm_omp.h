@@ -27,7 +27,7 @@ namespace LAMMPS_NS {
 
 class PPPMOMP : public PPPM, public ThrOMP {
  public:
-  PPPMOMP(class LAMMPS *, int, char **);
+  PPPMOMP(class LAMMPS *);
   virtual ~PPPMOMP ();
   virtual void compute(int, int);
 
@@ -46,7 +46,7 @@ class PPPMOMP : public PPPM, public ThrOMP {
   void compute_rho1d_thr(FFT_SCALAR * const * const, const FFT_SCALAR &,
                          const FFT_SCALAR &, const FFT_SCALAR &);
   void compute_drho1d_thr(FFT_SCALAR * const * const, const FFT_SCALAR &,
-			  const FFT_SCALAR &, const FFT_SCALAR &);
+                          const FFT_SCALAR &, const FFT_SCALAR &);
 //  void slabcorr(int);
 
 };

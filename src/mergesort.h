@@ -14,7 +14,7 @@
 #ifndef LMP_MERGESORT
 #define LMP_MERGESORT
 
-#include <string.h>
+#include <cstring>
 
 // custom hybrid upward merge sort implementation with support to pass
 // an opaque pointer to the comparison function, e.g. for access to
@@ -98,7 +98,7 @@ static void merge_sort(int *index, int num, void *ptr,
 
     int *tmp = dest; dest = hold; hold = tmp;
 
-    // merge from hold array to destiation array
+    // merge from hold array to destination array
 
     for (i=0; i < num-1; i += 2*chunk) {
       j = i + 2*chunk;
@@ -107,6 +107,10 @@ static void merge_sort(int *index, int num, void *ptr,
       if (m > num) m=num;
       do_merge(dest,hold,i,m,m,j,ptr,comp);
     }
+
+    // copy all indices not handled by the chunked merge sort loop
+
+    for ( ; i < num ; i++ ) dest[i] = hold[i];
     chunk *= 2;
   }
 

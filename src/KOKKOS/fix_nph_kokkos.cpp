@@ -11,7 +11,7 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <string.h>
+#include <cstring>
 #include "fix_nph_kokkos.h"
 #include "modify.h"
 #include "error.h"
@@ -71,7 +71,7 @@ FixNPHKokkos<DeviceType>::FixNPHKokkos(LAMMPS *lmp, int narg, char **arg) :
 
 namespace LAMMPS_NS {
 template class FixNPHKokkos<LMPDeviceType>;
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 template class FixNPHKokkos<LMPHostType>;
 #endif
 }

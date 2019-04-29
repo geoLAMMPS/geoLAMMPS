@@ -15,10 +15,10 @@
    Contributing author: Ray Shan (SNL)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "pair_coul_debye_kokkos.h"
 #include "kokkos.h"
 #include "atom_kokkos.h"
@@ -31,7 +31,7 @@
 #include "integrate.h"
 #include "respa.h"
 #include "math_const.h"
-#include "memory.h"
+#include "memory_kokkos.h"
 #include "error.h"
 #include "atom_masks.h"
 
@@ -62,7 +62,7 @@ template<class DeviceType>
 PairCoulDebyeKokkos<DeviceType>::~PairCoulDebyeKokkos()
 {
   if (!copymode) {
-    memory->destroy_kokkos(k_cutsq, cutsq);
+    memoryKK->destroy_kokkos(k_cutsq, cutsq);
   }
 }
 
@@ -87,19 +87,18 @@ void PairCoulDebyeKokkos<DeviceType>::compute(int eflag_in, int vflag_in)
 
   if (neighflag == FULL) no_virial_fdotr_compute = 1;
 
-  if (eflag || vflag) ev_setup(eflag,vflag,0);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag,0);
 
   // reallocate per-atom arrays if necessary
 
   if (eflag_atom) {
-    memory->destroy_kokkos(k_eatom,eatom);
-    memory->create_kokkos(k_eatom,eatom,maxeatom,"pair:eatom");
+    memoryKK->destroy_kokkos(k_eatom,eatom);
+    memoryKK->create_kokkos(k_eatom,eatom,maxeatom,"pair:eatom");
     d_eatom = k_eatom.view<DeviceType>();
   }
   if (vflag_atom) {
-    memory->destroy_kokkos(k_vatom,vatom);
-    memory->create_kokkos(k_vatom,vatom,maxvatom,6,"pair:vatom");
+    memoryKK->destroy_kokkos(k_vatom,vatom);
+    memoryKK->create_kokkos(k_vatom,vatom,maxvatom,6,"pair:vatom");
     d_vatom = k_vatom.view<DeviceType>();
   }
 
@@ -181,7 +180,7 @@ compute_fcoul(const F_FLOAT& rsq, const int& i, const int&j,
   F_FLOAT forcecoul;
 
   forcecoul = qqrd2e * qtmp * q(j) * screening * (kappa + rinv) *
-	  (STACKPARAMS?m_params[itype][jtype].scale:params(itype,jtype).scale);
+          (STACKPARAMS?m_params[itype][jtype].scale:params(itype,jtype).scale);
 
   return factor_coul*forcecoul*r2inv;
 
@@ -203,7 +202,7 @@ compute_ecoul(const F_FLOAT& rsq, const int& i, const int&j,
   const F_FLOAT screening = exp(-kappa*r);
 
   return factor_coul * qqrd2e * qtmp * q(j) * rinv * screening *
-	  (STACKPARAMS?m_params[itype][jtype].scale:params(itype,jtype).scale);
+          (STACKPARAMS?m_params[itype][jtype].scale:params(itype,jtype).scale);
 
 }
 
@@ -218,7 +217,7 @@ void PairCoulDebyeKokkos<DeviceType>::allocate()
 
   int n = atom->ntypes;
   memory->destroy(cutsq);
-  memory->create_kokkos(k_cutsq,cutsq,n+1,n+1,"pair:cutsq");
+  memoryKK->create_kokkos(k_cutsq,cutsq,n+1,n+1,"pair:cutsq");
   d_cutsq = k_cutsq.template view<DeviceType>();
   k_params = Kokkos::DualView<params_coul**,Kokkos::LayoutRight,DeviceType>("PairCoulDebye::params",n+1,n+1);
   params = k_params.template view<DeviceType>();
@@ -323,7 +322,7 @@ double PairCoulDebyeKokkos<DeviceType>::init_one(int i, int j)
 
 namespace LAMMPS_NS {
 template class PairCoulDebyeKokkos<LMPDeviceType>;
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 template class PairCoulDebyeKokkos<LMPHostType>;
 #endif
 }

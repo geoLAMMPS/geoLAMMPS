@@ -20,8 +20,11 @@
 #include <Kokkos_DualView.hpp>
 #include <impl/Kokkos_Timer.hpp>
 #include <Kokkos_Vectorization.hpp>
+#include <Kokkos_ScatterView.hpp>
 
-#if defined(KOKKOS_HAVE_CXX11)
+enum{FULL=1u,HALFTHREAD=2u,HALF=4u,N2=8u};
+
+#if defined(KOKKOS_ENABLE_CXX11)
 #undef ISFINITE
 #define ISFINITE(x) std::isfinite(x)
 #endif
@@ -106,6 +109,71 @@ typedef double FFT_SCALAR;
     }
   };
 
+template<class Scalar>
+struct t_scalar3 {
+  Scalar x,y,z;
+
+  KOKKOS_FORCEINLINE_FUNCTION
+  t_scalar3() {
+    x = 0; y = 0; z = 0;
+  }
+
+  KOKKOS_FORCEINLINE_FUNCTION
+  t_scalar3(const t_scalar3& rhs) {
+    x = rhs.x; y = rhs.y; z = rhs.z;
+  }
+
+  KOKKOS_FORCEINLINE_FUNCTION
+  t_scalar3(const Scalar& x_, const Scalar& y_, const Scalar& z_ ) {
+    x = x_; y = y_; z = z_;
+  }
+
+  KOKKOS_FORCEINLINE_FUNCTION
+  t_scalar3 operator= (const t_scalar3& rhs) {
+    x = rhs.x; y = rhs.y; z = rhs.z;
+    return *this;
+  }
+
+  KOKKOS_FORCEINLINE_FUNCTION
+  t_scalar3 operator= (const volatile t_scalar3& rhs) {
+    x = rhs.x; y = rhs.y; z = rhs.z;
+    return *this;
+  }
+
+  KOKKOS_FORCEINLINE_FUNCTION
+  t_scalar3 operator+= (const t_scalar3& rhs) {
+    x += rhs.x; y += rhs.y; z += rhs.z;
+    return *this;
+  }
+
+  KOKKOS_FORCEINLINE_FUNCTION
+  t_scalar3 operator+= (const volatile t_scalar3& rhs) volatile {
+    x += rhs.x; y += rhs.y; z += rhs.z;
+    return *this;
+  }
+};
+
+template<class Scalar>
+KOKKOS_FORCEINLINE_FUNCTION
+t_scalar3<Scalar> operator +
+  (const t_scalar3<Scalar>& a, const t_scalar3<Scalar>& b) {
+  return t_scalar3<Scalar>(a.x+b.x,a.y+b.y,a.z+b.z);
+}
+
+template<class Scalar>
+KOKKOS_FORCEINLINE_FUNCTION
+t_scalar3<Scalar> operator *
+  (const t_scalar3<Scalar>& a, const Scalar& b) {
+  return t_scalar3<Scalar>(a.x*b,a.y*b,a.z*b);
+}
+
+template<class Scalar>
+KOKKOS_FORCEINLINE_FUNCTION
+t_scalar3<Scalar> operator *
+  (const Scalar& b, const t_scalar3<Scalar>& a) {
+  return t_scalar3<Scalar>(a.x*b,a.y*b,a.z*b);
+}
+
 #if !defined(__CUDACC__) && !defined(__VECTOR_TYPES_H__)
   struct double2 {
     double x, y;
@@ -133,12 +201,106 @@ template<>
 struct ExecutionSpaceFromDevice<LMPHostType> {
   static const LAMMPS_NS::ExecutionSpace space = LAMMPS_NS::Host;
 };
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 template<>
 struct ExecutionSpaceFromDevice<Kokkos::Cuda> {
   static const LAMMPS_NS::ExecutionSpace space = LAMMPS_NS::Device;
 };
 #endif
+
+
+// Determine memory traits for force array
+// Do atomic trait when running HALFTHREAD neighbor list style
+template<int NEIGHFLAG>
+struct AtomicF {
+  enum {value = Kokkos::Unmanaged};
+};
+
+template<>
+struct AtomicF<HALFTHREAD> {
+  enum {value = Kokkos::Atomic|Kokkos::Unmanaged};
+};
+
+
+// Determine memory traits for force array
+// Do atomic trait when running HALFTHREAD neighbor list style with CUDA
+template<int NEIGHFLAG, class DeviceType>
+struct AtomicDup {
+  enum {value = Kokkos::Experimental::ScatterNonAtomic};
+};
+
+#ifdef KOKKOS_ENABLE_CUDA
+template<>
+struct AtomicDup<HALFTHREAD,Kokkos::Cuda> {
+  enum {value = Kokkos::Experimental::ScatterAtomic};
+};
+#endif
+
+#ifdef LMP_KOKKOS_USE_ATOMICS
+
+#ifdef KOKKOS_ENABLE_OPENMP
+template<>
+struct AtomicDup<HALFTHREAD,Kokkos::OpenMP> {
+  enum {value = Kokkos::Experimental::ScatterAtomic};
+};
+#endif
+
+#ifdef KOKKOS_ENABLE_THREADS
+template<>
+struct AtomicDup<HALFTHREAD,Kokkos::Threads> {
+  enum {value = Kokkos::Experimental::ScatterAtomic};
+};
+#endif
+
+#endif
+
+
+// Determine duplication traits for force array
+// Use duplication when running threaded and not using atomics
+template<int NEIGHFLAG, class DeviceType>
+struct NeedDup {
+  enum {value = Kokkos::Experimental::ScatterNonDuplicated};
+};
+
+#ifndef LMP_KOKKOS_USE_ATOMICS
+
+#ifdef KOKKOS_ENABLE_OPENMP
+template<>
+struct NeedDup<HALFTHREAD,Kokkos::OpenMP> {
+  enum {value = Kokkos::Experimental::ScatterDuplicated};
+};
+#endif
+
+#ifdef KOKKOS_ENABLE_THREADS
+template<>
+struct NeedDup<HALFTHREAD,Kokkos::Threads> {
+  enum {value = Kokkos::Experimental::ScatterDuplicated};
+};
+#endif
+
+#endif
+
+template<int value, typename T1, typename T2>
+class ScatterViewHelper {};
+
+template<typename T1, typename T2>
+class ScatterViewHelper<Kokkos::Experimental::ScatterDuplicated,T1,T2> {
+public:
+  KOKKOS_INLINE_FUNCTION
+  static T1 get(const T1 &dup, const T2 &nondup) {
+    return dup;
+  }
+};
+
+template<typename T1, typename T2>
+class ScatterViewHelper<Kokkos::Experimental::ScatterNonDuplicated,T1,T2> {
+public:
+  KOKKOS_INLINE_FUNCTION
+  static T2 get(const T1 &dup, const T2 &nondup) {
+    return nondup;
+  }
+};
+
 
 // define precision
 // handle global precision, force, energy, positions, kspace separately
@@ -323,6 +485,8 @@ typedef double K_FLOAT;
 typedef double2 K_FLOAT2;
 typedef double4 K_FLOAT4;
 #endif
+
+typedef int T_INT;
 
 // ------------------------------------------------------------------------
 
@@ -612,7 +776,7 @@ typedef tdual_int_64::t_dev_um t_int_64_um;
 
 };
 
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 template <>
 struct ArrayTypes<LMPHostType> {
 
@@ -889,7 +1053,7 @@ void buffer_view(BufferView &buf, DualView &view,
                  const size_t n7 = 0) {
 
   buf = BufferView(
-          view.template view<DeviceType>().ptr_on_device(),
+          view.template view<DeviceType>().data(),
           n0,n1,n2,n3,n4,n5,n6,n7);
 
 }
@@ -906,29 +1070,29 @@ struct MemsetZeroFunctor {
 template<class ViewType>
 void memset_kokkos (ViewType &view) {
   static MemsetZeroFunctor<typename ViewType::execution_space> f;
-  f.ptr = view.ptr_on_device();
+  f.ptr = view.data();
   #ifndef KOKKOS_USING_DEPRECATED_VIEW
   Kokkos::parallel_for(view.span()*sizeof(typename ViewType::value_type)/4, f);
   #else
-  Kokkos::parallel_for(view.capacity()*sizeof(typename ViewType::value_type)/4, f);
+  Kokkos::parallel_for(view.span()*sizeof(typename ViewType::value_type)/4, f);
   #endif
   ViewType::execution_space::fence();
 }
 
 struct params_lj_coul {
   KOKKOS_INLINE_FUNCTION
-  params_lj_coul(){cut_ljsq=0;cut_coulsq=0;lj1=0;lj2=0;lj3=0;lj4=0;offset=0;};   
+  params_lj_coul(){cut_ljsq=0;cut_coulsq=0;lj1=0;lj2=0;lj3=0;lj4=0;offset=0;};
   KOKKOS_INLINE_FUNCTION
   params_lj_coul(int i){cut_ljsq=0;cut_coulsq=0;lj1=0;lj2=0;lj3=0;lj4=0;offset=0;};
   F_FLOAT cut_ljsq,cut_coulsq,lj1,lj2,lj3,lj4,offset;
 };
 
-#if defined(KOKKOS_HAVE_CXX11)
+#if defined(KOKKOS_ENABLE_CXX11)
 #undef ISFINITE
 #define ISFINITE(x) std::isfinite(x)
 #endif
 
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 #define LAMMPS_LAMBDA [=] __device__
 #else
 #define LAMMPS_LAMBDA [=]

@@ -15,10 +15,10 @@
    Contributing author: Anders Hafreager (UiO)
 ------------------------------------------------------------------------- */
 #include <limits>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "pair_vashishta_gpu.h"
 #include "atom.h"
 #include "neighbor.h"
@@ -44,7 +44,7 @@ int vashishta_gpu_init(const int ntypes, const int inum, const int nall, const i
                 const double* gamma, const double* eta,
                 const double* lam1inv, const double* lam4inv,
                 const double* zizj, const double* mbigd,
-                const double* dvrc, const double* big6w, 
+                const double* dvrc, const double* big6w,
                 const double* heta, const double* bigh,
                 const double* bigw, const double* c0,
                 const double* costheta, const double* bigb,
@@ -94,8 +94,7 @@ PairVashishtaGPU::~PairVashishtaGPU()
 
 void PairVashishtaGPU::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   int nall = atom->nlocal + atom->nghost;
   int inum, host_start;
@@ -133,7 +132,7 @@ void PairVashishtaGPU::allocate()
     PairVashishta::allocate();
   }
   int n = atom->ntypes;
-  
+
   memory->create(cutghost,n+1,n+1,"pair:cutghost");
   gpu_allocated = true;
 }
@@ -151,7 +150,7 @@ void PairVashishtaGPU::init_style()
   if (force->newton_pair != 0)
     error->all(FLERR,"Pair style vashishta/gpu requires newton pair off");
 
-  double *cutsq, *r0, *r0eps, *gamma, *eta;
+  double *cutsq, *r0, *gamma, *eta;
   double *lam1inv, *lam4inv, *zizj, *mbigd;
   double *dvrc, *big6w, *heta, *bigh;
   double *bigw, *c0, *costheta, *bigb;
@@ -162,7 +161,7 @@ void PairVashishtaGPU::init_style()
   dvrc = big6w = heta = bigh = NULL;
   bigw = c0 = costheta = bigb = NULL;
   big2b = bigc = NULL;
-  
+
   memory->create(cutsq,nparams,"pair:cutsq");
   memory->create(r0,nparams,"pair:r0");
   memory->create(gamma,nparams,"pair:gamma");
@@ -204,8 +203,8 @@ void PairVashishtaGPU::init_style()
   }
   int success = vashishta_gpu_init(atom->ntypes+1, atom->nlocal, atom->nlocal+atom->nghost, 500,
                             cell_size, gpu_mode, screen, map, nelements,
-                            elem2param, nparams, cutsq, r0, gamma, eta, lam1inv, 
-                            lam4inv, zizj, mbigd, dvrc, big6w, heta, bigh, bigw, 
+                            elem2param, nparams, cutsq, r0, gamma, eta, lam1inv,
+                            lam4inv, zizj, mbigd, dvrc, big6w, heta, bigh, bigw,
                             c0, costheta, bigb, big2b, bigc);
   memory->destroy(cutsq);
   memory->destroy(r0);

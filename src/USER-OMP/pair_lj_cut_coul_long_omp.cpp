@@ -12,7 +12,7 @@
    Contributing author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
+#include <cmath>
 #include "pair_lj_cut_coul_long_omp.h"
 #include "atom.h"
 #include "comm.h"
@@ -45,9 +45,7 @@ PairLJCutCoulLongOMP::PairLJCutCoulLongOMP(LAMMPS *lmp) :
 
 void PairLJCutCoulLongOMP::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) {
-    ev_setup(eflag,vflag);
-  } else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   const int nall = atom->nlocal + atom->nghost;
   const int nthreads = comm->nthreads;

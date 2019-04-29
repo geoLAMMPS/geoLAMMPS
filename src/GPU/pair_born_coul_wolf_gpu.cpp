@@ -15,9 +15,10 @@
    Contributing authors: Trung Dac Nguyen (ORNL)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "pair_born_coul_wolf_gpu.h"
 #include "atom.h"
 #include "atom_vec.h"
@@ -33,7 +34,6 @@
 #include "universe.h"
 #include "update.h"
 #include "domain.h"
-#include <string.h>
 #include "gpu_extra.h"
 
 using namespace LAMMPS_NS;
@@ -92,8 +92,7 @@ PairBornCoulWolfGPU::~PairBornCoulWolfGPU()
 
 void PairBornCoulWolfGPU::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   int nall = atom->nlocal + atom->nghost;
   int inum, host_start;
@@ -191,9 +190,9 @@ double PairBornCoulWolfGPU::memory_usage()
 
 /* ---------------------------------------------------------------------- */
 
-void PairBornCoulWolfGPU::cpu_compute(int start, int inum, int eflag, int vflag,
-                                      int *ilist, int *numneigh,
-                                      int **firstneigh) {
+void PairBornCoulWolfGPU::cpu_compute(int start, int inum, int eflag,
+                                      int /* vflag */, int *ilist,
+                                      int *numneigh, int **firstneigh) {
   int i,j,ii,jj,jnum,itype,jtype;
   double xtmp,ytmp,ztmp,qtmp,delx,dely,delz,evdwl,ecoul,fpair;
   double rsq,r2inv,r6inv,forcecoul,forceborn,factor_coul,factor_lj;

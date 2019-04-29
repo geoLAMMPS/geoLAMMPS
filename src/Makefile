@@ -13,12 +13,13 @@ ARLIB =  liblammps_$@.a
 SHLIB =	 liblammps_$@.so
 ARLINK = liblammps.a
 SHLINK = liblammps.so
+TMPNAME= tmp_$@_name
 
 OBJDIR =   Obj_$@
 OBJSHDIR = Obj_shared_$@
 
 SRC =	$(wildcard *.cpp)
-INC =	$(wildcard *.h)
+INC =	$(filter-out lmpinstalledpkgs.h lmpgitversion.h,$(wildcard *.h))
 OBJ = 	$(SRC:.cpp=.o)
 
 SRCLIB = $(filter-out main.cpp,$(SRC))
@@ -53,29 +54,30 @@ endif
 # PACKEXT    = subset that require an external (downloaded) library
 
 PACKAGE = asphere body class2 colloid compress coreshell dipole gpu \
-	  granular kim kokkos kspace latte manybody mc meam misc \
+	  granular kim kokkos kspace latte manybody mc message misc \
 	  molecule mpiio mscg opt peri poems \
-	  python qeq reax replica rigid shock snap srd voronoi
+	  python qeq replica rigid shock snap spin srd voronoi
 
-PACKUSER = user-atc user-awpmd user-cgdna user-cgsdk user-colvars \
+PACKUSER = user-adios user-atc user-awpmd user-bocs user-cgdna user-cgsdk user-colvars \
 	   user-diffraction user-dpd user-drude user-eff user-fep user-h5md \
 	   user-intel user-lb user-manifold user-meamc user-meso \
-	   user-mgpt user-misc user-molfile \
-	   user-netcdf user-omp user-phonon user-qmmm user-qtb \
-	   user-quip user-reaxc user-smd user-smtbq user-sph user-tally \
-	   user-uef user-vtk
+	   user-mgpt user-misc user-mofff user-molfile \
+	   user-netcdf user-omp user-phonon user-plumed user-ptm user-qmmm \
+	   user-qtb user-quip user-reaxc user-scafacos user-smd user-smtbq \
+	   user-sdpd user-sph user-tally user-uef user-vtk user-yaff
 
-PACKLIB = compress gpu kim kokkos latte meam mpiio mscg poems \
-	  python reax voronoi \
-	  user-atc user-awpmd user-colvars user-h5md user-lb user-molfile \
-	  user-netcdf user-qmmm user-quip user-smd user-vtk
+PACKLIB = compress gpu kim kokkos latte message mpiio mscg poems \
+	  python voronoi \
+	  user-adios user-atc user-awpmd user-colvars user-h5md user-lb user-molfile \
+	  user-netcdf user-plumed user-qmmm user-quip user-scafacos \
+	  user-smd user-vtk
 
 PACKSYS = compress mpiio python user-lb
 
-PACKINT = gpu kokkos meam poems reax user-atc user-awpmd user-colvars
+PACKINT = gpu kokkos message poems user-atc user-awpmd user-colvars
 
-PACKEXT = kim mscg voronoi \
-	  user-h5md user-molfile user-netcdf user-qmmm user-quip \
+PACKEXT = kim latte mscg voronoi \
+	  user-adios user-h5md user-molfile user-netcdf user-plumed user-qmmm user-quip \
 	  user-smd user-vtk
 
 PACKALL = $(PACKAGE) $(PACKUSER)
@@ -100,6 +102,7 @@ help:
 	@echo ''
 	@echo 'make package                 list available packages and their dependencies'
 	@echo 'make package-status (ps)     status of all packages'
+	@echo 'make package-installed (pi)  list of installed packages'
 	@echo 'make yes-package             install a single pgk in src dir'
 	@echo 'make no-package              remove a single pkg from src dir'
 	@echo 'make yes-all                 install all pgks in src dir'
@@ -149,6 +152,46 @@ help:
 	  for file in $$files; do head -1 $$file; done
 	@echo ''
 
+
+lmpinstalledpkgs.h: $(SRC) $(INC)
+	@echo 'Gathering installed package information (may take a little while)'
+	@echo '#ifndef LMP_INSTALLED_PKGS_H' >  ${TMPNAME}.lmpinstalled
+	@echo '#define LMP_INSTALLED_PKGS_H' >> ${TMPNAME}.lmpinstalled
+	@echo 'const char * LAMMPS_NS::LAMMPS::installed_packages[] = {' >> ${TMPNAME}.lmpinstalled
+	@for p in $(PACKAGEUC) $(PACKUSERUC); do info=$$($(SHELL) Package.sh $$p installed); \
+             [ -n "$$info" ] && echo "\"$$info\"" | sed -e 's/".*package \(.*\)"/"\1",/' >> ${TMPNAME}.lmpinstalled || :; done
+	@echo ' NULL };' >> ${TMPNAME}.lmpinstalled
+	@echo '#endif' >> ${TMPNAME}.lmpinstalled
+	@if [ -f lmpinstalledpkgs.h ]; \
+          then test "`diff --brief ${TMPNAME}.lmpinstalled lmpinstalledpkgs.h`" != "" && \
+	        mv ${TMPNAME}.lmpinstalled lmpinstalledpkgs.h || rm ${TMPNAME}.lmpinstalled ; \
+        else mv ${TMPNAME}.lmpinstalled lmpinstalledpkgs.h ; fi
+
+gitversion:
+	@echo 'Gathering git version information'
+	@echo '#ifndef LMP_GIT_VERSION_H' >  ${TMPNAME}.lmpgitversion
+	@echo '#define LMP_GIT_VERSION_H' >> ${TMPNAME}.lmpgitversion
+	@if (type git && test -e ../.git ) >> /dev/null 2>> /dev/null ; then \
+	  git='true';					\
+	  commit=$$(git rev-parse HEAD);		\
+	  branch=$$(git rev-parse --abbrev-ref HEAD);	\
+	  describe=$$(git describe --dirty=-modified);	\
+	else \
+	  git='false' ;					\
+	  commit='(unknown)' ;				\
+	  branch='(unknown)' ;				\
+	  describe='(unknown)' ;			\
+	fi ; \
+	echo "const bool LAMMPS_NS::LAMMPS::has_git_info = $${git};"        >> ${TMPNAME}.lmpgitversion ; \
+	echo "const char LAMMPS_NS::LAMMPS::git_commit[] = \"$${commit}\";" >> ${TMPNAME}.lmpgitversion ; \
+	echo "const char LAMMPS_NS::LAMMPS::git_branch[] = \"$${branch}\";" >> ${TMPNAME}.lmpgitversion ; \
+	echo "const char LAMMPS_NS::LAMMPS::git_descriptor[] = \"$${describe}\";" >> ${TMPNAME}.lmpgitversion
+	@echo '#endif' >> ${TMPNAME}.lmpgitversion
+	@if [ -f lmpgitversion.h ]; \
+          then test "`diff --brief ${TMPNAME}.lmpgitversion lmpgitversion.h`" != "" && \
+	        mv ${TMPNAME}.lmpgitversion lmpgitversion.h || rm ${TMPNAME}.lmpgitversion ; \
+        else mv ${TMPNAME}.lmpgitversion lmpgitversion.h ; fi
+
 # Build LAMMPS in one of 4 modes
 # exe =   exe with static compile in Obj_machine (default)
 # shexe = exe with shared compile in Obj_shared_machine
@@ -162,6 +205,8 @@ help:
 	  -f MAKE/MACHINES/Makefile.$@ -o -f MAKE/MINE/Makefile.$@
 	@if [ ! -d $(objdir) ]; then mkdir $(objdir); fi
 	@$(SHELL) Make.sh style
+	@$(MAKE) $(MFLAGS) lmpinstalledpkgs.h gitversion
+	@echo 'Compiling LAMMPS for machine $@'
 	@if [ -f MAKE/MACHINES/Makefile.$@ ]; \
 	  then cp MAKE/MACHINES/Makefile.$@ $(objdir)/Makefile; fi
 	@if [ -f MAKE/OPTIONS/Makefile.$@ ]; \
@@ -230,7 +275,8 @@ mpi-stubs:
 
 sinclude ../lib/python/Makefile.lammps
 install-python:
-	@$(PYTHON) ../python/install.py
+	@$(PYTHON) ../python/install.py -v ../src/version.h \
+		-m ../python/lammps.py -l ../src/liblammps.so
 
 # Create a tarball of src dir and packages
 
@@ -260,12 +306,13 @@ package:
 	@echo 'make package                 list available packages'
 	@echo 'make package                 list available packages'
 	@echo 'make package-status (ps)     status of all packages'
+	@echo 'make package-installed (pi)  list of installed packages'
 	@echo 'make yes-package             install a single pgk in src dir'
 	@echo 'make no-package              remove a single pkg from src dir'
 	@echo 'make yes-all                 install all pgks in src dir'
 	@echo 'make no-all                  remove all pkgs from src dir'
 	@echo 'make yes-standard (yes-std)  install all standard pkgs'
-	@echo 'make no-standard (no-srd)    remove all standard pkgs'
+	@echo 'make no-standard (no-std)    remove all standard pkgs'
 	@echo 'make yes-user                install all user pkgs'
 	@echo 'make no-user                 remove all user pkgs'
 	@echo 'make yes-lib       install all pkgs with libs (included or ext)'
@@ -354,6 +401,7 @@ lib-%:
 	fi; touch main.cpp
 
 # status = list src files that differ from package files
+# installed = list of installed packages
 # update = replace src files with newer package files
 # overwrite = overwrite package files with newer src files
 # diff = show differences between src and package files
@@ -363,6 +411,10 @@ package-status ps:
 	@for p in $(PACKAGEUC); do $(SHELL) Package.sh $$p status; done
 	@echo ''
 	@for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p status; done
+
+package-installed pi:
+	@for p in $(PACKAGEUC); do $(SHELL) Package.sh $$p installed; done
+	@for p in $(PACKUSERUC); do $(SHELL) Package.sh $$p installed; done
 
 package-update pu: purge
 	@for p in $(PACKAGEUC); do $(SHELL) Package.sh $$p update; done

@@ -18,7 +18,7 @@
      Vincent Natoli, Stone Ridge Technology
 ------------------------------------------------------------------------- */
 
-#include <stdlib.h>
+#include <cstdlib>
 #include "pair_lj_cut_opt.h"
 #include "atom.h"
 #include "force.h"
@@ -34,8 +34,7 @@ PairLJCutOpt::PairLJCutOpt(LAMMPS *lmp) : PairLJCut(lmp) {}
 
 void PairLJCutOpt::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   if (evflag) {
     if (eflag) {

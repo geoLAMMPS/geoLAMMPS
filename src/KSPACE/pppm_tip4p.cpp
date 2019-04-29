@@ -15,7 +15,7 @@
    Contributing authors: Amalie Frischknecht and Ahmed Ismail (SNL)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
+#include <cmath>
 #include "pppm_tip4p.h"
 #include "atom.h"
 #include "domain.h"
@@ -39,8 +39,7 @@ using namespace MathConst;
 
 /* ---------------------------------------------------------------------- */
 
-PPPMTIP4P::PPPMTIP4P(LAMMPS *lmp, int narg, char **arg) :
-  PPPM(lmp, narg, arg)
+PPPMTIP4P::PPPMTIP4P(LAMMPS *lmp) : PPPM(lmp)
 {
   triclinic_support = 1;
   tip4pflag = 1;
@@ -73,7 +72,7 @@ void PPPMTIP4P::particle_map()
   double **x = atom->x;
   int nlocal = atom->nlocal;
 
-  if (!ISFINITE(boxlo[0]) || !ISFINITE(boxlo[1]) || !ISFINITE(boxlo[2]))
+  if (!std::isfinite(boxlo[0]) || !std::isfinite(boxlo[1]) || !std::isfinite(boxlo[2]))
     error->one(FLERR,"Non-numeric box dimensions - simulation unstable");
 
   int flag = 0;

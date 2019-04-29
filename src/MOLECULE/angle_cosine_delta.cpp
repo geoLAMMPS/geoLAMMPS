@@ -15,8 +15,8 @@
    Contributing author: Axel Kohlmeyer (Temple U), akohlmey at gmail.com
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "angle_cosine_delta.h"
 #include "atom.h"
 #include "neighbor.h"
@@ -44,8 +44,7 @@ void AngleCosineDelta::compute(int eflag, int vflag)
   double rsq1,rsq2,r1,r2,c,a,cot,a11,a12,a22,b11,b12,b22,c0,s0,s;
 
   eangle = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;

@@ -21,9 +21,9 @@
    see J. Chem. Phys. 133, 154103 (2010)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include <unistd.h>
 #include "fix_ave_correlate_long.h"
 #include "update.h"
@@ -31,6 +31,7 @@
 #include "compute.h"
 #include "input.h"
 #include "variable.h"
+#include "citeme.h"
 #include "memory.h"
 #include "error.h"
 #include "force.h"
@@ -45,11 +46,24 @@ enum{AUTO,UPPER,LOWER,AUTOUPPER,AUTOLOWER,FULL};
 #define INVOKED_VECTOR 2
 #define INVOKED_ARRAY 4
 
+static const char cite_fix_ave_correlate_long[] =
+"fix ave/correlate/long command:\n\n"
+"@Article{Ramirez10,\n"
+" author = {Jorge Rami{\'}rez and Sathish K. Sukumaran and Bart Vorselaars and Alexei E. Likhtman},\n"
+" title =   {Efficient on the fly calculation of time correlation functions in computer simulations},"
+" journal = {J.~Chem.~Phys.},\n"
+" year =    2010,\n"
+" volume =  133,\n"
+" pages =   {154103}\n"
+"}\n\n";
+
 /* ---------------------------------------------------------------------- */
 
 FixAveCorrelateLong::FixAveCorrelateLong(LAMMPS * lmp, int narg, char **arg):
   Fix (lmp, narg, arg)
 {
+  if (lmp->citeme) lmp->citeme->add(cite_fix_ave_correlate_long);
+
   // At least nevery nfrez and one value are needed
   if (narg < 6) error->all(FLERR,"Illegal fix ave/correlate/long command");
 
@@ -151,7 +165,7 @@ FixAveCorrelateLong::FixAveCorrelateLong(LAMMPS * lmp, int narg, char **arg):
         fp = fopen(arg[iarg+1],"w");
         if (fp == NULL) {
           char str[128];
-          sprintf(str,"Cannot open fix ave/correlate/long file %s",arg[iarg+1]);
+          snprintf(str,128,"Cannot open fix ave/correlate/long file %s",arg[iarg+1]);
           error->one(FLERR,str);
         }
       }
@@ -293,7 +307,7 @@ FixAveCorrelateLong::FixAveCorrelateLong(LAMMPS * lmp, int narg, char **arg):
 
   for (int i=0;i<npair;i++)
     for (int j=0;j<numcorrelators;j++) {
-      for (int k=0;k<p;k++) {
+      for (unsigned int k=0;k<p;k++) {
         shift[i][j][k]=-2E10;
         shift2[i][j][k]=0.0;
         correlation[i][j][k]=0.0;
@@ -303,7 +317,7 @@ FixAveCorrelateLong::FixAveCorrelateLong(LAMMPS * lmp, int narg, char **arg):
     }
 
   for (int i=0;i<numcorrelators;i++) {
-    for (int j=0;j<p;j++) ncorrelation[i][j]=0;
+    for (unsigned int j=0;j<p;j++) ncorrelation[i][j]=0;
     naccumulator[i]=0;
     insertindex[i]=0;
   }
@@ -321,6 +335,8 @@ FixAveCorrelateLong::FixAveCorrelateLong(LAMMPS * lmp, int narg, char **arg):
   nvalid_last = -1;
   nvalid = nextvalid();
   modify->addstep_compute_all(nvalid);
+  last_accumulated_step = -1;
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -396,7 +412,7 @@ void FixAveCorrelateLong::init()
    only does something if nvalid = current timestep
 ------------------------------------------------------------------------- */
 
-void FixAveCorrelateLong::setup(int vflag)
+void FixAveCorrelateLong::setup(int /*vflag*/)
 {
   end_of_step();
 }
@@ -479,7 +495,7 @@ void FixAveCorrelateLong::end_of_step()
     fprintf(fp,"# Timestep: " BIGINT_FORMAT "\n", ntimestep);
     for (unsigned int i=0;i<npcorr;++i) {
       fprintf(fp, "%lg ", t[i]*update->dt);
-      for (unsigned int j=0;j<npair;++j) {
+      for (int j=0;j<npair;++j) {
         fprintf(fp, "%lg ", f[j][i]);
       }
     fprintf(fp, "\n");
@@ -510,7 +526,7 @@ void FixAveCorrelateLong::evaluate() {
 
   // Subsequent correlators
   for (int k=1;k<kmax;++k) {
-    for (int j=dmin;j<p;++j) {
+    for (unsigned int j=dmin;j<p;++j) {
       if (ncorrelation[k][j]>0) {
         t[jm] = j * pow((double)m, k);
         for (int i=0;i<npair;++i)
@@ -532,7 +548,7 @@ void FixAveCorrelateLong::accumulate()
 {
   int i,j,ipair;
 
-  //printf("DEBUG %i %i\n", nvalues, npair);
+  if (update->ntimestep <= last_accumulated_step) return;
 
   if (type == AUTO) {
     for (i=0; i<nvalues;i++) add(i,values[i]);
@@ -566,13 +582,14 @@ void FixAveCorrelateLong::accumulate()
         else add(ipair++,values[i],values[j]);
       }
   }
+  last_accumulated_step = update->ntimestep;
 }
 
 
 /* ----------------------------------------------------------------------
    Add a scalar value to the autocorrelator k of pair i
 ------------------------------------------------------------------------- */
-void FixAveCorrelateLong::add(const int i, const double w, const unsigned int k){
+void FixAveCorrelateLong::add(const int i, const double w, const int k){
   // If we exceed the correlator side, the value is discarded
   if (k == numcorrelators) return;
   if (k > kmax) kmax=k;
@@ -624,7 +641,7 @@ void FixAveCorrelateLong::add(const int i, const double w, const unsigned int k)
    Add 2 scalar values to the cross-correlator k of pair i
 ------------------------------------------------------------------------- */
 void FixAveCorrelateLong::add(const int i, const double wA, const double wB,
-                        const unsigned int k) {
+                        const int k) {
   if (k == numcorrelators) return;
   if (k > kmax) kmax=k;
 
@@ -699,8 +716,8 @@ double FixAveCorrelateLong::memory_usage() {
   //    ncorrelation:     numcorrelators x p
   //    naccumulator:     numcorrelators
   //    insertindex:      numcorrelators
-  //    t:		numcorrelators x p
-  //    f:		npair x numcorrelators x p
+  //    t:              numcorrelators x p
+  //    f:              npair x numcorrelators x p
   double bytes = (4*npair*numcorrelators*p + 2*npair*numcorrelators
                   + numcorrelators*p)*sizeof(double)
     + numcorrelators*p*sizeof(unsigned long int)
@@ -723,11 +740,10 @@ void FixAveCorrelateLong::write_restart(FILE *fp) {
     list[n++]=numcorrelators;
     list[n++]=p;
     list[n++]=m;
-    list[n++]=nvalid;
-    list[n++]=nvalid_last;
+    list[n++] = last_accumulated_step;
     for (int i=0;i<npair;i++)
       for (int j=0;j<numcorrelators;j++) {
-        for (int k=0;k<p;k++) {
+        for (unsigned int k=0;k<p;k++) {
           list[n++]=shift[i][j][k];
           list[n++]=shift2[i][j][k];
           list[n++]=correlation[i][j][k];
@@ -736,7 +752,7 @@ void FixAveCorrelateLong::write_restart(FILE *fp) {
         list[n++]=accumulator2[i][j];
       }
     for (int i=0;i<numcorrelators;i++) {
-      for (int j=0;j<p;j++) list[n++]=ncorrelation[i][j];
+      for (unsigned int j=0;j<p;j++) list[n++]=ncorrelation[i][j];
       list[n++]=naccumulator[i];
       list[n++]=insertindex[i];
     }
@@ -760,16 +776,15 @@ void FixAveCorrelateLong::restart(char *buf)
   int numcorrelatorsin = static_cast<int> (list[n++]);
   int pin = static_cast<int> (list[n++]);
   int min = static_cast<int> (list[n++]);
-  nvalid = static_cast<int> (list[n++]);
-  nvalid_last = static_cast<int> (list[n++]);
+  last_accumulated_step = static_cast<int> (list[n++]);
 
   if ((npairin!=npair) || (numcorrelatorsin!=numcorrelators)
-      || (pin!=p) || (min!=m))
+      || (pin!=(int)p) || (min!=(int)m))
     error->all(FLERR,"Fix ave/correlate/long: restart and input data are different");
 
   for (int i=0;i<npair;i++)
     for (int j=0;j<numcorrelators;j++) {
-      for (int k=0;k<p;k++) {
+      for (unsigned int k=0;k<p;k++) {
         shift[i][j][k] = list[n++];
         shift2[i][j][k] = list[n++];
         correlation[i][j][k] = list[n++];
@@ -778,7 +793,7 @@ void FixAveCorrelateLong::restart(char *buf)
       accumulator2[i][j] = list[n++];
     }
   for (int i=0;i<numcorrelators;i++) {
-    for (int j=0;j<p;j++)
+    for (unsigned int j=0;j<p;j++)
       ncorrelation[i][j] = static_cast<unsigned long int>(list[n++]);
     naccumulator[i] = static_cast<unsigned int> (list[n++]);
     insertindex[i] = static_cast<unsigned int> (list[n++]);

@@ -14,10 +14,10 @@
    Contributiong authors: Arben Jusufi, Axel Kohlmeyer (Temple U.)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "pair_coul_diel.h"
 #include "atom.h"
 #include "comm.h"
@@ -58,8 +58,7 @@ void PairCoulDiel::compute(int eflag, int vflag)
   int *ilist,*jlist,*numneigh,**firstneigh;
 
   ecoul = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;
@@ -326,7 +325,7 @@ void PairCoulDiel::read_restart_settings(FILE *fp)
 /* ---------------------------------------------------------------------- */
 
 double PairCoulDiel::single(int i, int j, int itype, int jtype,
-                           double rsq, double factor_coul, double factor_lj,
+                           double rsq, double factor_coul, double /*factor_lj*/,
                            double &fforce)
 {
   double r, rarg,forcedielec,phidielec;

@@ -11,8 +11,8 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <string.h>
-#include <stdio.h>
+#include <cstring>
+#include <cstdio>
 #include "fix_neigh_history_omp.h"
 #include "atom.h"
 #include "comm.h"
@@ -98,7 +98,7 @@ void FixNeighHistoryOMP::pre_exchange_onesided()
     // nlocal can be larger if other fixes added atoms at this pre_exchange()
 
     // clear per-thread paged data structures
-    
+
     MyPage <tagint> &ipg = ipage_atom[tid];
     MyPage <double> &dpg = dpage_atom[tid];
     ipg.reset();
@@ -129,7 +129,7 @@ void FixNeighHistoryOMP::pre_exchange_onesided()
       allflags = firstflag[i];
 
       for (jj = 0; jj < jnum; jj++)
-        if (allflags[jj]) 
+        if (allflags[jj])
           if ((i >= lfrom) && (i < lto)) npartner[i]++;
     }
 
@@ -256,7 +256,7 @@ void FixNeighHistoryOMP::pre_exchange_newton()
         }
       }
     }
-#if defined(_OPENMP)    
+#if defined(_OPENMP)
 #pragma omp barrier
     {;}
 
@@ -330,7 +330,7 @@ void FixNeighHistoryOMP::pre_exchange_newton()
         }
       }
     }
-#if defined(_OPENMP)    
+#if defined(_OPENMP)
 #pragma omp barrier
     {;}
 
@@ -356,7 +356,7 @@ void FixNeighHistoryOMP::pre_exchange_newton()
 #endif
     {
       maxpartner = MAX(m,maxpartner);
-      comm->maxexchange_fix = MAX(comm->maxexchange_fix,4*maxpartner+1);
+      comm->maxexchange_fix = MAX(comm->maxexchange_fix,(dnum+1)*maxpartner+1);
     }
   }
 
@@ -516,9 +516,9 @@ void FixNeighHistoryOMP::post_neighbor()
     memory->sfree(firstflag);
     memory->sfree(firstvalue);
     maxatom = nall;
-    firstflag = (int **) 
+    firstflag = (int **)
       memory->smalloc(maxatom*sizeof(int *),"neighbor_history:firstflag");
-    firstvalue = (double **) 
+    firstvalue = (double **)
       memory->smalloc(maxatom*sizeof(double *),"neighbor_history:firstvalue");
   }
 
@@ -540,8 +540,8 @@ void FixNeighHistoryOMP::post_neighbor()
     int *allflags;
     double *allvalues;
 
-    MyPage <tagint> &ipg = ipage_atom[tid];
-    MyPage <double> &dpg = dpage_atom[tid];
+    MyPage <int> &ipg = ipage_neigh[tid];
+    MyPage <double> &dpg = dpage_neigh[tid];
     ipg.reset();
     dpg.reset();
 
@@ -576,7 +576,7 @@ void FixNeighHistoryOMP::post_neighbor()
         rflag = sbmask(j);
         j &= NEIGHMASK;
         jlist[jj] = j;
-        
+
         // rflag = 1 if r < radsum in npair_size() method
         // preserve neigh history info if tag[j] is in old-neigh partner list
         // this test could be more geometrically precise for two sphere/line/tri

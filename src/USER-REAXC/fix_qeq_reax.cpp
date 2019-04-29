@@ -18,10 +18,10 @@
      Hybrid and sub-group capabilities: Ray Shan (Sandia)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "fix_qeq_reax.h"
 #include "pair_reaxc.h"
 #include "atom.h"
@@ -126,14 +126,12 @@ FixQEqReax::FixQEqReax(LAMMPS *lmp, int narg, char **arg) :
   reaxc = NULL;
   reaxc = (PairReaxC *) force->pair_match("reax/c",0);
 
-  if (reaxc) {
-    s_hist = t_hist = NULL;
-    grow_arrays(atom->nmax);
-    atom->add_callback(0);
-    for (int i = 0; i < atom->nmax; i++)
-      for (int j = 0; j < nprev; ++j)
-        s_hist[i][j] = t_hist[i][j] = 0;
-  }
+  s_hist = t_hist = NULL;
+  grow_arrays(atom->nmax);
+  atom->add_callback(0);
+  for (int i = 0; i < atom->nmax; i++)
+    for (int j = 0; j < nprev; ++j)
+      s_hist[i][j] = t_hist[i][j] = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -381,7 +379,7 @@ void FixQEqReax::init()
 
 /* ---------------------------------------------------------------------- */
 
-void FixQEqReax::init_list(int id, NeighList *ptr)
+void FixQEqReax::init_list(int /*id*/, NeighList *ptr)
 {
   list = ptr;
 }
@@ -428,7 +426,7 @@ void FixQEqReax::init_taper()
   Tap[3] = 140.0 * (swa3*swb + 3.0*swa2*swb2 + swa*swb3) / d7;
   Tap[2] =-210.0 * (swa3*swb2 + swa2*swb3) / d7;
   Tap[1] = 140.0 * swa3 * swb3 / d7;
-  Tap[0] = (-35.0*swa3*swb2*swb2 + 21.0*swa2*swb3*swb2 +
+  Tap[0] = (-35.0*swa3*swb2*swb2 + 21.0*swa2*swb3*swb2 -
             7.0*swa*swb3*swb3 + swb3*swb3*swb) / d7;
 }
 
@@ -485,7 +483,7 @@ void FixQEqReax::init_storage()
 
 /* ---------------------------------------------------------------------- */
 
-void FixQEqReax::pre_force(int vflag)
+void FixQEqReax::pre_force(int /*vflag*/)
 {
   double t_start, t_end;
 
@@ -504,7 +502,7 @@ void FixQEqReax::pre_force(int vflag)
 
   init_matvec();
 
-  matvecs_s = CG(b_s, s);    	// CG on s - parallel
+  matvecs_s = CG(b_s, s);       // CG on s - parallel
   matvecs_t = CG(b_t, t);       // CG on t - parallel
   matvecs = matvecs_s + matvecs_t;
 
@@ -518,7 +516,7 @@ void FixQEqReax::pre_force(int vflag)
 
 /* ---------------------------------------------------------------------- */
 
-void FixQEqReax::pre_force_respa(int vflag, int ilevel, int iloop)
+void FixQEqReax::pre_force_respa(int vflag, int ilevel, int /*iloop*/)
 {
   if (ilevel == nlevels_respa-1) pre_force(vflag);
 }
@@ -557,17 +555,11 @@ void FixQEqReax::init_matvec()
       b_s[i]      = -chi[ atom->type[i] ];
       b_t[i]      = -1.0;
 
-      /* linear extrapolation for s & t from previous solutions */
-      //s[i] = 2 * s_hist[i][0] - s_hist[i][1];
-      //t[i] = 2 * t_hist[i][0] - t_hist[i][1];
-
       /* quadratic extrapolation for s & t from previous solutions */
-      //s[i] = s_hist[i][2] + 3 * ( s_hist[i][0] - s_hist[i][1] );
       t[i] = t_hist[i][2] + 3 * ( t_hist[i][0] - t_hist[i][1]);
 
       /* cubic extrapolation for s & t from previous solutions */
       s[i] = 4*(s_hist[i][0]+s_hist[i][2])-(6*s_hist[i][1]+s_hist[i][3]);
-      //t[i] = 4*(t_hist[i][0]+t_hist[i][2])-(6*t_hist[i][1]+t_hist[i][3]);
     }
   }
 
@@ -615,6 +607,7 @@ void FixQEqReax::compute_H()
 
       for (jj = 0; jj < jnum; jj++) {
         j = jlist[jj];
+        j &= NEIGHMASK;
 
         dx = x[j][0] - x[i][0];
         dy = x[j][1] - x[i][1];
@@ -631,9 +624,9 @@ void FixQEqReax::compute_H()
               if (dy > SMALL) flag = 1;
               else if (fabs(dy) < SMALL && dx > SMALL)
                 flag = 1;
-	    }
-	  }
-	}
+            }
+          }
+        }
 
         if (flag) {
           H.jlist[m_fill] = j;
@@ -833,7 +826,7 @@ void FixQEqReax::calculate_Q()
 /* ---------------------------------------------------------------------- */
 
 int FixQEqReax::pack_forward_comm(int n, int *list, double *buf,
-                                  int pbc_flag, int *pbc)
+                                  int /*pbc_flag*/, int * /*pbc*/)
 {
   int m;
 
@@ -952,7 +945,7 @@ void FixQEqReax::grow_arrays(int nmax)
    copy values within fictitious charge arrays
 ------------------------------------------------------------------------- */
 
-void FixQEqReax::copy_arrays(int i, int j, int delflag)
+void FixQEqReax::copy_arrays(int i, int j, int /*delflag*/)
 {
   for (int m = 0; m < nprev; m++) {
     s_hist[j][m] = s_hist[i][m];

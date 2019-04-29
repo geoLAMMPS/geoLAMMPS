@@ -15,8 +15,8 @@
    Contributing author: Mathias Puetz (SNL) and friends
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "dihedral_multi_harmonic.h"
 #include "atom.h"
 #include "neighbor.h"
@@ -34,7 +34,10 @@ using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-DihedralMultiHarmonic::DihedralMultiHarmonic(LAMMPS *lmp) : Dihedral(lmp) {}
+DihedralMultiHarmonic::DihedralMultiHarmonic(LAMMPS *lmp) : Dihedral(lmp)
+{
+  writedata = 1;
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -64,8 +67,7 @@ void DihedralMultiHarmonic::compute(int eflag, int vflag)
   double s2,sin2;
 
   edihedral = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;
@@ -330,4 +332,14 @@ void DihedralMultiHarmonic::read_restart(FILE *fp)
   MPI_Bcast(&a5[1],atom->ndihedraltypes,MPI_DOUBLE,0,world);
 
   for (int i = 1; i <= atom->ndihedraltypes; i++) setflag[i] = 1;
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 writes to data file
+------------------------------------------------------------------------- */
+
+void DihedralMultiHarmonic::write_data(FILE *fp)
+{
+  for (int i = 1; i <= atom->ndihedraltypes; i++)
+    fprintf(fp,"%d %g %g %g %g %g\n",i,a1[i],a2[i],a3[i],a4[i],a5[i]);
 }

@@ -13,11 +13,9 @@
 
 #include "neigh_list_kokkos.h"
 #include "atom.h"
-#include "memory.h"
+#include "memory_kokkos.h"
 
 using namespace LAMMPS_NS;
-
-enum{NSQ,BIN,MULTI};
 
 /* ---------------------------------------------------------------------- */
 
@@ -55,7 +53,7 @@ void NeighListKokkos<Device>::grow(int nmax)
 
 namespace LAMMPS_NS {
 template class NeighListKokkos<LMPDeviceType>;
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 template class NeighListKokkos<LMPHostType>;
 #endif
 }

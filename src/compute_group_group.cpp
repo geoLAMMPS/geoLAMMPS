@@ -17,7 +17,8 @@
 ------------------------------------------------------------------------- */
 
 #include <mpi.h>
-#include <string.h>
+#include <cstring>
+#include <cmath>
 #include "compute_group_group.h"
 #include "atom.h"
 #include "update.h"
@@ -29,10 +30,10 @@
 #include "group.h"
 #include "kspace.h"
 #include "error.h"
-#include <math.h>
 #include "comm.h"
 #include "domain.h"
 #include "math_const.h"
+#include "utils.h"
 
 using namespace LAMMPS_NS;
 using namespace MathConst;
@@ -124,7 +125,8 @@ void ComputeGroupGroup::init()
 
   if (pairflag && force->pair == NULL)
     error->all(FLERR,"No pair style defined for compute group/group");
-  if (force->pair_match("hybrid",0) == NULL && force->pair->single_enable == 0)
+  if (force->pair_match("^hybrid",0) == NULL
+      && force->pair->single_enable == 0)
     error->all(FLERR,"Pair style does not support compute group/group");
 
   // error if Kspace style does not compute group/group interactions
@@ -173,7 +175,7 @@ void ComputeGroupGroup::init()
 
 /* ---------------------------------------------------------------------- */
 
-void ComputeGroupGroup::init_list(int id, NeighList *ptr)
+void ComputeGroupGroup::init_list(int /*id*/, NeighList *ptr)
 {
   list = ptr;
 }
@@ -259,7 +261,7 @@ void ComputeGroupGroup::pair_contribution()
 
       // skip if atom J is not in either group
 
-      if (!(mask[j] & groupbit || mask[j] & jgroupbit)) continue; 
+      if (!(mask[j] & groupbit || mask[j] & jgroupbit)) continue;
 
       // skip if atoms I,J are only in the same group
 
@@ -267,8 +269,8 @@ void ComputeGroupGroup::pair_contribution()
       int ji_flag = 0;
       if (mask[i] & groupbit && mask[j] & jgroupbit) ij_flag = 1;
       if (mask[j] & groupbit && mask[i] & jgroupbit) ji_flag = 1;
-      if (!ij_flag && !ji_flag) continue; 
-      
+      if (!ij_flag && !ji_flag) continue;
+
       // skip if molecule IDs of atoms I,J do not satisfy molflag setting
 
       if (molflag != OFF) {

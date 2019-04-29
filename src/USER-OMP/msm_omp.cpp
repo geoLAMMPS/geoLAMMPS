@@ -24,7 +24,7 @@
 #include "memory.h"
 #include "math_const.h"
 
-#include <string.h>
+#include <cstring>
 
 #if defined(_OPENMP)
 #include <omp.h>
@@ -35,8 +35,7 @@ using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-MSMOMP::MSMOMP(LAMMPS *lmp, int narg, char **arg) :
-  MSM(lmp, narg, arg), ThrOMP(lmp, THR_KSPACE)
+MSMOMP::MSMOMP(LAMMPS *lmp) : MSM(lmp), ThrOMP(lmp, THR_KSPACE)
 {
   triclinic_support = 0;
   suffix_flag |= Suffix::OMP;

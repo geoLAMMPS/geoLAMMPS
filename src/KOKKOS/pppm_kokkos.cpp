@@ -16,10 +16,10 @@
 ------------------------------------------------------------------------- */
 
 #include <mpi.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
+#include <cstring>
+#include <cstdio>
+#include <cstdlib>
+#include <cmath>
 #include "pppm_kokkos.h"
 #include "atom_kokkos.h"
 #include "comm.h"
@@ -32,9 +32,10 @@
 #include "domain.h"
 #include "fft3d_wrap.h"
 #include "remap_wrap.h"
-#include "memory.h"
+#include "memory_kokkos.h"
 #include "error.h"
 #include "atom_masks.h"
+#include "kokkos.h"
 
 #include "math_const.h"
 #include "math_special_kokkos.h"
@@ -63,10 +64,8 @@ enum{FORWARD_IK,FORWARD_IK_PERATOM};
 /* ---------------------------------------------------------------------- */
 
 template<class DeviceType>
-PPPMKokkos<DeviceType>::PPPMKokkos(LAMMPS *lmp, int narg, char **arg) : PPPM(lmp, narg, arg)
+PPPMKokkos<DeviceType>::PPPMKokkos(LAMMPS *lmp) : PPPM(lmp)
 {
-  if (narg < 1) error->all(FLERR,"Illegal kspace_style pppm command");
-
   atomKK = (AtomKokkos *) atom;
   execution_space = ExecutionSpaceFromDevice<DeviceType>::space;
   datamask_read = X_MASK | F_MASK | TYPE_MASK | Q_MASK;
@@ -75,8 +74,6 @@ PPPMKokkos<DeviceType>::PPPMKokkos(LAMMPS *lmp, int narg, char **arg) : PPPM(lmp
   pppmflag = 1;
   group_group_enable = 0;
   triclinic_support = 0;
-
-  accuracy_relative = fabs(force->numeric(FLERR,arg[0]));
 
   nfactors = 3;
   //factors = new int[nfactors];
@@ -147,6 +144,13 @@ PPPMKokkos<DeviceType>::PPPMKokkos(LAMMPS *lmp, int narg, char **arg) : PPPM(lmp
   k_flag = DAT::tdual_int_scalar("PPPM:flag");
 }
 
+template<class DeviceType>
+void PPPMKokkos<DeviceType>::settings(int narg, char **arg)
+{
+  if (narg < 1) error->all(FLERR,"Illegal kspace_style pppm/kk command");
+  accuracy_relative = fabs(force->numeric(FLERR,arg[0]));
+}
+
 /* ----------------------------------------------------------------------
    free all memory
 ------------------------------------------------------------------------- */
@@ -161,9 +165,9 @@ PPPMKokkos<DeviceType>::~PPPMKokkos()
   if (peratom_allocate_flag) deallocate_peratom();
   //memory->destroy(part2grid);
   //memory->destroy(acons);
-  
-  memory->destroy_kokkos(k_eatom,eatom);
-  memory->destroy_kokkos(k_vatom,vatom);
+
+  memoryKK->destroy_kokkos(k_eatom,eatom);
+  memoryKK->destroy_kokkos(k_vatom,vatom);
   eatom = NULL;
   vatom = NULL;
 }
@@ -198,7 +202,7 @@ void PPPMKokkos<DeviceType>::init()
   if (!atomKK->q_flag) error->all(FLERR,"Kspace style requires atomKK attribute q");
 
   if (slabflag == 0 && domain->nonperiodic > 0)
-    error->all(FLERR,"Cannot use nonperiodic boundaries with PPPM");
+    error->all(FLERR,"Cannot use non-periodic boundaries with PPPM");
   if (slabflag) {
     if (domain->xperiodic != 1 || domain->yperiodic != 1 ||
         domain->boundary[2][0] != 1 || domain->boundary[2][1] != 1)
@@ -367,7 +371,7 @@ void PPPMKokkos<DeviceType>::setup()
   // perform some checks to avoid illegal boundaries with read_data
 
   if (slabflag == 0 && domain->nonperiodic > 0)
-    error->all(FLERR,"Cannot use nonperiodic boundaries with PPPM");
+    error->all(FLERR,"Cannot use non-periodic boundaries with PPPM");
   if (slabflag) {
     if (domain->xperiodic != 1 || domain->yperiodic != 1 ||
         domain->boundary[2][0] != 1 || domain->boundary[2][1] != 1)
@@ -611,20 +615,19 @@ void PPPMKokkos<DeviceType>::compute(int eflag, int vflag)
   // set energy/virial flags
   // invoke allocate_peratom() if needed for first time
 
-  if (eflag || vflag) ev_setup(eflag,vflag,0);
-  else evflag = evflag_atom = eflag_global = vflag_global =
+  ev_init(eflag,vflag,0);
          eflag_atom = vflag_atom = 0;
 
   // reallocate per-atom arrays if necessary
 
   if (eflag_atom) {
-    memory->destroy_kokkos(k_eatom,eatom);
-    memory->create_kokkos(k_eatom,eatom,maxeatom,"pair:eatom");
+    memoryKK->destroy_kokkos(k_eatom,eatom);
+    memoryKK->create_kokkos(k_eatom,eatom,maxeatom,"pair:eatom");
     d_eatom = k_eatom.view<DeviceType>();
   }
   if (vflag_atom) {
-    memory->destroy_kokkos(k_vatom,vatom);
-    memory->create_kokkos(k_vatom,vatom,maxvatom,6,"pair:vatom");
+    memoryKK->destroy_kokkos(k_vatom,vatom);
+    memoryKK->create_kokkos(k_vatom,vatom,maxvatom,6,"pair:vatom");
     d_vatom = k_vatom.view<DeviceType>();
   }
 
@@ -805,12 +808,12 @@ void PPPMKokkos<DeviceType>::allocate()
 {
   d_density_brick = typename AT::t_FFT_SCALAR_3d("pppm:density_brick",nzhi_out-nzlo_out+1,nyhi_out-nylo_out+1,nxhi_out-nxlo_out+1);
 
-  memory->create_kokkos(k_density_fft,density_fft,nfft_both,"pppm:d_density_fft");
+  memoryKK->create_kokkos(k_density_fft,density_fft,nfft_both,"pppm:d_density_fft");
   d_density_fft = k_density_fft.view<DeviceType>();
 
   d_greensfn = typename AT::t_float_1d("pppm:greensfn",nfft_both);
-  memory->create_kokkos(k_work1,work1,2*nfft_both,"pppm:work1");
-  memory->create_kokkos(k_work2,work2,2*nfft_both,"pppm:work2");
+  memoryKK->create_kokkos(k_work1,work1,2*nfft_both,"pppm:work1");
+  memoryKK->create_kokkos(k_work2,work2,2*nfft_both,"pppm:work2");
   d_work1 = k_work1.view<DeviceType>();
   d_work2 = k_work2.view<DeviceType>();
   d_vg = typename AT::t_virial_array("pppm:vg",nfft_both);
@@ -878,13 +881,13 @@ void PPPMKokkos<DeviceType>::allocate()
 template<class DeviceType>
 void PPPMKokkos<DeviceType>::deallocate()
 {
-  memory->destroy_kokkos(d_density_fft,density_fft);
+  memoryKK->destroy_kokkos(d_density_fft,density_fft);
   density_fft = NULL;
-  memory->destroy_kokkos(d_greensfn,greensfn);
+  memoryKK->destroy_kokkos(d_greensfn,greensfn);
   greensfn = NULL;
-  memory->destroy_kokkos(d_work1,work1);
+  memoryKK->destroy_kokkos(d_work1,work1);
   work1 = NULL;
-  memory->destroy_kokkos(d_work2,work2);
+  memoryKK->destroy_kokkos(d_work2,work2);
   work2 = NULL;
 
   delete fft1;
@@ -968,6 +971,8 @@ void PPPMKokkos<DeviceType>::set_grid_global()
   if (!gewaldflag) {
     if (accuracy <= 0.0)
       error->all(FLERR,"KSpace accuracy must be > 0");
+    if (q2 == 0.0)
+      error->all(FLERR,"Must use 'kspace_modify gewald' for uncharged system");
     g_ewald = accuracy*sqrt(natoms*cutoff*xprd*yprd*zprd) / (2.0*q2);
     if (g_ewald >= 1.0) g_ewald = (1.35 - 0.15*log(accuracy))/cutoff;
     else g_ewald = sqrt(-log(g_ewald)) / cutoff;
@@ -1178,6 +1183,7 @@ double PPPMKokkos<DeviceType>::final_accuracy()
   double yprd = domain->yprd;
   double zprd = domain->zprd;
   bigint natoms = atomKK->natoms;
+  if (natoms == 0) natoms = 1; // avoid division by zero
 
   double df_kspace = compute_df_kspace();
   double q2_over_sqrt = q2 / sqrt(natoms*cutoff*xprd*yprd*zprd);
@@ -1575,7 +1581,7 @@ void PPPMKokkos<DeviceType>::particle_map()
   k_flag.template modify<LMPHostType>();
   k_flag.template sync<DeviceType>();
 
-  if (!ISFINITE(boxlo[0]) || !ISFINITE(boxlo[1]) || !ISFINITE(boxlo[2]))
+  if (!std::isfinite(boxlo[0]) || !std::isfinite(boxlo[1]) || !std::isfinite(boxlo[2]))
     error->one(FLERR,"Non-numeric box dimensions - simulation unstable");
 
   copymode = 1;
@@ -1641,7 +1647,7 @@ void PPPMKokkos<DeviceType>::make_rho()
 
   nlocal = atomKK->nlocal;
 
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
   copymode = 1;
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagPPPM_make_rho_atomic>(0,nlocal),*this);
   copymode = 0;
@@ -2631,7 +2637,7 @@ void PPPMKokkos<DeviceType>::operator()(TagPPPM_fieldforce_peratom, const int &i
 ------------------------------------------------------------------------- */
 
 template<class DeviceType>
-void PPPMKokkos<DeviceType>::pack_forward_kokkos(int flag, Kokkos::DualView<FFT_SCALAR*,Kokkos::LayoutRight,LMPDeviceType> &k_buf, int nlist, DAT::tdual_int_2d &k_list, int index)
+void PPPMKokkos<DeviceType>::pack_forward_kspace_kokkos(int flag, Kokkos::DualView<FFT_SCALAR*,Kokkos::LayoutRight,LMPDeviceType> &k_buf, int nlist, DAT::tdual_int_2d &k_list, int index)
 {
   typename AT::t_int_2d_um d_list = k_list.view<DeviceType>();
   d_list_index = Kokkos::subview(d_list,index,Kokkos::ALL());
@@ -2687,7 +2693,7 @@ void PPPMKokkos<DeviceType>::operator()(TagPPPM_pack_forward2, const int &i) con
 ------------------------------------------------------------------------- */
 
 template<class DeviceType>
-void PPPMKokkos<DeviceType>::unpack_forward_kokkos(int flag, Kokkos::DualView<FFT_SCALAR*,Kokkos::LayoutRight,LMPDeviceType> &k_buf, int nlist, DAT::tdual_int_2d &k_list, int index)
+void PPPMKokkos<DeviceType>::unpack_forward_kspace_kokkos(int flag, Kokkos::DualView<FFT_SCALAR*,Kokkos::LayoutRight,LMPDeviceType> &k_buf, int nlist, DAT::tdual_int_2d &k_list, int index)
 {
   typename AT::t_int_2d_um d_list = k_list.view<DeviceType>();
   d_list_index = Kokkos::subview(d_list,index,Kokkos::ALL());
@@ -2744,7 +2750,7 @@ void PPPMKokkos<DeviceType>::operator()(TagPPPM_unpack_forward2, const int &i) c
 ------------------------------------------------------------------------- */
 
 template<class DeviceType>
-void PPPMKokkos<DeviceType>::pack_reverse_kokkos(int flag, Kokkos::DualView<FFT_SCALAR*,Kokkos::LayoutRight,LMPDeviceType> &k_buf, int nlist, DAT::tdual_int_2d &k_list, int index)
+void PPPMKokkos<DeviceType>::pack_reverse_kspace_kokkos(int flag, Kokkos::DualView<FFT_SCALAR*,Kokkos::LayoutRight,LMPDeviceType> &k_buf, int nlist, DAT::tdual_int_2d &k_list, int index)
 {
   typename AT::t_int_2d_um d_list = k_list.view<DeviceType>();
   d_list_index = Kokkos::subview(d_list,index,Kokkos::ALL());
@@ -2774,7 +2780,7 @@ void PPPMKokkos<DeviceType>::operator()(TagPPPM_pack_reverse, const int &i) cons
 ------------------------------------------------------------------------- */
 
 template<class DeviceType>
-void PPPMKokkos<DeviceType>::unpack_reverse_kokkos(int flag, Kokkos::DualView<FFT_SCALAR*,Kokkos::LayoutRight,LMPDeviceType> &k_buf, int nlist, DAT::tdual_int_2d &k_list, int index)
+void PPPMKokkos<DeviceType>::unpack_reverse_kspace_kokkos(int flag, Kokkos::DualView<FFT_SCALAR*,Kokkos::LayoutRight,LMPDeviceType> &k_buf, int nlist, DAT::tdual_int_2d &k_list, int index)
 {
   typename AT::t_int_2d_um d_list = k_list.view<DeviceType>();
   d_list_index = Kokkos::subview(d_list,index,Kokkos::ALL());
@@ -3114,7 +3120,7 @@ double PPPMKokkos<DeviceType>::memory_usage()
 
 namespace LAMMPS_NS {
 template class PPPMKokkos<LMPDeviceType>;
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 template class PPPMKokkos<LMPHostType>;
 #endif
 }

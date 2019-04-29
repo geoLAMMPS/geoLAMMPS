@@ -20,6 +20,7 @@
 #include "neigh_list.h"
 #include "atom.h"
 #include "comm.h"
+#include "domain.h"
 #include "group.h"
 
 using namespace LAMMPS_NS;
@@ -69,7 +70,8 @@ fbi(NeighList *list, IntelBuffers<flt_t,acc_t> *buffers) {
   int offload_noghost = _fix->offload_noghost();
   #endif
 
-  buffers->grow_list(list, atom->nlocal, comm->nthreads, off_end,
+  buffers->grow_list(list, atom->nlocal, comm->nthreads,
+                     _fix->three_body_neighbor(), off_end,
                      _fix->nbor_pack_width());
 
   int need_ic = 0;

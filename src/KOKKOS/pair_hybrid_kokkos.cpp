@@ -11,10 +11,10 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <cctype>
 #include "pair_hybrid_kokkos.h"
 #include "atom_kokkos.h"
 #include "force.h"
@@ -23,10 +23,11 @@
 #include "neigh_request.h"
 #include "update.h"
 #include "comm.h"
-#include "memory.h"
+#include "memory_kokkos.h"
 #include "error.h"
 #include "respa.h"
 #include "atom_masks.h"
+#include "kokkos.h"
 
 using namespace LAMMPS_NS;
 
@@ -77,9 +78,7 @@ void PairHybridKokkos::compute(int eflag, int vflag)
 
   if (no_virial_fdotr_compute && vflag % 4 == 2) vflag = 1 + vflag/4 * 4;
 
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = eflag_global = vflag_global =
-         eflag_atom = vflag_atom = 0;
+  ev_init(eflag,vflag);
 
   // check if global component of incoming vflag = 2
   // if so, reset vflag passed to substyle as if it were 0

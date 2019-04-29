@@ -16,10 +16,10 @@
    This style is a simplified re-implementation of the CG/CMM pair style
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "pair_lj_sdk_coul_msm.h"
 #include "atom.h"
 #include "comm.h"
@@ -57,9 +57,7 @@ void PairLJSDKCoulMSM::compute(int eflag, int vflag)
   if (force->kspace->scalar_pressure_flag)
     error->all(FLERR,"Must use 'kspace_modify pressure/scalar no' with Pair style");
 
-  if (eflag || vflag) {
-    ev_setup(eflag,vflag);
-  } else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   if (evflag) {
     if (eflag) {

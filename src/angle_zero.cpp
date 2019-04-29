@@ -15,9 +15,9 @@
    Contributing author: Carsten Svaneborg (SDU)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include "angle_zero.h"
 #include "atom.h"
 #include "force.h"
@@ -47,8 +47,7 @@ AngleZero::~AngleZero()
 
 void AngleZero::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = 0;
+  ev_init(eflag,vflag);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -148,7 +147,7 @@ void AngleZero::write_data(FILE *fp)
 
 /* ---------------------------------------------------------------------- */
 
-double AngleZero::single(int type, int i1, int i2, int i3)
+double AngleZero::single(int /*type*/, int /*i1*/, int /*i2*/, int /*i3*/)
 {
   return 0.0;
 }

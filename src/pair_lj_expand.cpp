@@ -11,10 +11,10 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "pair_lj_expand.h"
 #include "atom.h"
 #include "comm.h"
@@ -38,8 +38,9 @@ PairLJExpand::PairLJExpand(LAMMPS *lmp) : Pair(lmp)
 
 PairLJExpand::~PairLJExpand()
 {
-  if (!copymode) {
-   if (allocated) {
+  if (copymode) return;
+
+  if (allocated) {
     memory->destroy(setflag);
     memory->destroy(cutsq);
 
@@ -52,7 +53,6 @@ PairLJExpand::~PairLJExpand()
     memory->destroy(lj3);
     memory->destroy(lj4);
     memory->destroy(offset);
-   }
   }
 }
 
@@ -67,8 +67,7 @@ void PairLJExpand::compute(int eflag, int vflag)
   int *ilist,*jlist,*numneigh,**firstneigh;
 
   evdwl = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;
@@ -282,9 +281,9 @@ double PairLJExpand::init_one(int i, int j)
        (1.0/3.0 + 2.0*shift1/(4.0*rc1) + shift2/(5.0*rc2))/rc3);
     ptail_ij = 16.0*MY_PI*all[0]*all[1]*epsilon[i][j] * sig6 *
       ((1.0/9.0 + 3.0*shift1/(10.0*rc1) +
-	3.0*shift2/(11.0*rc2) + shift3/(12.0*rc3))*2.0*sig6/rc9 -
+        3.0*shift2/(11.0*rc2) + shift3/(12.0*rc3))*2.0*sig6/rc9 -
        (1.0/3.0 + 3.0*shift1/(4.0*rc1) +
-	3.0*shift2/(5.0*rc2) + shift3/(6.0*rc3))/rc3);
+        3.0*shift2/(5.0*rc2) + shift3/(6.0*rc3))/rc3);
   }
 
   return cut[i][j] + shift[i][j];
@@ -396,8 +395,8 @@ void PairLJExpand::write_data_all(FILE *fp)
 
 /* ---------------------------------------------------------------------- */
 
-double PairLJExpand::single(int i, int j, int itype, int jtype, double rsq,
-                            double factor_coul, double factor_lj,
+double PairLJExpand::single(int /*i*/, int /*j*/, int itype, int jtype, double rsq,
+                            double /*factor_coul*/, double factor_lj,
                             double &fforce)
 {
   double r,rshift,rshiftsq,r2inv,r6inv,forcelj,philj;

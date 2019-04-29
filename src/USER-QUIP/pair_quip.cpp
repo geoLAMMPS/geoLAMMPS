@@ -17,10 +17,10 @@
 ------------------------------------------------------------------------- */
 
 #include <mpi.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "pair_quip.h"
 #include "atom.h"
 #include "update.h"
@@ -40,6 +40,7 @@ using namespace LAMMPS_NS;
 PairQUIP::PairQUIP(LAMMPS *lmp) : Pair(lmp)
 {
    single_enable = 0;
+   restartinfo = 0;
    one_coeff = 1;
    no_virial_fdotr_compute = 1;
    manybody_flag = 1;
@@ -74,8 +75,7 @@ void PairQUIP::compute(int eflag, int vflag)
 
   double *quip_local_e, *quip_force, *quip_local_virial, *quip_virial, quip_energy, *lattice;
 
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else ev_unset();
+  ev_init(eflag,vflag);
 
   inum = list->inum;
   ilist = list->ilist;
@@ -211,7 +211,7 @@ void PairQUIP::compute(int eflag, int vflag)
    global settings
 ------------------------------------------------------------------------- */
 
-void PairQUIP::settings(int narg, char **arg)
+void PairQUIP::settings(int narg, char **/*arg*/)
 {
   if (narg != 0) error->all(FLERR,"Illegal pair_style command");
   if (strcmp(force->pair_style,"hybrid") == 0)
@@ -251,7 +251,7 @@ void PairQUIP::coeff(int narg, char **arg)
       }
    }
 
-   if( narg != (4+n) ) {
+   if (narg != (4+n)) {
       char str[1024];
       sprintf(str,"Number of arguments %d is not correct, it should be %d", narg, 4+n);
       error->all(FLERR,str);
@@ -270,7 +270,7 @@ void PairQUIP::coeff(int narg, char **arg)
 
    for (int i = 4; i < narg; i++) {
 
-      if( 0 == sscanf(arg[i],"%d",&map[i-4])) {
+      if (0 == sscanf(arg[i],"%d",&map[i-4])) {
          char str[1024];
          sprintf(str,"Incorrect atomic number %s at position %d",arg[i],i);
          error->all(FLERR,str);
@@ -303,7 +303,7 @@ void PairQUIP::init_style()
   if (force->newton_pair != 1)
     error->all(FLERR,"Pair style quip requires newton pair on");
 
-  // Initialise neighbour list
+  // Initialise neighbor list
   int irequest_full = neighbor->request(this);
   neighbor->requests[irequest_full]->id = 1;
   neighbor->requests[irequest_full]->half = 0;
@@ -314,7 +314,7 @@ void PairQUIP::init_style()
    init for one type pair i,j and corresponding j,i
 ------------------------------------------------------------------------- */
 
-double PairQUIP::init_one(int i, int j)
+double PairQUIP::init_one(int /*i*/, int /*j*/)
 {
   return cutoff;
 }

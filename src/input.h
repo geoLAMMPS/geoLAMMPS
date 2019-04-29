@@ -14,7 +14,7 @@
 #ifndef LMP_INPUT_H
 #define LMP_INPUT_H
 
-#include <stdio.h>
+#include <cstdio>
 #include "pointers.h"
 #include <map>
 #include <string>
@@ -24,6 +24,8 @@ namespace LAMMPS_NS {
 class Input : protected Pointers {
   friend class Info;
   friend class Error;
+  friend class Deprecated;
+
  public:
   int narg;                    // # of command args
   char **arg;                  // parsed args for command
@@ -38,9 +40,11 @@ class Input : protected Pointers {
                                  // substitute for variables in a string
   int expand_args(int, char **, int, char **&);  // expand args due to wildcard
 
+ protected:
+  char *command;               // ptr to current command
+
  private:
   int me;                      // proc ID
-  char *command;               // ptr to current command
   int maxarg;                  // max # of args in arg
   char *line,*copy,*work;      // input line & copy and work string
   int maxline,maxcopy,maxwork; // max lengths of char strings
@@ -169,9 +173,9 @@ E: Unbalanced quotes in input line
 No matching end double quote was found following a leading double
 quote.
 
-E: Input line quote not followed by whitespace
+E: Input line quote not followed by white-space
 
-An end quote must be followed by whitespace.
+An end quote must be followed by white-space.
 
 E: Invalid variable name
 
@@ -181,10 +185,9 @@ E: Invalid immediate variable
 
 Syntax of immediate value is incorrect.
 
-E: Substitution for illegal variable
+E: Substitution for illegal variable %s
 
-Input script line contained a variable that could not be substituted
-for.
+UNDOCUMENTED
 
 E: Illegal ... command
 
@@ -253,6 +256,14 @@ The chosen atom style does not allow for bonds to be defined.
 E: Bond_style command when no bonds allowed
 
 The chosen atom style does not allow for bonds to be defined.
+
+E: Bond_write command when no bonds allowed
+
+UNDOCUMENTED
+
+E: Bond_write command before bond_style is defined
+
+UNDOCUMENTED
 
 E: Boundary command after simulation box is defined
 
@@ -326,7 +337,7 @@ after a read_data, read_restart, or create_box command.
 
 E: Package command after simulation box is defined
 
-The package command cannot be used afer a read_data, read_restart, or
+The package command cannot be used after a read_data, read_restart, or
 create_box command.
 
 E: Package gpu command without GPU package installed
@@ -380,5 +391,10 @@ E: Units command after simulation box is defined
 
 The units command cannot be used after a read_data, read_restart, or
 create_box command.
+
+U: Substitution for illegal variable
+
+Input script line contained a variable that could not be substituted
+for.
 
 */

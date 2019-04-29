@@ -11,9 +11,9 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstring>
+#include <cstdlib>
 #include "compute_pair_local.h"
 #include "atom.h"
 #include "update.h"
@@ -43,9 +43,6 @@ ComputePairLocal::ComputePairLocal(LAMMPS *lmp, int narg, char **arg) :
 
   local_flag = 1;
   nvalues = narg - 3;
-  if (nvalues == 1) size_local_cols = 0;
-  else size_local_cols = nvalues;
-
   pstyle = new int[nvalues];
   pindex = new int[nvalues];
 
@@ -76,7 +73,7 @@ ComputePairLocal::ComputePairLocal(LAMMPS *lmp, int narg, char **arg) :
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"cutoff") == 0) {
-      if (iarg+2 > narg) 
+      if (iarg+2 > narg)
         error->all(FLERR,"Illegal compute pair/local command");
       if (strcmp(arg[iarg+1],"type") == 0) cutstyle = TYPE;
       else if (strcmp(arg[iarg+1],"radius") == 0) cutstyle = RADIUS;
@@ -95,6 +92,9 @@ ComputePairLocal::ComputePairLocal(LAMMPS *lmp, int narg, char **arg) :
   singleflag = 0;
   for (int i = 0; i < nvalues; i++)
     if (pstyle[i] != DIST) singleflag = 1;
+
+  if (nvalues == 1) size_local_cols = 0;
+  else size_local_cols = nvalues;
 
   nmax = 0;
   vlocal = NULL;
@@ -139,7 +139,7 @@ void ComputePairLocal::init()
 
 /* ---------------------------------------------------------------------- */
 
-void ComputePairLocal::init_list(int id, NeighList *ptr)
+void ComputePairLocal::init_list(int /*id*/, NeighList *ptr)
 {
   list = ptr;
 }

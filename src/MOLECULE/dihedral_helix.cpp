@@ -17,8 +17,8 @@
 ------------------------------------------------------------------------- */
 
 #include <mpi.h>
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "dihedral_helix.h"
 #include "atom.h"
 #include "neighbor.h"
@@ -39,7 +39,10 @@ using namespace MathConst;
 
 /* ---------------------------------------------------------------------- */
 
-DihedralHelix::DihedralHelix(LAMMPS *lmp) : Dihedral(lmp) {}
+DihedralHelix::DihedralHelix(LAMMPS *lmp) : Dihedral(lmp)
+{
+  writedata = 1;
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -67,8 +70,7 @@ void DihedralHelix::compute(int eflag, int vflag)
   double s2,cx,cy,cz,cmag,dx,phi,si,siinv,sin2;
 
   edihedral = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;
@@ -331,4 +333,14 @@ void DihedralHelix::read_restart(FILE *fp)
   MPI_Bcast(&cphi[1],atom->ndihedraltypes,MPI_DOUBLE,0,world);
 
   for (int i = 1; i <= atom->ndihedraltypes; i++) setflag[i] = 1;
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 writes to data file
+------------------------------------------------------------------------- */
+
+void DihedralHelix::write_data(FILE *fp)
+{
+  for (int i = 1; i <= atom->ndihedraltypes; i++)
+    fprintf(fp,"%d %g %g %g\n",i,aphi[i],bphi[i],cphi[i]);
 }

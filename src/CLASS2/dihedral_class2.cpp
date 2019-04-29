@@ -15,9 +15,9 @@
    Contributing author: Eric Simon (Cray)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstring>
+#include <cstdlib>
 #include "dihedral_class2.h"
 #include "atom.h"
 #include "neighbor.h"
@@ -118,8 +118,7 @@ void DihedralClass2::compute(int eflag, int vflag)
   double fabcd[4][3];
 
   edihedral = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;
@@ -664,7 +663,7 @@ void DihedralClass2::coeff(int narg, char **arg)
     }
 
   } else if (strcmp(arg[1],"ebt") == 0) {
-    if (narg != 10) 
+    if (narg != 10)
       error->all(FLERR,"Incorrect args for dihedral coefficients");
 
     double f1_1_one = force->numeric(FLERR,arg[2]);
@@ -690,7 +689,7 @@ void DihedralClass2::coeff(int narg, char **arg)
     }
 
   } else if (strcmp(arg[1],"at") == 0) {
-    if (narg != 10) 
+    if (narg != 10)
       error->all(FLERR,"Incorrect args for dihedral coefficients");
 
     double f1_1_one = force->numeric(FLERR,arg[2]);

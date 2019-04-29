@@ -16,8 +16,8 @@
    [ based on dihedral_multi_harmonic.cpp Mathias Puetz (SNL) and friends ]
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "dihedral_nharmonic.h"
 #include "atom.h"
 #include "neighbor.h"
@@ -35,7 +35,8 @@ using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-DihedralNHarmonic::DihedralNHarmonic(LAMMPS *lmp) : Dihedral(lmp) {
+DihedralNHarmonic::DihedralNHarmonic(LAMMPS *lmp) : Dihedral(lmp)
+{
   writedata = 1;
 }
 
@@ -66,8 +67,7 @@ void DihedralNHarmonic::compute(int eflag, int vflag)
   double s2,sin2;
 
   edihedral = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;
@@ -277,7 +277,7 @@ void DihedralNHarmonic::coeff(int narg, char **arg)
   if (narg < 4 ) error->all(FLERR,"Incorrect args for dihedral coefficients");
 
   int n = force->inumeric(FLERR,arg[1]);
-  if (narg != n + 2) 
+  if (narg != n + 2)
     error->all(FLERR,"Incorrect args for dihedral coefficients");
 
   if (!allocated) allocate();

@@ -11,8 +11,8 @@
  See the README file in the top-level LAMMPS directory.
  ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "pair_sph_lj.h"
 #include "atom.h"
 #include "force.h"
@@ -53,10 +53,7 @@ void PairSPHLJ::compute(int eflag, int vflag) {
   double vxtmp, vytmp, vztmp, imass, jmass, fi, fj, fvisc, h, ih, ihsq, ihcub;
   double rsq, wfd, delVdotDelR, mu, deltaE, ci, cj, lrc;
 
-  if (eflag || vflag)
-    ev_setup(eflag, vflag);
-  else
-    evflag = vflag_fdotr = 0;
+  ev_init(eflag, vflag);
 
   double **v = atom->vest;
   double **x = atom->x;
@@ -204,10 +201,10 @@ void PairSPHLJ::allocate() {
  global settings
  ------------------------------------------------------------------------- */
 
-void PairSPHLJ::settings(int narg, char **arg) {
+void PairSPHLJ::settings(int narg, char **/*arg*/) {
   if (narg != 0)
     error->all(FLERR,
-        "Illegal number of setting arguments for pair_style sph/lj");
+        "Illegal number of arguments for pair_style sph/lj");
 }
 
 /* ----------------------------------------------------------------------
@@ -261,8 +258,8 @@ double PairSPHLJ::init_one(int i, int j) {
 
 /* ---------------------------------------------------------------------- */
 
-double PairSPHLJ::single(int i, int j, int itype, int jtype,
-    double rsq, double factor_coul, double factor_lj, double &fforce) {
+double PairSPHLJ::single(int /*i*/, int /*j*/, int /*itype*/, int /*jtype*/,
+    double /*rsq*/, double /*factor_coul*/, double /*factor_lj*/, double &fforce) {
   fforce = 0.0;
 
   return 0.0;

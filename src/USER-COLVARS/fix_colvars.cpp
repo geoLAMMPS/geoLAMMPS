@@ -24,10 +24,10 @@
    Contributing author:  Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <errno.h>
 
 #include "fix_colvars.h"
@@ -549,9 +549,9 @@ void FixColvars::setup(int vflag)
         } else {
           m[i] = atom->mass[type[k]];
         }
-	if (atom->q_flag) {
-	  q[i] = atom->q[k];
-	}
+        if (atom->q_flag) {
+          q[i] = atom->q[k];
+        }
       }
     }
 
@@ -616,7 +616,7 @@ void FixColvars::setup(int vflag)
           comm_buf[nme].m = atom->mass[type[k]];
         }
 
-	if (atom->q_flag) {
+        if (atom->q_flag) {
           comm_buf[nme].q = atom->q[k];
         }
 
@@ -645,7 +645,7 @@ void FixColvars::setup(int vflag)
 /* ---------------------------------------------------------------------- */
 /* Main colvars handler:
  * Send coodinates and add colvar forces to atoms. */
-void FixColvars::post_force(int vflag)
+void FixColvars::post_force(int /*vflag*/)
 {
   // some housekeeping: update status of the proxy as needed.
   if (me == 0) {
@@ -816,7 +816,7 @@ void FixColvars::min_post_force(int vflag)
 }
 
 /* ---------------------------------------------------------------------- */
-void FixColvars::post_force_respa(int vflag, int ilevel, int iloop)
+void FixColvars::post_force_respa(int vflag, int ilevel, int /*iloop*/)
 {
   /* only process colvar forces on the outmost RESPA level. */
   if (ilevel == nlevels_respa-1) post_force(vflag);

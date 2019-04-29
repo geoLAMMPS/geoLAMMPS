@@ -19,11 +19,14 @@
 ------------------------------------------------------------------------- */
 
 #include <mpi.h>
-#include <stdlib.h>
-#include <math.h>
+#include <cstdlib>
+#include <cmath>
 #include "pppm_intel.h"
 #include "atom.h"
+#include "comm.h"
+#include "domain.h"
 #include "error.h"
+#include "modify.h"
 #include "fft3d_wrap.h"
 #include "gridcomm.h"
 #include "math_const.h"
@@ -54,7 +57,7 @@ enum{FORWARD_IK,FORWARD_AD,FORWARD_IK_PERATOM,FORWARD_AD_PERATOM};
 
 /* ---------------------------------------------------------------------- */
 
-PPPMIntel::PPPMIntel(LAMMPS *lmp, int narg, char **arg) : PPPM(lmp, narg, arg)
+PPPMIntel::PPPMIntel(LAMMPS *lmp) : PPPM(lmp)
 {
   suffix_flag |= Suffix::INTEL;
 
@@ -158,9 +161,7 @@ void PPPMIntel::compute_first(int eflag, int vflag)
   // set energy/virial flags
   // invoke allocate_peratom() if needed for first time
 
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = evflag_atom = eflag_global = vflag_global =
-         eflag_atom = vflag_atom = 0;
+  ev_init(eflag,vflag);
 
   if (evflag_atom && !peratom_allocate_flag) {
     allocate_peratom();
@@ -252,7 +253,7 @@ void PPPMIntel::compute_first(int eflag, int vflag)
 
 /* ---------------------------------------------------------------------- */
 
-void PPPMIntel::compute_second(int eflag, int vflag)
+void PPPMIntel::compute_second(int /*eflag*/, int /*vflag*/)
 {
   int i,j;
 
@@ -355,7 +356,7 @@ void PPPMIntel::particle_map(IntelBuffers<flt_t,acc_t> *buffers)
 
   int flag = 0;
 
-  if (!ISFINITE(boxlo[0]) || !ISFINITE(boxlo[1]) || !ISFINITE(boxlo[2]))
+  if (!std::isfinite(boxlo[0]) || !std::isfinite(boxlo[1]) || !std::isfinite(boxlo[2]))
     error->one(FLERR,"Non-numeric box dimensions - simulation unstable");
 
   #if defined(_OPENMP)
@@ -578,6 +579,12 @@ void PPPMIntel::fieldforce_ik(IntelBuffers<flt_t,acc_t> *buffers)
   else
     nthr = comm->nthreads;
 
+  if (fix->need_zero(0)) {
+    int zl = nlocal;
+    if (force->newton_pair) zl += atom->nghost;
+    memset(f, 0, zl * sizeof(FORCE_T));
+  }
+
   #if defined(_OPENMP)
   #pragma omp parallel default(none) \
     shared(nlocal, nthr) if(!_use_lrt)
@@ -623,7 +630,7 @@ void PPPMIntel::fieldforce_ik(IntelBuffers<flt_t,acc_t> *buffers)
         #pragma simd
         #endif
         for (int k = 0; k < INTEL_P3M_ALIGNED_MAXORDER; k++) {
-	  rho0[k] = rho_lookup[idx][k];
+          rho0[k] = rho_lookup[idx][k];
           rho1[k] = rho_lookup[idy][k];
           rho2[k] = rho_lookup[idz][k];
         }
@@ -640,7 +647,7 @@ void PPPMIntel::fieldforce_ik(IntelBuffers<flt_t,acc_t> *buffers)
             r2 = rho_coeff[l][k] + r2*dy;
             r3 = rho_coeff[l][k] + r3*dz;
           }
-	  rho0[k-nlower] = r1;
+          rho0[k-nlower] = r1;
           rho1[k-nlower] = r2;
           rho2[k-nlower] = r3;
         }
@@ -670,9 +677,9 @@ void PPPMIntel::fieldforce_ik(IntelBuffers<flt_t,acc_t> *buffers)
           for (int l = 0; l < INTEL_P3M_ALIGNED_MAXORDER; l++) {
             int mx = l+nxsum;
             FFT_SCALAR x0 = y0*rho0[l];
-	    ekx_arr[l] -= x0*vdx_brick[mz][my][mx];
-	    eky_arr[l] -= x0*vdy_brick[mz][my][mx];
-	    ekz_arr[l] -= x0*vdz_brick[mz][my][mx];
+            ekx_arr[l] -= x0*vdx_brick[mz][my][mx];
+            eky_arr[l] -= x0*vdy_brick[mz][my][mx];
+            ekz_arr[l] -= x0*vdz_brick[mz][my][mx];
           }
         }
       }
@@ -681,9 +688,9 @@ void PPPMIntel::fieldforce_ik(IntelBuffers<flt_t,acc_t> *buffers)
       ekx = eky = ekz = ZEROF;
 
       for (int l = 0; l < order; l++) {
-	ekx += ekx_arr[l];
-	eky += eky_arr[l];
-	ekz += ekz_arr[l];
+        ekx += ekx_arr[l];
+        eky += eky_arr[l];
+        ekz += ekz_arr[l];
       }
 
       // convert E-field to force
@@ -722,6 +729,12 @@ void PPPMIntel::fieldforce_ad(IntelBuffers<flt_t,acc_t> *buffers)
   FFT_SCALAR * _noalias const particle_ekx = this->particle_ekx;
   FFT_SCALAR * _noalias const particle_eky = this->particle_eky;
   FFT_SCALAR * _noalias const particle_ekz = this->particle_ekz;
+
+  if (fix->need_zero(0)) {
+    int zl = nlocal;
+    if (force->newton_pair) zl += atom->nghost;
+    memset(f, 0, zl * sizeof(FORCE_T));
+  }
 
   #if defined(_OPENMP)
   #pragma omp parallel default(none) \
@@ -1001,22 +1014,22 @@ void PPPMIntel::allocate()
   PPPM::allocate();
   memory->destroy3d_offset(density_brick,nzlo_out,nylo_out,nxlo_out);
   create3d_offset(density_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
-		  nxlo_out,nxhi_out,"pppm:density_brick");
+                  nxlo_out,nxhi_out,"pppm:density_brick");
 
   if (differentiation_flag == 1) {
     memory->destroy3d_offset(u_brick,nzlo_out,nylo_out,nxlo_out);
     create3d_offset(u_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
-	            nxlo_out,nxhi_out,"pppm:u_brick");
+                    nxlo_out,nxhi_out,"pppm:u_brick");
   } else {
     memory->destroy3d_offset(vdx_brick,nzlo_out,nylo_out,nxlo_out);
     memory->destroy3d_offset(vdy_brick,nzlo_out,nylo_out,nxlo_out);
     memory->destroy3d_offset(vdz_brick,nzlo_out,nylo_out,nxlo_out);
     create3d_offset(vdx_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
-	            nxlo_out,nxhi_out,"pppm:vdx_brick");
+                    nxlo_out,nxhi_out,"pppm:vdx_brick");
     create3d_offset(vdy_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
-	            nxlo_out,nxhi_out,"pppm:vdy_brick");
+                    nxlo_out,nxhi_out,"pppm:vdy_brick");
     create3d_offset(vdz_brick,nzlo_out,nzhi_out,nylo_out,nyhi_out,
-	            nxlo_out,nxhi_out,"pppm:vdz_brick");
+                    nxlo_out,nxhi_out,"pppm:vdz_brick");
   }
 }
 
@@ -1024,16 +1037,16 @@ void PPPMIntel::allocate()
    Create 3D-offset allocation with extra padding for vector writes
 ------------------------------------------------------------------------- */
 
-FFT_SCALAR *** PPPMIntel::create3d_offset(FFT_SCALAR ***&array, int n1lo, 
-	                                  int n1hi, int n2lo, int n2hi, 
-	                                  int n3lo, int n3hi,
-	                                  const char *name)
+FFT_SCALAR *** PPPMIntel::create3d_offset(FFT_SCALAR ***&array, int n1lo,
+                                          int n1hi, int n2lo, int n2hi,
+                                          int n3lo, int n3hi,
+                                          const char *name)
 {
   int n1 = n1hi - n1lo + 1;
   int n2 = n2hi - n2lo + 1;
   int n3 = n3hi - n3lo + 1;
 
-  bigint nbytes = ((bigint) sizeof(FFT_SCALAR)) * n1*n2*n3 + 
+  bigint nbytes = ((bigint) sizeof(FFT_SCALAR)) * n1*n2*n3 +
     INTEL_P3M_ALIGNED_MAXORDER*2;
   FFT_SCALAR *data = (FFT_SCALAR *) memory->smalloc(nbytes,name);
   nbytes = ((bigint) sizeof(FFT_SCALAR *)) * n1*n2;

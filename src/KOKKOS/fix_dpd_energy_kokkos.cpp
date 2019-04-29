@@ -11,8 +11,8 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #include "fix_dpd_energy_kokkos.h"
 #include "atom_masks.h"
 #include "atom_kokkos.h"
@@ -90,7 +90,7 @@ void FixDPDenergyKokkos<DeviceType>::final_integrate()
 
 namespace LAMMPS_NS {
 template class FixDPDenergyKokkos<LMPDeviceType>;
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 template class FixDPDenergyKokkos<LMPHostType>;
 #endif
 }

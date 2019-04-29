@@ -19,9 +19,9 @@
             JR Shewchuk, http://www-2.cs.cmu.edu/~jrs/jrspapers.html#cg
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include "min.h"
 #include "atom.h"
 #include "atom_vec.h"
@@ -245,7 +245,7 @@ void Min::setup(int flag)
   domain->image_check();
   domain->box_too_small_check();
   modify->setup_pre_neighbor();
-  neighbor->build();
+  neighbor->build(1);
   modify->setup_post_neighbor();
   neighbor->ncalls = 0;
 
@@ -345,7 +345,7 @@ void Min::setup_minimal(int flag)
     domain->image_check();
     domain->box_too_small_check();
     modify->setup_pre_neighbor();
-    neighbor->build();
+    neighbor->build(1);
     modify->setup_post_neighbor();
     neighbor->ncalls = 0;
   }
@@ -508,7 +508,7 @@ double Min::energy_force(int resetflag)
       modify->min_pre_neighbor();
       timer->stamp(Timer::MODIFY);
     }
-    neighbor->build();
+    neighbor->build(1);
     timer->stamp(Timer::NEIGH);
     if (modify->n_min_post_neighbor) {
       modify->min_post_neighbor();
@@ -655,7 +655,11 @@ void Min::modify_params(int narg, char **arg)
       else if (strcmp(arg[iarg+1],"forcezero") == 0) linestyle = 2;
       else error->all(FLERR,"Illegal min_modify command");
       iarg += 2;
-    } else error->all(FLERR,"Illegal min_modify command");
+    } else {
+      int n = modify_param(narg-iarg,&arg[iarg]);
+      if (n == 0) error->all(FLERR,"Illegal fix_modify command");
+      iarg += n;
+    }
   }
 }
 

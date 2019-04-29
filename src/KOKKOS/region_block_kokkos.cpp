@@ -11,8 +11,8 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #include "region_block_kokkos.h"
 #include "domain.h"
 #include "force.h"
@@ -167,7 +167,7 @@ void RegBlockKokkos<DeviceType>::rotate(double &x, double &y, double &z, double 
 
 namespace LAMMPS_NS {
 template class RegBlockKokkos<LMPDeviceType>;
-#ifdef KOKKOS_HAVE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 template class RegBlockKokkos<LMPHostType>;
 #endif
 }

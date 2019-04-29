@@ -15,8 +15,8 @@
    Contributing author: Naveen Michaud-Agrawal (Johns Hopkins U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "angle_cosine_squared.h"
 #include "atom.h"
 #include "neighbor.h"
@@ -34,7 +34,11 @@ using namespace MathConst;
 
 /* ---------------------------------------------------------------------- */
 
-AngleCosineSquared::AngleCosineSquared(LAMMPS *lmp) : Angle(lmp) {}
+AngleCosineSquared::AngleCosineSquared(LAMMPS *lmp) : Angle(lmp)
+{
+  k = NULL;
+  theta0 = NULL;
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -58,8 +62,7 @@ void AngleCosineSquared::compute(int eflag, int vflag)
   double rsq1,rsq2,r1,r2,c,a,a11,a12,a22;
 
   eangle = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;

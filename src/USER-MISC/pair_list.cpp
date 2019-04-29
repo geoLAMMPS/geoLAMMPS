@@ -24,10 +24,10 @@
 
 #include "error.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cmath>
 
 using namespace LAMMPS_NS;
 
@@ -54,6 +54,7 @@ typedef struct { double x,y,z; } dbl3_t;
 PairList::PairList(LAMMPS *lmp) : Pair(lmp)
 {
   single_enable = 0;
+  restartinfo = 0;
   respa_enable = 0;
   cut_global = 0.0;
   style = NULL;
@@ -79,9 +80,7 @@ PairList::~PairList()
 
 void PairList::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = eflag_global =
-         vflag_global = eflag_atom = vflag_atom = 0;
+  ev_init(eflag,vflag);
 
   const int nlocal = atom->nlocal;
   const int newton_pair = force->newton_pair;

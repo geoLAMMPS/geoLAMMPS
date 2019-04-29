@@ -17,8 +17,8 @@
 ------------------------------------------------------------------------- */
 
 #include <mpi.h>
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "dihedral_fourier.h"
 #include "atom.h"
 #include "comm.h"
@@ -38,7 +38,7 @@ using namespace MathConst;
 
 /* ---------------------------------------------------------------------- */
 
-DihedralFourier::DihedralFourier(LAMMPS *lmp) : Dihedral(lmp) 
+DihedralFourier::DihedralFourier(LAMMPS *lmp) : Dihedral(lmp)
 {
    writedata = 1;
 }
@@ -79,8 +79,7 @@ void DihedralFourier::compute(int eflag, int vflag)
   double dtfx,dtfy,dtfz,dtgx,dtgy,dtgz,dthx,dthy,dthz;
   double c,s,p_,sx2,sy2,sz2;
 
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;

@@ -12,7 +12,7 @@
    Contributing author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
+#include <cmath>
 #include "pair_tersoff_mod_c_omp.h"
 #include "atom.h"
 #include "comm.h"
@@ -36,9 +36,7 @@ PairTersoffMODCOMP::PairTersoffMODCOMP(LAMMPS *lmp) :
 
 void PairTersoffMODCOMP::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) {
-    ev_setup(eflag,vflag);
-  } else evflag = vflag_fdotr = vflag_atom = 0;
+  ev_init(eflag,vflag);
 
   const int nall = atom->nlocal + atom->nghost;
   const int nthreads = comm->nthreads;

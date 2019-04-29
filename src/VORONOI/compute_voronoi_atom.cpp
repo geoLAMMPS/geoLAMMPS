@@ -16,9 +16,10 @@
 ------------------------------------------------------------------------- */
 
 #include <mpi.h>
-#include <math.h>
-#include <string.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstring>
+#include <cstdlib>
+#include "voro++.hh"
 #include "compute_voronoi_atom.h"
 #include "atom.h"
 #include "group.h"
@@ -42,9 +43,9 @@ using namespace voro;
 /* ---------------------------------------------------------------------- */
 
 ComputeVoronoi::ComputeVoronoi(LAMMPS *lmp, int narg, char **arg) :
-  Compute(lmp, narg, arg), con_mono(NULL), con_poly(NULL), 
-  radstr(NULL), voro(NULL), edge(NULL), sendvector(NULL), 
-  rfield(NULL), tags(NULL), occvec(NULL), sendocc(NULL), 
+  Compute(lmp, narg, arg), con_mono(NULL), con_poly(NULL),
+  radstr(NULL), voro(NULL), edge(NULL), sendvector(NULL),
+  rfield(NULL), tags(NULL), occvec(NULL), sendocc(NULL),
   lroot(NULL), lnext(NULL), faces(NULL)
 {
   int sgroup;
@@ -80,7 +81,7 @@ ComputeVoronoi::ComputeVoronoi(LAMMPS *lmp, int narg, char **arg) :
     }
     else if (strcmp(arg[iarg], "radius") == 0) {
       if (iarg + 2 > narg || strstr(arg[iarg+1],"v_") != arg[iarg+1] )
-	error->all(FLERR,"Illegal compute voronoi/atom command");
+        error->all(FLERR,"Illegal compute voronoi/atom command");
       int n = strlen(&arg[iarg+1][2]) + 1;
       radstr = new char[n];
       strcpy(radstr,&arg[iarg+1][2]);
@@ -89,7 +90,7 @@ ComputeVoronoi::ComputeVoronoi(LAMMPS *lmp, int narg, char **arg) :
     else if (strcmp(arg[iarg], "surface") == 0) {
       if (iarg + 2 > narg) error->all(FLERR,"Illegal compute voronoi/atom command");
       // group all is a special case where we just skip group testing
-      if(strcmp(arg[iarg+1], "all") == 0) {
+      if (strcmp(arg[iarg+1], "all") == 0) {
         surface = VOROSURF_ALL;
       } else {
         sgroup = group->find(arg[iarg+1]);
@@ -265,7 +266,7 @@ void ComputeVoronoi::buildCells()
   double **x = atom->x;
 
   // setup bounds for voro++ domain for orthogonal and triclinic simulation boxes
-  if( domain->triclinic ) {
+  if (domain->triclinic) {
     // triclinic box: embed parallelepiped into orthogonal voro++ domain
 
     // cutghost is in lamda coordinates for triclinic boxes, use subxx_lamda
@@ -274,8 +275,8 @@ void ComputeVoronoi::buildCells()
       sublo_bound[i] = sublo_lamda[i]-cut[i]-e;
       subhi_bound[i] = subhi_lamda[i]+cut[i]+e;
       if (domain->periodicity[i]==0) {
-	sublo_bound[i] = MAX(sublo_bound[i],0.0);
-	subhi_bound[i] = MIN(subhi_bound[i],1.0);
+        sublo_bound[i] = MAX(sublo_bound[i],0.0);
+        subhi_bound[i] = MIN(subhi_bound[i],1.0);
       }
     }
     if (dim == 2) {
@@ -295,8 +296,8 @@ void ComputeVoronoi::buildCells()
       sublo_bound[i] = sublo[i]-cut[i]-e;
       subhi_bound[i] = subhi[i]+cut[i]+e;
       if (domain->periodicity[i]==0) {
-	sublo_bound[i] = MAX(sublo_bound[i],domain->boxlo[i]);
-	subhi_bound[i] = MIN(subhi_bound[i],domain->boxhi[i]);
+        sublo_bound[i] = MAX(sublo_bound[i],domain->boxlo[i]);
+        subhi_bound[i] = MIN(subhi_bound[i],domain->boxhi[i]);
       }
     }
     if (dim == 2) {
@@ -345,17 +346,17 @@ void ComputeVoronoi::buildCells()
     // polydisperse voro++ container
     delete con_poly;
     con_poly = new container_poly(sublo_bound[0],
-				  subhi_bound[0],
-				  sublo_bound[1],
-				  subhi_bound[1],
-				  sublo_bound[2],
-				  subhi_bound[2],
-				  int(n[0]),int(n[1]),int(n[2]),
-				  false,false,false,8);
+                                  subhi_bound[0],
+                                  sublo_bound[1],
+                                  subhi_bound[1],
+                                  sublo_bound[2],
+                                  subhi_bound[2],
+                                  int(n[0]),int(n[1]),int(n[2]),
+                                  false,false,false,8);
 
     // pass coordinates for local and ghost atoms to voro++
     for (i = 0; i < nall; i++) {
-      if( !onlyGroup || (mask[i] & groupbit) )
+      if (!onlyGroup || (mask[i] & groupbit))
         con_poly->put(i,x[i][0],x[i][1],x[i][2],rfield[i]);
     }
   } else {
@@ -363,17 +364,17 @@ void ComputeVoronoi::buildCells()
     delete con_mono;
 
     con_mono = new container(sublo_bound[0],
-			     subhi_bound[0],
-			     sublo_bound[1],
-			     subhi_bound[1],
-			     sublo_bound[2],
-			     subhi_bound[2],
-			     int(n[0]),int(n[1]),int(n[2]),
-			     false,false,false,8);
+                             subhi_bound[0],
+                             sublo_bound[1],
+                             subhi_bound[1],
+                             sublo_bound[2],
+                             subhi_bound[2],
+                             int(n[0]),int(n[1]),int(n[2]),
+                             false,false,false,8);
 
     // pass coordinates for local and ghost atoms to voro++
     for (i = 0; i < nall; i++)
-      if( !onlyGroup || (mask[i] & groupbit) )
+      if (!onlyGroup || (mask[i] & groupbit))
         con_mono->put(i,x[i][0],x[i][1],x[i][2]);
   }
 }
@@ -581,9 +582,9 @@ void ComputeVoronoi::processCell(voronoicell_neighbor &c, int i)
 
     if (faces_flag) {
       if (nfaces+voro[i][1] > nfacesmax) {
-	while (nfacesmax < nfaces+voro[i][1]) nfacesmax += FACESDELTA;
-	memory->grow(faces,nfacesmax,size_local_cols,"compute/voronoi/atom:faces");
-	array_local = faces;
+        while (nfacesmax < nfaces+voro[i][1]) nfacesmax += FACESDELTA;
+        memory->grow(faces,nfacesmax,size_local_cols,"compute/voronoi/atom:faces");
+        array_local = faces;
       }
 
       if (!have_narea) c.face_areas(narea);
@@ -594,21 +595,21 @@ void ComputeVoronoi::processCell(voronoicell_neighbor &c, int i)
       tagint *tag = atom->tag;
       itag = tag[i];
       for (j=0; j<neighs; ++j)
-	if (narea[j] > fthresh) {
+        if (narea[j] > fthresh) {
 
-	  // external faces assigned the tag 0
+          // external faces assigned the tag 0
 
-	  int jj = neigh[j];
-	  if (jj >= 0) jtag = tag[jj];
-	  else jtag = 0;
+          int jj = neigh[j];
+          if (jj >= 0) jtag = tag[jj];
+          else jtag = 0;
 
-	  faces[nfaces][0] = itag;
-	  faces[nfaces][1] = jtag;
-	  faces[nfaces][2] = narea[j];
-	  nfaces++;
-	}
+          faces[nfaces][0] = itag;
+          faces[nfaces][1] = jtag;
+          faces[nfaces][2] = narea[j];
+          nfaces++;
+        }
     }
-      
+
 
   } else if (i < atom->nlocal) voro[i][0] = voro[i][1] = 0.0;
 }
@@ -624,7 +625,7 @@ double ComputeVoronoi::memory_usage()
 void ComputeVoronoi::compute_vector()
 {
   invoked_vector = update->ntimestep;
-  if( invoked_peratom < invoked_vector ) compute_peratom();
+  if (invoked_peratom < invoked_vector) compute_peratom();
 
   for( int i=0; i<size_vector; ++i ) sendvector[i] = edge[i];
   MPI_Allreduce(sendvector,edge,size_vector,MPI_DOUBLE,MPI_SUM,world);
@@ -635,13 +636,13 @@ void ComputeVoronoi::compute_vector()
 void ComputeVoronoi::compute_local()
 {
   invoked_local = update->ntimestep;
-  if( invoked_peratom < invoked_local ) compute_peratom();
+  if (invoked_peratom < invoked_local) compute_peratom();
 }
 
 /* ---------------------------------------------------------------------- */
 
 int ComputeVoronoi::pack_forward_comm(int n, int *list, double *buf,
-                                  int pbc_flag, int *pbc)
+                                  int /* pbc_flag */, int * /* pbc */)
 {
   int i,m=0;
   for (i = 0; i < n; ++i) buf[m++] = rfield[list[i]];

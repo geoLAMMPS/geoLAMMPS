@@ -11,8 +11,8 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #include "replicate.h"
 #include "atom.h"
 #include "atom_vec.h"
@@ -29,8 +29,6 @@ using namespace LAMMPS_NS;
 
 #define LB_FACTOR 1.1
 #define EPSILON   1.0e-6
-
-enum{LAYOUT_UNIFORM,LAYOUT_NONUNIFORM,LAYOUT_TILED};    // several files
 
 /* ---------------------------------------------------------------------- */
 
@@ -78,7 +76,7 @@ void Replicate::command(int narg, char **arg)
   if (atom->nextra_grow || atom->nextra_restart || atom->nextra_store)
     error->all(FLERR,"Cannot replicate with fixes that store atom quantities");
 
-  // Record wall time for atom replication
+  // record wall time for atom replication
 
   MPI_Barrier(world);
   double time1 = MPI_Wtime();
@@ -267,7 +265,7 @@ void Replicate::command(int narg, char **arg)
     sublo[2] = domain->sublo_lamda[2]; subhi[2] = domain->subhi_lamda[2];
   }
 
-  if (comm->layout != LAYOUT_TILED) {
+  if (comm->layout != Comm::LAYOUT_TILED) {
     if (domain->xperiodic) {
       if (comm->myloc[0] == 0) sublo[0] -= epsilon[0];
       if (comm->myloc[0] == comm->procgrid[0]-1) subhi[0] += epsilon[0];
@@ -764,15 +762,15 @@ void Replicate::command(int narg, char **arg)
     special.build();
   }
 
-  // Wall time
+  // total time
 
   MPI_Barrier(world);
   double time2 = MPI_Wtime();
 
   if (me == 0) {
     if (screen)
-      fprintf(screen,"  Time spent = %g secs\n",time2-time1);
+      fprintf(screen,"  replicate CPU = %g secs\n",time2-time1);
     if (logfile)
-      fprintf(logfile,"  Time spent = %g secs\n",time2-time1);
+      fprintf(logfile,"  replicate CPU = %g secs\n",time2-time1);
   }
 }

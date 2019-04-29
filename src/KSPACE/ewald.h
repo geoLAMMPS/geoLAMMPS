@@ -26,10 +26,11 @@ namespace LAMMPS_NS {
 
 class Ewald : public KSpace {
  public:
-  Ewald(class LAMMPS *, int, char **);
+  Ewald(class LAMMPS *);
   virtual ~Ewald();
   void init();
   void setup();
+  virtual void settings(int, char **);
   virtual void compute(int, int);
   double memory_usage();
 
@@ -98,7 +99,7 @@ E: Kspace style requires atom attribute q
 
 The atom style defined does not have these attributes.
 
-E: Cannot use nonperiodic boundaries with Ewald
+E: Cannot use non-periodic boundaries with Ewald
 
 For kspace style ewald, all 3 dimensions must have periodic boundaries
 unless you use the kspace_modify command to define a 2d slab with a
@@ -121,6 +122,10 @@ long-range Coulombic or dispersion components be used.
 E: KSpace accuracy must be > 0
 
 The kspace accuracy designated in the input must be greater than zero.
+
+E: Must use 'kspace_modify gewald' for uncharged system
+
+UNDOCUMENTED
 
 E: Cannot (yet) use K-space slab correction with compute group/group for triclinic systems
 

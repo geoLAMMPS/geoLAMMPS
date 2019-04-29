@@ -34,6 +34,10 @@ class Atom : protected Pointers {
   int tag_enable;               // 0/1 if atom ID tags are defined
   int molecular;                // 0 = atomic, 1 = standard molecular system,
                                 // 2 = molecule template system
+  bigint nellipsoids;           // number of ellipsoids
+  bigint nlines;                // number of lines
+  bigint ntris;                 // number of triangles
+  bigint nbodies;               // number of bodies
 
   bigint nbonds,nangles,ndihedrals,nimpropers;
   int ntypes,nbondtypes,nangletypes,ndihedraltypes,nimpropertypes;
@@ -60,6 +64,11 @@ class Atom : protected Pointers {
   double **omega,**angmom,**torque;
   double *radius,*rmass;
   int *ellipsoid,*line,*tri,*body;
+
+  // SPIN package
+
+  double **sp;
+  double **fm;
 
   // PERI package
 
@@ -98,7 +107,7 @@ class Atom : protected Pointers {
 
   double **cc, **cc_flux;        // cc = chemical concentration
   double *edpd_temp,*edpd_flux;  // temperature and heat flux
-  double *edpd_cv;               // heat capacity 
+  double *edpd_cv;               // heat capacity
   int cc_species;
 
   // molecular info
@@ -146,6 +155,10 @@ class Atom : protected Pointers {
   int rho_flag,e_flag,cv_flag,vest_flag;
   int dpd_flag,edpd_flag,tdpd_flag;
 
+  //USER-SPIN package
+
+  int sp_flag;
+
   // USER-SMD package
 
   int smd_flag;
@@ -187,7 +200,8 @@ class Atom : protected Pointers {
   int nextra_store;
 
   int map_style;                  // style of atom map: 0=none, 1=array, 2=hash
-  int map_user;                   // user selected style = same 0,1,2
+  int map_user;                   // user requested map style:
+                                  // 0 = no request, 1=array, 2=hash, 3=yes
   tagint map_tag_max;             // max atom ID that map() is setup for
 
   // spatial sorting of atoms
@@ -223,13 +237,15 @@ class Atom : protected Pointers {
   void tag_extend();
   int tag_consecutive();
 
+  void bonus_check();
+
   int parse_data(const char *);
   int count_words(const char *);
   int count_words(const char *, char *);
 
   void deallocate_topology();
 
-  void data_atoms(int, char *, tagint, int, int, double *);
+  void data_atoms(int, char *, tagint, tagint, int, int, double *);
   void data_vels(int, char *, tagint);
   void data_bonds(int, char *, int *, tagint, int);
   void data_angles(int, char *, int *, tagint, int);
@@ -238,7 +254,7 @@ class Atom : protected Pointers {
   void data_bonus(int, char *, class AtomVec *, tagint);
   void data_bodies(int, char *, class AtomVecBody *, tagint);
   void data_fix_compute_variable(int, int);
-  
+
   virtual void allocate_type_arrays();
   void set_mass(const char *, int, const char *, int);
   void set_mass(const char *, int, int, double);
@@ -477,31 +493,6 @@ E: Invalid atom ID in Bodies section of data file
 Atom IDs must be positive integers and within range of defined
 atoms.
 
-E: Cannot set mass for this atom style
-
-This atom style does not support mass settings for each atom type.
-Instead they are defined on a per-atom basis in the data file.
-
-E: Invalid mass line in data file
-
-Self-explanatory.
-
-E: Invalid type for mass set
-
-Mass command must set a type from 1-N where N is the number of atom
-types.
-
-E: Invalid mass value
-
-Self-explanatory.
-
-E: All masses are not set
-
-For atom styles that define masses for each atom type, all masses must
-be set in the data file or by the mass command before running a
-simulation.  They must also be set before using the velocity
-command.
-
 E: Reuse of molecule template ID
 
 The template IDs must be unique.
@@ -511,15 +502,34 @@ E: Atom sort did not operate correctly
 This is an internal LAMMPS error.  Please report it to the
 developers.
 
-E: Atom sorting has bin size = 0.0
-
-The neighbor cutoff is being used as the bin size, but it is zero.
-Thus you must explicitly list a bin size in the atom_modify sort
-command or turn off sorting.
-
 E: Too many atom sorting bins
 
 This is likely due to an immense simulation box that has blown up
 to a large size.
+
+U: Cannot set mass for this atom style
+
+This atom style does not support mass settings for each atom type.
+Instead they are defined on a per-atom basis in the data file.
+
+U: Invalid mass line in data file
+
+Self-explanatory.
+
+U: Invalid type for mass set
+
+Mass command must set a type from 1-N where N is the number of atom
+types.
+
+U: Invalid mass value
+
+Self-explanatory.
+
+U: All masses are not set
+
+For atom styles that define masses for each atom type, all masses must
+be set in the data file or by the mass command before running a
+simulation.  They must also be set before using the velocity
+command.
 
 */

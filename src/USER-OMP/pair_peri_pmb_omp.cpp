@@ -12,8 +12,8 @@
    Contributing author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <float.h>
+#include <cmath>
+#include <cfloat>
 #include "pair_peri_pmb_omp.h"
 #include "fix.h"
 #include "fix_peri_neigh.h"
@@ -43,9 +43,7 @@ PairPeriPMBOMP::PairPeriPMBOMP(LAMMPS *lmp) :
 
 void PairPeriPMBOMP::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) {
-    ev_setup(eflag,vflag);
-  } else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   const int nall = atom->nlocal + atom->nghost;
   const int nthreads = comm->nthreads;

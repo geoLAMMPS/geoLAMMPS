@@ -33,7 +33,7 @@
 
 void Hydrogen_Bonds( reax_system *system, control_params *control,
                      simulation_data *data, storage *workspace,
-                     reax_list **lists, output_controls *out_control )
+                     reax_list **lists, output_controls * /*out_control*/ )
 {
   int  i, j, k, pi, pk;
   int  type_i, type_j, type_k;
@@ -63,7 +63,7 @@ void Hydrogen_Bonds( reax_system *system, control_params *control,
   hbond_list = hbonds->select.hbond_list;
 
   for( j = 0; j < system->n; ++j )
-    if( system->reax_param.sbp[system->my_atoms[j].type].p_hbond == 1 ) {
+    if (system->reax_param.sbp[system->my_atoms[j].type].p_hbond == 1) {
       type_j     = system->my_atoms[j].type;
       start_j    = Start_Index(j, bonds);
       end_j      = End_Index(j, bonds);
@@ -76,7 +76,7 @@ void Hydrogen_Bonds( reax_system *system, control_params *control,
         pbond_ij = &( bond_list[pi] );
         i = pbond_ij->nbr;
         type_i = system->my_atoms[i].type;
-	if (type_i < 0) continue;
+        if (type_i < 0) continue;
         bo_ij = &(pbond_ij->bo_data);
 
         if( system->reax_param.sbp[type_i].p_hbond == 2 &&
@@ -88,7 +88,7 @@ void Hydrogen_Bonds( reax_system *system, control_params *control,
         /* set k's varibles */
         k = hbond_list[pk].nbr;
         type_k = system->my_atoms[k].type;
-	if (type_k < 0) continue;
+        if (type_k < 0) continue;
         nbr_jk = hbond_list[pk].ptr;
         r_jk = nbr_jk->d;
         rvec_Scale( dvec_jk, hbond_list[pk].scl, nbr_jk->dvec );
@@ -98,12 +98,12 @@ void Hydrogen_Bonds( reax_system *system, control_params *control,
           pbond_ij = &( bonds->select.bond_list[pi] );
           i = pbond_ij->nbr;
 
-          if( system->my_atoms[i].orig_id != system->my_atoms[k].orig_id ) {
+          if (system->my_atoms[i].orig_id != system->my_atoms[k].orig_id) {
             bo_ij = &(pbond_ij->bo_data);
             type_i = system->my_atoms[i].type;
-	    if (type_i < 0) continue;
+            if (type_i < 0) continue;
             hbp = &(system->reax_param.hbp[ type_i ][ type_j ][ type_k ]);
-	    if (hbp->r0_hb <= 0.0) continue;
+            if (hbp->r0_hb <= 0.0) continue;
             ++num_hb_intrs;
 
             Calculate_Theta( pbond_ij->dvec, pbond_ij->d, dvec_jk, r_jk,
@@ -133,7 +133,7 @@ void Hydrogen_Bonds( reax_system *system, control_params *control,
             /* hydrogen bond forces */
             bo_ij->Cdbo += CEhb1; // dbo term
 
-            if( control->virial == 0 ) {
+            if (control->virial == 0) {
               // dcos terms
               rvec_ScaledAdd( workspace->f[i], +CEhb2, dcos_theta_di );
               rvec_ScaledAdd( workspace->f[j], +CEhb2, dcos_theta_dj );

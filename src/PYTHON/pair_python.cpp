@@ -16,9 +16,9 @@
 ------------------------------------------------------------------------- */
 
 #include <Python.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "pair_python.h"
 #include "atom.h"
 #include "comm.h"
@@ -26,7 +26,7 @@
 #include "memory.h"
 #include "update.h"
 #include "neigh_list.h"
-#include "python.h"
+#include "lmppython.h"
 #include "error.h"
 #include "python_compat.h"
 
@@ -82,8 +82,7 @@ void PairPython::compute(int eflag, int vflag)
   int *ilist,*jlist,*numneigh,**firstneigh;
 
   evdwl = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;
@@ -181,6 +180,7 @@ void PairPython::compute(int eflag, int vflag)
           error->all(FLERR,"Calling 'compute_force' function failed");
         }
         fpair = factor_lj*PyFloat_AsDouble(py_value);
+        Py_DECREF(py_value);
 
         f[i][0] += delx*fpair;
         f[i][1] += dely*fpair;
@@ -194,6 +194,7 @@ void PairPython::compute(int eflag, int vflag)
         if (eflag) {
           py_value = PyObject_CallObject(py_compute_energy,py_compute_args);
           evdwl = factor_lj*PyFloat_AsDouble(py_value);
+          Py_DECREF(py_value);
         } else evdwl = 0.0;
 
         if (evflag) ev_tally(i,j,nlocal,newton_pair,
@@ -399,9 +400,9 @@ double PairPython::init_one(int, int)
 
 /* ---------------------------------------------------------------------- */
 
-double PairPython::single(int i, int j, int itype, int jtype, double rsq,
-                         double factor_coul, double factor_lj,
-                         double &fforce)
+double PairPython::single(int /* i */, int /* j */, int itype, int jtype,
+                         double rsq, double /* factor_coul */,
+                         double factor_lj, double &fforce)
 {
   // with hybrid/overlay we might get called for skipped types
   if (skip_types[itype] || skip_types[jtype]) {
@@ -467,6 +468,7 @@ double PairPython::single(int i, int j, int itype, int jtype, double rsq,
     error->all(FLERR,"Calling 'compute_force' function failed");
   }
   fforce = factor_lj*PyFloat_AsDouble(py_value);
+  Py_DECREF(py_value);
 
   py_value = PyObject_CallObject(py_compute_energy,py_compute_args);
   if (!py_value) {
@@ -476,6 +478,7 @@ double PairPython::single(int i, int j, int itype, int jtype, double rsq,
     error->all(FLERR,"Calling 'compute_energy' function failed");
   }
   double evdwl = factor_lj*PyFloat_AsDouble(py_value);
+  Py_DECREF(py_value);
 
   Py_DECREF(py_compute_args);
   PyGILState_Release(gstate);

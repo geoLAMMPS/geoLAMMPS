@@ -15,9 +15,9 @@
    Contributing author: Pavel Elkind (Gothenburg University)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include "pair_lj_cut_tip4p_cut.h"
 #include "atom.h"
 #include "force.h"
@@ -91,8 +91,7 @@ void PairLJCutTIP4PCut::compute(int eflag, int vflag)
   double *x1,*x2,*xH1,*xH2;
 
   evdwl = ecoul = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   // reallocate hneigh & newsite if necessary
   // initialize hneigh[0] to -1 on steps when reneighboring occurred

@@ -33,11 +33,16 @@ class Info : protected Pointers {
   bool is_defined(const char *, const char *);
   bool is_available(const char *, const char *);
 
-  bool has_gzip_support() const;
-  bool has_png_support() const;
-  bool has_jpeg_support() const;
-  bool has_ffmpeg_support() const;
-  bool has_exceptions() const;
+  static bool has_gzip_support();
+  static bool has_png_support();
+  static bool has_jpeg_support();
+  static bool has_ffmpeg_support();
+  static bool has_exceptions();
+  static bool has_package(const char * package_name);
+
+  static char *get_os_info();
+  static char *get_compiler_info();
+  static const char *get_openmp_info();
 
   char **get_variable_names(int &num);
 

@@ -57,7 +57,7 @@ class FixQEqReaxKokkos : public FixQEqReax {
   void compute_h_item(int, int &, const bool &) const;
 
   KOKKOS_INLINE_FUNCTION
-  void mat_vec_item(int) const;
+  void matvec_item(int) const;
 
   KOKKOS_INLINE_FUNCTION
   void sparse12_item(int) const;
@@ -145,9 +145,10 @@ class FixQEqReaxKokkos : public FixQEqReax {
   void unpack_reverse_comm(int, int *, double *);
   double memory_usage();
 
- protected:
+ private:
   int inum;
   int allocated_flag;
+  int need_dup;
 
   typedef Kokkos::DualView<int***,DeviceType> tdual_int_1d;
   Kokkos::DualView<params_qeq*,Kokkos::LayoutRight,DeviceType> k_params;
@@ -192,6 +193,9 @@ class FixQEqReaxKokkos : public FixQEqReax {
   HAT::t_ffloat_2d h_s_hist, h_t_hist;
   typename AT::t_ffloat_2d_randomread r_s_hist, r_t_hist;
 
+  Kokkos::Experimental::ScatterView<F_FLOAT*, typename AT::t_ffloat_1d::array_layout, DeviceType, Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated> dup_o;
+  Kokkos::Experimental::ScatterView<F_FLOAT*, typename AT::t_ffloat_1d::array_layout, DeviceType, Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated> ndup_o;
+
   void init_shielding_k();
   void init_hist();
   void allocate_matrix();
@@ -210,6 +214,10 @@ class FixQEqReaxKokkos : public FixQEqReax {
   typename AT::t_int_2d d_sendlist;
   typename AT::t_xfloat_1d_um v_buf;
 
+  void grow_arrays(int);
+  void copy_arrays(int, int, int);
+  int pack_exchange(int, double *);
+  int unpack_exchange(int, double *);
 };
 
 template <class DeviceType>
@@ -235,7 +243,7 @@ struct FixQEqReaxKokkosMatVecFunctor  {
   };
   KOKKOS_INLINE_FUNCTION
   void operator()(const int ii) const {
-    c.mat_vec_item(ii);
+    c.matvec_item(ii);
   }
 };
 

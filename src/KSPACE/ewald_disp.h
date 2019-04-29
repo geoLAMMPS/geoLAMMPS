@@ -36,10 +36,11 @@ typedef struct kvector { long x, y, z; } kvector;
 
 class EwaldDisp : public KSpace {
  public:
-  EwaldDisp(class LAMMPS *, int, char **);
+  EwaldDisp(class LAMMPS *);
   ~EwaldDisp();
   void init();
   void setup();
+  void settings(int, char **);
   void compute(int, int);
   double memory_usage() {return bytes;}
 
@@ -107,7 +108,7 @@ E: Cannot use EwaldDisp with 2d simulation
 
 This is a current restriction of this command.
 
-E: Cannot use nonperiodic boundaries with EwaldDisp
+E: Cannot use non-periodic boundaries with EwaldDisp
 
 For kspace style ewald/disp, all 3 dimensions must have periodic
 boundaries unless you use the kspace_modify command to define a 2d
@@ -145,6 +146,14 @@ W: System is not charge neutral, net charge = %g
 
 The total charge on all atoms on the system is not 0.0.
 For some KSpace solvers this is only a warning.
+
+E: KSpace accuracy must be > 0
+
+UNDOCUMENTED
+
+E: Must use 'kspace_modify gewald' for uncharged system
+
+UNDOCUMENTED
 
 W: Ewald/disp Newton solver failed, using old method to estimate g_ewald
 

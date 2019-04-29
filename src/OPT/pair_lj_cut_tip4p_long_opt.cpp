@@ -15,7 +15,7 @@
    OPT version: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
+#include <cmath>
 #include "pair_lj_cut_tip4p_long_opt.h"
 #include "atom.h"
 #include "domain.h"
@@ -53,8 +53,7 @@ PairLJCutTIP4PLongOpt::PairLJCutTIP4PLongOpt(LAMMPS *lmp) :
 
 void PairLJCutTIP4PLongOpt::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   const int nlocal = atom->nlocal;
   const int nall = nlocal + atom->nghost;

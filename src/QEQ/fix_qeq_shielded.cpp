@@ -15,10 +15,10 @@
    Contributing author: Ray Shan (Sandia)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "fix_qeq_shielded.h"
 #include "atom.h"
 #include "comm.h"
@@ -29,6 +29,7 @@
 #include "update.h"
 #include "force.h"
 #include "group.h"
+#include "pair.h"
 #include "kspace.h"
 #include "respa.h"
 #include "memory.h"
@@ -39,7 +40,9 @@ using namespace LAMMPS_NS;
 /* ---------------------------------------------------------------------- */
 
 FixQEqShielded::FixQEqShielded(LAMMPS *lmp, int narg, char **arg) :
-  FixQEq(lmp, narg, arg) {}
+  FixQEq(lmp, narg, arg) {
+  if (reax_flag) extract_reax();
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -75,6 +78,22 @@ void FixQEqShielded::init()
 
 /* ---------------------------------------------------------------------- */
 
+void FixQEqShielded::extract_reax()
+{
+  Pair *pair = force->pair_match("reax/c",1);
+  if (pair == NULL) error->all(FLERR,"No pair reax/c for fix qeq/shielded");
+  int tmp;
+  chi = (double *) pair->extract("chi",tmp);
+  eta = (double *) pair->extract("eta",tmp);
+  gamma = (double *) pair->extract("gamma",tmp);
+  if (chi == NULL || eta == NULL || gamma == NULL)
+    error->all(FLERR,
+        "Fix qeq/slater could not extract params from pair reax/c");
+}
+
+
+/* ---------------------------------------------------------------------- */
+
 void FixQEqShielded::init_shielding()
 {
   int i,j;
@@ -105,26 +124,26 @@ void FixQEqShielded::init_shielding()
   Tap[3] = 140.0 * (swa3*swb + 3.0*swa2*swb2 + swa*swb3 ) / d7;
   Tap[2] =-210.0 * (swa3*swb2 + swa2*swb3) / d7;
   Tap[1] = 140.0 * swa3 * swb3 / d7;
-  Tap[0] = (-35.0*swa3*swb2*swb2 + 21.0*swa2*swb3*swb2 +
+  Tap[0] = (-35.0*swa3*swb2*swb2 + 21.0*swa2*swb3*swb2 -
             7.0*swa*swb3*swb3 + swb3*swb3*swb ) / d7;
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FixQEqShielded::pre_force(int vflag)
+void FixQEqShielded::pre_force(int /*vflag*/)
 {
   if (update->ntimestep % nevery) return;
 
   nlocal = atom->nlocal;
 
-  if( atom->nmax > nmax ) reallocate_storage();
+  if (atom->nmax > nmax) reallocate_storage();
 
-  if( nlocal > n_cap*DANGER_ZONE || m_fill > m_cap*DANGER_ZONE )
+  if (nlocal > n_cap*DANGER_ZONE || m_fill > m_cap*DANGER_ZONE)
     reallocate_matrix();
 
   init_matvec();
-  matvecs = CG(b_s, s);    	// CG on s - parallel
-  matvecs += CG(b_t, t); 	// CG on t - parallel
+  matvecs = CG(b_s, s);         // CG on s - parallel
+  matvecs += CG(b_t, t);        // CG on t - parallel
   calculate_Q();
 
   if (force->kspace) force->kspace->qsum_qsq();
@@ -189,16 +208,16 @@ void FixQEqShielded::compute_H()
 
       for( jj = 0; jj < jnum; jj++ ) {
         j = jlist[jj];
-	j &= NEIGHMASK;
+        j &= NEIGHMASK;
 
         dx = x[j][0] - x[i][0];
         dy = x[j][1] - x[i][1];
         dz = x[j][2] - x[i][2];
         r_sqr = dx*dx + dy*dy + dz*dz;
 
-	if (r_sqr <= cutoff_sq) {
+        if (r_sqr <= cutoff_sq) {
           H.jlist[m_fill] = j;
-	  r = sqrt(r_sqr);
+          r = sqrt(r_sqr);
           H.val[m_fill] = 0.5 * calculate_H( r, shld[type[i]][type[j]] );
           m_fill++;
         }

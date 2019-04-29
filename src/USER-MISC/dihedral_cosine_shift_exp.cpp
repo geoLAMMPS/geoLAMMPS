@@ -16,8 +16,8 @@
 ------------------------------------------------------------------------- */
 
 #include <mpi.h>
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "dihedral_cosine_shift_exp.h"
 #include "atom.h"
 #include "comm.h"
@@ -26,6 +26,7 @@
 #include "force.h"
 #include "update.h"
 #include "memory.h"
+#include "math_const.h"
 #include "error.h"
 
 using namespace LAMMPS_NS;
@@ -35,7 +36,10 @@ using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-DihedralCosineShiftExp::DihedralCosineShiftExp(LAMMPS *lmp) : Dihedral(lmp) {}
+DihedralCosineShiftExp::DihedralCosineShiftExp(LAMMPS *lmp) : Dihedral(lmp)
+{
+  writedata = 1;
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -67,8 +71,7 @@ void DihedralCosineShiftExp::compute(int eflag, int vflag)
   double cccpsss,cssmscc,exp2;
 
   edihedral = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;
@@ -285,9 +288,9 @@ void DihedralCosineShiftExp::coeff(int narg, char **arg)
     doExpansion[i]=(fabs(a_)<0.001);
     umin[i]  = umin_;
     a[i]     = a_;
-    cost[i]  = cos(theta0_*3.14159265/180);
-    sint[i]  = sin(theta0_*3.14159265/180);
-    theta[i] = theta0_*3.14159265/180;
+    cost[i]  = cos(theta0_*MathConst::MY_PI/180.0);
+    sint[i]  = sin(theta0_*MathConst::MY_PI/180.0);
+    theta[i] = theta0_*MathConst::MY_PI/180.0;
 
     if (!doExpansion[i]) opt1[i]=umin_/(exp(a_)-1);
 
@@ -337,4 +340,15 @@ void DihedralCosineShiftExp::read_restart(FILE *fp)
     doExpansion[i]=(fabs(a[i])<0.01);
     if (!doExpansion[i]) opt1[i]=umin[i]/(exp(a[i])-1);
   }
+}
+
+/* ----------------------------------------------------------------------
+   proc 0 writes to data file
+------------------------------------------------------------------------- */
+
+void DihedralCosineShiftExp::write_data(FILE *fp)
+{
+  for (int i = 1; i <= atom->ndihedraltypes; i++)
+    fprintf(fp,"%d %g %g %g\n",i,umin[i],
+            theta[i]*180.0/MathConst::MY_PI,a[i]);
 }

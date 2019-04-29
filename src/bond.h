@@ -14,7 +14,7 @@
 #ifndef LMP_BOND_H
 #define LMP_BOND_H
 
-#include <stdio.h>
+#include <cstdio>
 #include "pointers.h"
 
 namespace LAMMPS_NS {
@@ -64,6 +64,10 @@ class Bond : protected Pointers {
   int vflag_either,vflag_global,vflag_atom;
   int maxeatom,maxvatom;
 
+  void ev_init(int eflag, int vflag, int alloc = 1) {
+    if (eflag||vflag) ev_setup(eflag, vflag, alloc);
+    else evflag = eflag_either = eflag_global = eflag_atom = vflag_either = vflag_global = vflag_atom = 0;
+  }
   void ev_setup(int, int, int alloc = 1);
   void ev_tally(int, int, int, int, double, double, double, double, double);
 };
@@ -83,5 +87,25 @@ E: All bond coeffs are not set
 
 All bond coefficients must be set in the data file or by the
 bond_coeff command before running a simulation.
+
+E: Illegal ... command
+
+UNDOCUMENTED
+
+E: Invalid atom types in bond_write command
+
+UNDOCUMENTED
+
+E: Invalid rlo/rhi values in bond_write command
+
+UNDOCUMENTED
+
+E: Cannot open bond_write file
+
+UNDOCUMENTED
+
+E: Fix adapt interface to this bond style not supported
+
+UNDOCUMENTED
 
 */

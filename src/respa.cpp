@@ -15,8 +15,8 @@
    Contributing authors: Mark Stevens (SNL), Paul Crozier (SNL)
 ------------------------------------------------------------------------- */
 
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #include "respa.h"
 #include "neighbor.h"
 #include "atom.h"
@@ -38,15 +38,16 @@
 #include "timer.h"
 #include "memory.h"
 #include "error.h"
+#include "utils.h"
 #include "pair_hybrid.h"
 
 using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-Respa::Respa(LAMMPS *lmp, int narg, char **arg) : 
+Respa::Respa(LAMMPS *lmp, int narg, char **arg) :
   Integrate(lmp, narg, arg),
-  step(NULL), loop(NULL), hybrid_level(NULL), hybrid_compute(NULL), 
+  step(NULL), loop(NULL), hybrid_level(NULL), hybrid_compute(NULL),
   newton(NULL), fix_respa(NULL)
 {
   nhybrid_styles = 0;
@@ -120,7 +121,7 @@ Respa::Respa(LAMMPS *lmp, int narg, char **arg) :
       iarg += 2;
     } else if (strcmp(arg[iarg],"hybrid") == 0) {
       // the hybrid keyword requires a hybrid pair style
-      if (!strstr(force->pair_style,"hybrid"))
+      if (!utils::strmatch(force->pair_style,"^hybrid"))
         error->all(FLERR,"Illegal run_style respa command");
       PairHybrid *hybrid = (PairHybrid *) force->pair;
       nhybrid_styles = hybrid->nstyles;
@@ -441,7 +442,7 @@ void Respa::setup(int flag)
   domain->image_check();
   domain->box_too_small_check();
   modify->setup_pre_neighbor();
-  neighbor->build();
+  neighbor->build(1);
   modify->setup_post_neighbor();
   neighbor->ncalls = 0;
 
@@ -517,7 +518,7 @@ void Respa::setup_minimal(int flag)
     domain->image_check();
     domain->box_too_small_check();
     modify->setup_pre_neighbor();
-    neighbor->build();
+    neighbor->build(1);
     modify->setup_post_neighbor();
     neighbor->ncalls = 0;
   }
@@ -668,7 +669,7 @@ void Respa::recurse(int ilevel)
           modify->pre_neighbor();
           timer->stamp(Timer::MODIFY);
         }
-        neighbor->build();
+        neighbor->build(1);
         timer->stamp(Timer::NEIGH);
         if (modify->n_post_neighbor) {
           modify->post_neighbor();
@@ -774,7 +775,7 @@ void Respa::recurse(int ilevel)
    clear other arrays as needed
 ------------------------------------------------------------------------- */
 
-void Respa::force_clear(int newtonflag)
+void Respa::force_clear(int /*newtonflag*/)
 {
   if (external_force_clear) return;
 

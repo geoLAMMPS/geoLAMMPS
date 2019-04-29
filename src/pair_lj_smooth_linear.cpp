@@ -15,9 +15,9 @@
    Contributing author: Jonathan Zimmerman (Sandia)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include "pair_lj_smooth_linear.h"
 #include "atom.h"
 #include "comm.h"
@@ -62,8 +62,7 @@ void PairLJSmoothLinear::compute(int eflag, int vflag)
   int *ilist,*jlist,*numneigh,**firstneigh;
 
   evdwl = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;
@@ -326,9 +325,9 @@ void PairLJSmoothLinear::read_restart_settings(FILE *fp)
 
 /* ---------------------------------------------------------------------- */
 
-double PairLJSmoothLinear::single(int i, int j, int itype, int jtype,
+double PairLJSmoothLinear::single(int /*i*/, int /*j*/, int itype, int jtype,
                                   double rsq,
-                                  double factor_coul, double factor_lj,
+                                  double /*factor_coul*/, double factor_lj,
                                   double &fforce)
 {
   double r2inv,r6inv,forcelj,philj,r,rinv;

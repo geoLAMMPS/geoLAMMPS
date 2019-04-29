@@ -16,9 +16,9 @@
 ------------------------------------------------------------------------- */
 
 #include <mpi.h>
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
 #include "dihedral_charmm.h"
 #include "atom.h"
 #include "comm.h"
@@ -76,8 +76,7 @@ void DihedralCharmm::compute(int eflag, int vflag)
   double forcecoul,forcelj,fpair,ecoul,evdwl;
 
   edihedral = evdwl = ecoul = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = 0;
+  ev_init(eflag,vflag);
 
   // insure pair->ev_tally() will use 1-4 virial contribution
 

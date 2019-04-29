@@ -15,7 +15,7 @@
    Contributing author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
+#include <cmath>
 #include "dihedral_harmonic_omp.h"
 #include "atom.h"
 #include "comm.h"
@@ -43,10 +43,7 @@ DihedralHarmonicOMP::DihedralHarmonicOMP(class LAMMPS *lmp)
 
 void DihedralHarmonicOMP::compute(int eflag, int vflag)
 {
-
-  if (eflag || vflag) {
-    ev_setup(eflag,vflag);
-  } else evflag = 0;
+  ev_init(eflag,vflag);
 
   const int nall = atom->nlocal + atom->nghost;
   const int nthreads = comm->nthreads;

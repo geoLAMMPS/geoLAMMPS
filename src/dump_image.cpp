@@ -11,10 +11,10 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cctype>
+#include <cstdlib>
+#include <cstring>
 #include "dump_image.h"
 #include "image.h"
 #include "atom.h"
@@ -49,11 +49,11 @@ enum{NO,YES};
 /* ---------------------------------------------------------------------- */
 
 DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
-  DumpCustom(lmp, narg, arg), thetastr(NULL), phistr(NULL), cxstr(NULL), 
-  cystr(NULL), czstr(NULL), upxstr(NULL), upystr(NULL), upzstr(NULL), 
-  zoomstr(NULL), perspstr(NULL), diamtype(NULL), diamelement(NULL), 
-  bdiamtype(NULL), colortype(NULL), colorelement(NULL), bcolortype(NULL), 
-  avec_line(NULL), avec_tri(NULL), avec_body(NULL), fixptr(NULL), image(NULL), 
+  DumpCustom(lmp, narg, arg), thetastr(NULL), phistr(NULL), cxstr(NULL),
+  cystr(NULL), czstr(NULL), upxstr(NULL), upystr(NULL), upzstr(NULL),
+  zoomstr(NULL), perspstr(NULL), diamtype(NULL), diamelement(NULL),
+  bdiamtype(NULL), colortype(NULL), colorelement(NULL), bcolortype(NULL),
+  avec_line(NULL), avec_tri(NULL), avec_body(NULL), fixptr(NULL), image(NULL),
   chooseghost(NULL), bufcopy(NULL)
 {
   if (binary || multiproc) error->all(FLERR,"Invalid dump image filename");
@@ -376,17 +376,17 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
 
   if (lineflag) {
     avec_line = (AtomVecLine *) atom->style_match("line");
-    if (!avec_line) 
+    if (!avec_line)
       error->all(FLERR,"Dump image line requires atom style line");
   }
   if (triflag) {
     avec_tri = (AtomVecTri *) atom->style_match("tri");
-    if (!avec_tri) 
+    if (!avec_tri)
       error->all(FLERR,"Dump image tri requires atom style tri");
   }
   if (bodyflag) {
     avec_body = (AtomVecBody *) atom->style_match("body");
-    if (!avec_body) 
+    if (!avec_body)
       error->all(FLERR,"Dump image body yes requires atom style body");
   }
 
@@ -1193,7 +1193,7 @@ void DumpImage::create_image()
 /* ---------------------------------------------------------------------- */
 
 int DumpImage::pack_forward_comm(int n, int *list, double *buf,
-                                 int pbc_flag, int *pbc)
+                                 int /*pbc_flag*/, int * /*pbc*/)
 {
   int i,j,m;
 
@@ -1290,7 +1290,7 @@ int DumpImage::modify_param(int narg, char **arg)
   if (strcmp(arg[0],"amap") == 0) {
     if (narg < 6) error->all(FLERR,"Illegal dump_modify command");
     if (strlen(arg[3]) != 2) error->all(FLERR,"Illegal dump_modify command");
-    int factor;
+    int factor = 0;
     if (arg[3][0] == 's') factor = 1;
     else if (arg[3][0] == 'c') factor = 2;
     else if (arg[3][0] == 'd') factor = 3;

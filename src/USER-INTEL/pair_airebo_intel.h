@@ -47,8 +47,8 @@ class PairAIREBOIntel : public PairAIREBO {
 
   template <int EVFLAG, int EFLAG, class flt_t, class acc_t>
   void eval(const int offload, const int vflag,
-	    IntelBuffers<flt_t,acc_t> * buffers,
-	    const int astart, const int aend);
+            IntelBuffers<flt_t,acc_t> * buffers,
+            const int astart, const int aend);
 
   template <class flt_t, class acc_t>
   void pack_force_const(IntelBuffers<flt_t,acc_t> * buffers);
@@ -106,5 +106,11 @@ E: Cannot open AIREBO potential file %s
 
 The specified AIREBO potential file cannot be opened.  Check that the
 path and name are correct.
+
+E: Cannot yet use airebo/intel with hybrid.
+
+Pair style airebo/intel cannot currently be used as part of a hybrid
+pair style (with the exception of hybrid/overlay).
+
 
 */

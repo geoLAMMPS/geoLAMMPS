@@ -12,7 +12,8 @@
    Contributing author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
+#include <cmath>
+#include <cstring>
 #include "pair_gran_hooke_history_omp.h"
 #include "fix_neigh_history.h"
 #include "atom.h"
@@ -23,8 +24,6 @@
 #include "neighbor.h"
 #include "neigh_list.h"
 #include "update.h"
-
-#include <string.h>
 
 #include "suffix.h"
 using namespace LAMMPS_NS;
@@ -42,9 +41,7 @@ PairGranHookeHistoryOMP::PairGranHookeHistoryOMP(LAMMPS *lmp) :
 
 void PairGranHookeHistoryOMP::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) {
-    ev_setup(eflag,vflag);
-  } else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   const int shearupdate = (update->setupflag) ? 0 : 1;
 

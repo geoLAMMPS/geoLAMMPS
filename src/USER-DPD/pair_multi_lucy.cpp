@@ -22,10 +22,10 @@
 ------------------------------------------------------------------------------------------- */
 
 #include <mpi.h>
-#include <math.h>
+#include <cmath>
 #include "math_const.h"
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #include "pair_multi_lucy.h"
 #include "atom.h"
 #include "force.h"
@@ -95,8 +95,7 @@ void PairMultiLucy::compute(int eflag, int vflag)
   int tlm1 = tablength - 1;
 
   evdwl = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;
@@ -350,7 +349,7 @@ void PairMultiLucy::read_table(Table *tb, char *file, char *keyword)
   FILE *fp = fopen(file,"r");
   if (fp == NULL) {
     char str[128];
-    sprintf(str,"Cannot open file %s",file);
+    snprintf(str,128,"Cannot open file %s",file);
     error->one(FLERR,str);
   }
 
@@ -781,7 +780,7 @@ void PairMultiLucy::computeLocalDensity()
 }
 /* ---------------------------------------------------------------------- */
 
-int PairMultiLucy::pack_forward_comm(int n, int *list, double *buf, int pbc_flag, int *pbc)
+int PairMultiLucy::pack_forward_comm(int n, int *list, double *buf, int /*pbc_flag*/, int * /*pbc*/)
 {
   int i,j,m;
   double *rho = atom->rho;

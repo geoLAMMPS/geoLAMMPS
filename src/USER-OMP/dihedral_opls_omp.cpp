@@ -15,7 +15,7 @@
    Contributing author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
+#include <cmath>
 #include "dihedral_opls_omp.h"
 #include "atom.h"
 #include "comm.h"
@@ -44,10 +44,7 @@ DihedralOPLSOMP::DihedralOPLSOMP(class LAMMPS *lmp)
 
 void DihedralOPLSOMP::compute(int eflag, int vflag)
 {
-
-  if (eflag || vflag) {
-    ev_setup(eflag,vflag);
-  } else evflag = 0;
+  ev_init(eflag,vflag);
 
   const int nall = atom->nlocal + atom->nghost;
   const int nthreads = comm->nthreads;

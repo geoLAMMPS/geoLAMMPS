@@ -11,8 +11,8 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 #include "rerun.h"
 #include "read_dump.h"
 #include "domain.h"
@@ -57,7 +57,7 @@ void Rerun::command(int narg, char **arg)
   if (nfile == 0 || nfile == narg) error->all(FLERR,"Illegal rerun command");
 
   // parse optional args up until "dump"
-  // user MAXBIGINT -1 so Output can add 1 to it and still be a big int
+  // use MAXBIGINT -1 so Output can add 1 to it and still be a big int
 
   bigint first = 0;
   bigint last = MAXBIGINT - 1;

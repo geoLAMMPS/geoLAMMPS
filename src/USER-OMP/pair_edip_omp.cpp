@@ -12,7 +12,7 @@
    Contributing author: Axel Kohlmeyer (Temple U)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
+#include <cmath>
 #include "pair_edip_omp.h"
 #include "atom.h"
 #include "comm.h"
@@ -43,9 +43,7 @@ PairEDIPOMP::PairEDIPOMP(LAMMPS *lmp) :
 
 void PairEDIPOMP::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) {
-    ev_setup(eflag,vflag);
-  } else evflag = vflag_fdotr = vflag_atom = 0;
+  ev_init(eflag,vflag);
 
   const int nall = atom->nlocal + atom->nghost;
   const int nthreads = comm->nthreads;
@@ -84,7 +82,7 @@ void PairEDIPOMP::eval(int iifrom, int iito, ThrData * const thr)
   int itype,jtype,ktype,ijparam,ikparam;
   double xtmp,ytmp,ztmp,evdwl;
   int *ilist,*jlist,*numneigh,**firstneigh;
-  register int preForceCoord_counter;
+  int preForceCoord_counter;
 
   double invR_ij;
   double invR_ik;

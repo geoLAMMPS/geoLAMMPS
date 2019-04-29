@@ -11,9 +11,9 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <string.h>
-#include <ctype.h>
+#include <cmath>
+#include <cstring>
+#include <cctype>
 #include "dihedral_hybrid.h"
 #include "atom.h"
 #include "neighbor.h"
@@ -104,8 +104,7 @@ void DihedralHybrid::compute(int eflag, int vflag)
   // set neighbor->dihedrallist to sub-style dihedrallist before call
   // accumulate sub-style global/peratom energy/virial in hybrid
 
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = eflag_global = vflag_global = eflag_atom = vflag_atom = 0;
+  ev_init(eflag,vflag);
 
   for (m = 0; m < nstyles; m++) {
     neighbor->ndihedrallist = ndihedrallist[m];

@@ -20,7 +20,7 @@ PairStyle(hybrid,PairHybrid)
 #ifndef LMP_PAIR_HYBRID_H
 #define LMP_PAIR_HYBRID_H
 
-#include <stdio.h>
+#include <cstdio>
 #include "pair.h"
 
 namespace LAMMPS_NS {
@@ -32,6 +32,7 @@ class PairHybrid : public Pair {
   friend class Force;
   friend class Respa;
   friend class Info;
+  friend class PairDeprecated;
  public:
   PairHybrid(class LAMMPS *);
   virtual ~PairHybrid();
@@ -90,10 +91,6 @@ class PairHybrid : public Pair {
 
 /* ERROR/WARNING messages:
 
-E: Cannot yet use pair hybrid with Kokkos
-
-This feature is not yet supported.
-
 E: Illegal ... command
 
 Self-explanatory.  Check the input script syntax and compare to the
@@ -111,6 +108,10 @@ Self-explanatory.
 E: Incorrect args for pair coefficients
 
 Self-explanatory.  Check the input script or data file.
+
+E: Cannot yet use pair hybrid with Kokkos
+
+This feature is not yet supported.
 
 E: Pair coeff for hybrid has invalid style
 

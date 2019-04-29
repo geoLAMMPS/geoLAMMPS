@@ -22,7 +22,7 @@
 #include "neighbor.h"
 #include "domain.h"
 
-#include <math.h>
+#include <cmath>
 
 #include "suffix.h"
 using namespace LAMMPS_NS;
@@ -39,10 +39,7 @@ BondNonlinearOMP::BondNonlinearOMP(class LAMMPS *lmp)
 
 void BondNonlinearOMP::compute(int eflag, int vflag)
 {
-
-  if (eflag || vflag) {
-    ev_setup(eflag,vflag);
-  } else evflag = 0;
+  ev_init(eflag,vflag);
 
   const int nall = atom->nlocal + atom->nghost;
   const int nthreads = comm->nthreads;

@@ -18,8 +18,8 @@
      Vincent Natoli, Stone Ridge Technology
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdlib.h>
+#include <cmath>
+#include <cstdlib>
 #include "pair_lj_charmm_coul_long_opt.h"
 #include "atom.h"
 #include "force.h"
@@ -44,8 +44,7 @@ PairLJCharmmCoulLongOpt::PairLJCharmmCoulLongOpt(LAMMPS *lmp) :
 
 void PairLJCharmmCoulLongOpt::compute(int eflag, int vflag)
 {
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   if (evflag) {
     if (eflag) {

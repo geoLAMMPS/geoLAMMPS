@@ -15,10 +15,10 @@
    Contributing author: Paul Crozier (SNL)
 ------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include "pair_lj_cut_thole_long.h"
 #include "atom.h"
 #include "comm.h"
@@ -32,6 +32,8 @@
 #include "math_const.h"
 #include "memory.h"
 #include "error.h"
+#include "modify.h"
+#include "domain.h"
 
 using namespace LAMMPS_NS;
 using namespace MathConst;
@@ -96,8 +98,7 @@ void PairLJCutTholeLong::compute(int eflag, int vflag)
   int di_closest;
 
   evdwl = ecoul = 0.0;
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   double **x = atom->x;
   double **f = atom->f;
@@ -681,7 +682,7 @@ void *PairLJCutTholeLong::extract(const char *str, int &dim)
 {
   dim = 0;
   if (strcmp(str,"cut_coul") == 0) return (void *) &cut_coul;
-  dim = 6;
+  dim = 2;
   if (strcmp(str,"epsilon") == 0) return (void *) epsilon;
   if (strcmp(str,"sigma") == 0) return (void *) sigma;
   if (strcmp(str,"scale") == 0) return (void *) scale;
