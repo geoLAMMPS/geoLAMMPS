@@ -133,7 +133,7 @@ void FixWallGranRegion::init()
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGranRegion::post_force(int /*vflag*/)
+void FixWallGranRegion::post_force(int vflag)
 {
   //~ Mirror from FixWallGran [KH - 29 May 2017]
   // virial setup
