@@ -116,16 +116,16 @@ void FixWallGranRegion::init()
       strcmp(region_style,region->style) != 0 ||
       nregion != region->nregion) {
     char str[256];
-    sprintf(str,"Region properties for region %s changed between runs, "
-            "resetting its motion",idregion);
+    snprintf(str,256,"Region properties for region %s changed between runs, "
+             "resetting its motion",idregion);
     error->warning(FLERR,str);
     region->reset_vel();
   }
 
   if (motion_resetflag){
     char str[256];
-    sprintf(str,"Region properties for region %s are inconsistent "
-            "with restart file, resetting its motion",idregion);
+    snprintf(str,256,"Region properties for region %s are inconsistent "
+             "with restart file, resetting its motion",idregion);
     error->warning(FLERR,str);
     region->reset_vel();
   }
@@ -133,7 +133,7 @@ void FixWallGranRegion::init()
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGranRegion::post_force(int vflag)
+void FixWallGranRegion::post_force(int /*vflag*/)
 {
   //~ Mirror from FixWallGran [KH - 29 May 2017]
   // virial setup
@@ -403,7 +403,7 @@ void FixWallGranRegion::grow_arrays(int nmax)
    copy values within local atom-based arrays
 ------------------------------------------------------------------------- */
 
-void FixWallGranRegion::copy_arrays(int i, int j, int delflag)
+void FixWallGranRegion::copy_arrays(int i, int j, int /*delflag*/)
 {
   int m,n,iwall;
 

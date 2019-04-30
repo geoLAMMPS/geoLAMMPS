@@ -697,20 +697,27 @@ namespace Kokkos {
     typedef Random_XorShift64<DeviceType> generator_type;
     typedef DeviceType device_type;
 
+    KOKKOS_INLINE_FUNCTION
     Random_XorShift64_Pool() {
       num_states_ = 0;
     }
     Random_XorShift64_Pool(uint64_t seed) {
       num_states_ = 0;
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE
       init(seed,DeviceType::max_hardware_threads());
+#else
+      init(seed,DeviceType::impl_max_hardware_threads());
+#endif
     }
 
+    KOKKOS_INLINE_FUNCTION
     Random_XorShift64_Pool(const Random_XorShift64_Pool& src):
       locks_(src.locks_),
       state_(src.state_),
       num_states_(src.num_states_)
     {}
 
+    KOKKOS_INLINE_FUNCTION
     Random_XorShift64_Pool operator = (const Random_XorShift64_Pool& src) {
       locks_ = src.locks_;
       state_ = src.state_;
@@ -751,7 +758,11 @@ namespace Kokkos {
 
     KOKKOS_INLINE_FUNCTION
     Random_XorShift64<DeviceType> get_state() const {
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE
       const int i = DeviceType::hardware_thread_id();;
+#else
+      const int i = DeviceType::impl_hardware_thread_id();;
+#endif
       return Random_XorShift64<DeviceType>(state_(i),i);
     }
 
@@ -950,6 +961,7 @@ namespace Kokkos {
 
     typedef DeviceType device_type;
 
+    KOKKOS_INLINE_FUNCTION
     Random_XorShift1024_Pool() {
       num_states_ = 0;
     }
@@ -957,9 +969,14 @@ namespace Kokkos {
     inline
     Random_XorShift1024_Pool(uint64_t seed){
       num_states_ = 0;
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE
       init(seed,DeviceType::max_hardware_threads());
+#else
+      init(seed,DeviceType::impl_max_hardware_threads());
+#endif
     }
 
+    KOKKOS_INLINE_FUNCTION
     Random_XorShift1024_Pool(const Random_XorShift1024_Pool& src):
       locks_(src.locks_),
       state_(src.state_),
@@ -967,6 +984,7 @@ namespace Kokkos {
       num_states_(src.num_states_)
     {}
 
+    KOKKOS_INLINE_FUNCTION
     Random_XorShift1024_Pool operator = (const Random_XorShift1024_Pool& src) {
       locks_ = src.locks_;
       state_ = src.state_;
@@ -1012,7 +1030,11 @@ namespace Kokkos {
 
     KOKKOS_INLINE_FUNCTION
     Random_XorShift1024<DeviceType> get_state() const {
+#ifdef KOKKOS_ENABLE_DEPRECATED_CODE
       const int i = DeviceType::hardware_thread_id();
+#else
+      const int i = DeviceType::impl_hardware_thread_id();
+#endif
       return Random_XorShift1024<DeviceType>(state_,p_(i),i);
     };
 

@@ -40,10 +40,6 @@ using namespace MathConst;
 enum{NONE=0,FINAL,DELTA,SCALE,VEL,ERATE,TRATE,VOLUME,WIGGLE,VARIABLE};
 enum{ONE_FROM_ONE,ONE_FROM_TWO,TWO_FROM_ONE};
 
-// same as domain.cpp, fix_nvt_sllod.cpp, compute_temp_deform.cpp
-
-enum{NO_REMAP,X_REMAP,V_REMAP};
-
 /* ---------------------------------------------------------------------- */
 
 FixDeform::FixDeform(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg),
@@ -208,7 +204,7 @@ rfix(NULL), irregular(NULL), set(NULL)
   // no x remap effectively moves atoms within box, so set restart_pbc
 
   options(narg-iarg,&arg[iarg]);
-  if (remapflag != X_REMAP) restart_pbc = 1;
+  if (remapflag != Domain::X_REMAP) restart_pbc = 1;
 
   // setup dimflags used by other classes to check for volume-change conflicts
 
@@ -902,7 +898,7 @@ void FixDeform::end_of_step()
 
   // convert atoms and rigid bodies to lamda coords
 
-  if (remapflag == X_REMAP) {
+  if (remapflag == Domain::X_REMAP) {
     double **x = atom->x;
     int *mask = atom->mask;
     int nlocal = atom->nlocal;
@@ -942,7 +938,7 @@ void FixDeform::end_of_step()
 
   // convert atoms and rigid bodies back to box coords
 
-  if (remapflag == X_REMAP) {
+  if (remapflag == Domain::X_REMAP) {
     double **x = atom->x;
     int *mask = atom->mask;
     int nlocal = atom->nlocal;
@@ -1004,7 +1000,7 @@ void FixDeform::options(int narg, char **arg)
 {
   if (narg < 0) error->all(FLERR,"Illegal fix deform command");
 
-  remapflag = X_REMAP;
+  remapflag = Domain::X_REMAP;
   scaleflag = 1;
   flipflag = 1;
 
@@ -1012,9 +1008,9 @@ void FixDeform::options(int narg, char **arg)
   while (iarg < narg) {
     if (strcmp(arg[iarg],"remap") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal fix deform command");
-      if (strcmp(arg[iarg+1],"x") == 0) remapflag = X_REMAP;
-      else if (strcmp(arg[iarg+1],"v") == 0) remapflag = V_REMAP;
-      else if (strcmp(arg[iarg+1],"none") == 0) remapflag = NO_REMAP;
+      if (strcmp(arg[iarg+1],"x") == 0) remapflag = Domain::X_REMAP;
+      else if (strcmp(arg[iarg+1],"v") == 0) remapflag = Domain::V_REMAP;
+      else if (strcmp(arg[iarg+1],"none") == 0) remapflag = Domain::NO_REMAP;
       else error->all(FLERR,"Illegal fix deform command");
       iarg += 2;
     } else if (strcmp(arg[iarg],"units") == 0) {

@@ -46,7 +46,6 @@ using namespace MathConst;
 #define LARGE 10000.0
 #define EPS_HOC 1.0e-7
 
-enum{GEOMETRIC,ARITHMETIC,SIXTHPOWER};
 enum{REVERSE_RHO, REVERSE_RHO_G, REVERSE_RHO_A, REVERSE_RHO_NONE};
 enum{FORWARD_IK, FORWARD_AD, FORWARD_IK_PERATOM, FORWARD_AD_PERATOM,
      FORWARD_IK_G, FORWARD_AD_G, FORWARD_IK_PERATOM_G, FORWARD_AD_PERATOM_G,
@@ -64,7 +63,7 @@ enum{FORWARD_IK, FORWARD_AD, FORWARD_IK_PERATOM, FORWARD_AD_PERATOM,
 
 /* ---------------------------------------------------------------------- */
 
-PPPMDisp::PPPMDisp(LAMMPS *lmp, int narg, char **arg) : KSpace(lmp, narg, arg),
+PPPMDisp::PPPMDisp(LAMMPS *lmp) : KSpace(lmp),
   factors(NULL), csumi(NULL), cii(NULL), B(NULL), density_brick(NULL), vdx_brick(NULL),
   vdy_brick(NULL), vdz_brick(NULL), density_fft(NULL), u_brick(NULL), v0_brick(NULL),
   v1_brick(NULL), v2_brick(NULL), v3_brick(NULL), v4_brick(NULL), v5_brick(NULL),
@@ -107,11 +106,8 @@ PPPMDisp::PPPMDisp(LAMMPS *lmp, int narg, char **arg) : KSpace(lmp, narg, arg),
    fft2_6(NULL), remap(NULL), remap_6(NULL), cg(NULL), cg_peratom(NULL), cg_6(NULL),
    cg_peratom_6(NULL), part2grid(NULL), part2grid_6(NULL), boxlo(NULL)
 {
-  if (narg < 1) error->all(FLERR,"Illegal kspace_style pppm/disp command");
-
   triclinic_support = 0;
   pppmflag = dispersionflag = 1;
-  accuracy_relative = fabs(force->numeric(FLERR,arg[0]));
 
   nfactors = 3;
   factors = new int[nfactors];
@@ -226,6 +222,14 @@ PPPMDisp::PPPMDisp(LAMMPS *lmp, int narg, char **arg) : KSpace(lmp, narg, arg),
   memset(function, 0, EWALD_FUNCS*sizeof(int));
 }
 
+/* ---------------------------------------------------------------------- */
+
+void PPPMDisp::settings(int narg, char **arg)
+{
+  if (narg < 1) error->all(FLERR,"Illegal kspace_style pppm/disp command");
+  accuracy_relative = fabs(force->numeric(FLERR,arg[0]));
+}
+
 /* ----------------------------------------------------------------------
    free all memory
 ------------------------------------------------------------------------- */
@@ -304,7 +308,7 @@ void PPPMDisp::init()
   // check out which types of potentials will have to be calculated
 
   int ewald_order = ptr ? *((int *) ptr) : 1<<1;
-  int ewald_mix = ptr ? *((int *) pair->extract("ewald_mix",tmp)) : GEOMETRIC;
+  int ewald_mix = ptr ? *((int *) pair->extract("ewald_mix",tmp)) : Pair::GEOMETRIC;
   memset(function, 0, EWALD_FUNCS*sizeof(int));
   for (int i=0; i<=EWALD_MAXORDER; ++i)                 // transcribe order
     if (ewald_order&(1<<i)) {                           // from pair_style
@@ -314,9 +318,9 @@ void PPPMDisp::init()
         case 1:
           k = 0; break;
         case 6:
-          if ((ewald_mix==GEOMETRIC || ewald_mix==SIXTHPOWER ||
+          if ((ewald_mix==Pair::GEOMETRIC || ewald_mix==Pair::SIXTHPOWER ||
                mixflag == 1) && mixflag!= 2) { k = 1; break; }
-          else if (ewald_mix==ARITHMETIC && mixflag!=2) { k = 2; break; }
+          else if (ewald_mix==Pair::ARITHMETIC && mixflag!=2) { k = 2; break; }
           else if (mixflag == 2) { k = 3; break; }
         default:
           sprintf(str, "Unsupported order in kspace_style "
@@ -8053,7 +8057,7 @@ void PPPMDisp::compute_rho_coeff(FFT_SCALAR **coeff , FFT_SCALAR **dcoeff,
    extended to non-neutral systems (J. Chem. Phys. 131, 094107).
 ------------------------------------------------------------------------- */
 
-void PPPMDisp::slabcorr(int eflag)
+void PPPMDisp::slabcorr(int /*eflag*/)
 {
   // compute local contribution to global dipole moment
 

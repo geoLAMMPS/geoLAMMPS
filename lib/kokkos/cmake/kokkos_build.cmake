@@ -76,7 +76,11 @@ IF(KOKKOS_SEPARATE_LIBS)
   )
 
   foreach(lib IN LISTS KOKKOS_TPL_LIBRARY_NAMES)
-    find_library(LIB_${lib} ${lib} PATHS ${KOKKOS_TPL_LIBRARY_DIRS})
+    if ("${lib}" STREQUAL "cuda")
+      set(LIB_cuda "-lcuda")
+    else()
+      find_library(LIB_${lib} ${lib} PATHS ${KOKKOS_TPL_LIBRARY_DIRS})
+    endif()
     target_link_libraries(kokkoscore PUBLIC ${LIB_${lib}})
   endforeach()
 
@@ -154,7 +158,11 @@ ELSE()
   )
 
   foreach(lib IN LISTS KOKKOS_TPL_LIBRARY_NAMES)
-    find_library(LIB_${lib} ${lib} PATHS ${KOKKOS_TPL_LIBRARY_DIRS})
+    if ("${lib}" STREQUAL "cuda")
+      set(LIB_cuda "-lcuda")
+    else()
+      find_library(LIB_${lib} ${lib} PATHS ${KOKKOS_TPL_LIBRARY_DIRS})
+    endif()
     target_link_libraries(kokkos PUBLIC ${LIB_${lib}})
   endforeach()
 
@@ -227,3 +235,7 @@ install(FILES
 # Install the export set for use with the install-tree
 INSTALL(EXPORT KokkosTargets DESTINATION
        "${INSTALL_CMAKE_DIR}")
+
+# build and install pkgconfig file
+CONFIGURE_FILE(core/src/kokkos.pc.in kokkos.pc @ONLY)
+INSTALL(FILES ${CMAKE_CURRENT_BINARY_DIR}/kokkos.pc DESTINATION lib/pkgconfig)

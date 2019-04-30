@@ -44,7 +44,6 @@ using namespace MathConst;
 
 enum{BOX,REGION,SINGLE,RANDOM};
 enum{ATOM,MOLECULE};
-enum{LAYOUT_UNIFORM,LAYOUT_NONUNIFORM,LAYOUT_TILED};    // several files
 
 /* ---------------------------------------------------------------------- */
 
@@ -314,7 +313,7 @@ void CreateAtoms::command(int narg, char **arg)
   }
 
   if (style == BOX || style == REGION) {
-    if (comm->layout != LAYOUT_TILED) {
+    if (comm->layout != Comm::LAYOUT_TILED) {
       if (domain->xperiodic) {
         if (comm->myloc[0] == 0) sublo[0] -= epsilon[0];
         if (comm->myloc[0] == comm->procgrid[0]-1) subhi[0] -= 2.0*epsilon[0];
@@ -570,10 +569,20 @@ void CreateAtoms::add_single()
   }
 
   // if triclinic, convert to lamda coords (0-1)
+  // with remapflag set and periodic dims,
+  //   resulting coord must satisfy 0.0 <= coord < 1.0
 
   double lamda[3],*coord;
   if (triclinic) {
     domain->x2lamda(xone,lamda);
+    if (remapflag) {
+      if (domain->xperiodic && (lamda[0] < 0.0 || lamda[0] >= 1.0)) 
+        lamda[0] = 0.0;
+      if (domain->yperiodic && (lamda[1] < 0.0 || lamda[1] >= 1.0)) 
+        lamda[1] = 0.0;
+      if (domain->zperiodic && (lamda[2] < 0.0 || lamda[2] >= 1.0)) 
+        lamda[2] = 0.0;
+    }
     coord = lamda;
   } else coord = xone;
 

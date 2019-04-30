@@ -2,11 +2,12 @@
 
 :link(lws,http://lammps.sandia.gov)
 :link(ld,Manual.html)
-:link(lc,Section_commands.html#comm)
+:link(lc,Commands_all.html)
 
 :line
 
 fix wall/gran command :h3
+fix wall/gran/omp command :h3
 
 [Syntax:]
 
@@ -141,6 +142,27 @@ the wall at whatever {radius} has been defined.
 
 For the {translate} keyword, the wall moves continuously with the
 specified velocity {vwallx vwally vwallz}.
+:line
+
+Styles with a {gpu}, {intel}, {kk}, {omp}, or {opt} suffix are
+functionally the same as the corresponding style without the suffix.
+They have been optimized to run faster, depending on your available
+hardware, as discussed on the "Speed packages"_Speed_packages.html doc
+page.  The accelerated styles take the same arguments and should
+produce the same results, except for round-off and precision issues.
+
+These accelerated styles are part of the GPU, USER-INTEL, KOKKOS,
+USER-OMP and OPT packages, respectively.  They are only enabled if
+LAMMPS was built with those packages.  See the "Build
+package"_Build_package.html doc page for more info.
+
+You can specify the accelerated styles explicitly in your input script
+by including their suffix, or you can use the "-suffix command-line
+switch"_Run_options.html when you invoke LAMMPS, or you can use the
+"suffix"_suffix.html command in your input script.
+
+See the "Speed packages"_Speed_packages.html doc page for more
+instructions on how to use the accelerated styles effectively.
 
 [Restart, fix_modify, output, run start/stop, minimize info:]
 
@@ -158,15 +180,18 @@ user should specify the new wall position in a restart file.
 
 This fix returns the wall positions and forces applied by the walls to the atoms in the sample.  These can be accessed by various "output commands"_Section_howto.html#howto_15.  The number of values returned for each granular wall fix command is 5, the first one is the current position of the lower plane (lo), the second the current position of the upper plane (hi), and the third, fourth and fifth the values of the {total} force applied by {both} walls to the atoms in the Cartesian x, y and z directions respectively.
 
-No parameter of this fix can be used with the {start/stop} keywords of
-the "run"_run.html command.  This fix is not invoked during "energy
+None of the "fix_modify"_fix_modify.html options are relevant to this
+fix.  No global or per-atom quantities are stored by this fix for
+access by various "output commands"_Howto_output.html.  No parameter
+of this fix can be used with the {start/stop} keywords of the
+"run"_run.html command.  This fix is not invoked during "energy
 minimization"_minimize.html.
 
 [Restrictions:]
 
 This fix is part of the GRANULAR package.  It is only enabled if
-LAMMPS was built with that package.  See the "Making
-LAMMPS"_Section_start.html#start_3 section for more info.
+LAMMPS was built with that package.  See the "Build
+package"_Build_package.html doc page for more info.
 
 Any dimension (xyz) that has a granular wall must be non-periodic.
 
