@@ -178,11 +178,11 @@ user should specify the new wall position in a restart file.
 
 "fix_modify"_fix_modify.html can be used to change the frictional coefficient (xmu), the damping coefficients (gamma_n and gamma_t) and the dampflag.  With the {translate} keyword in conjunction with {off} wall velocities can be set to zero and movement switched off.  The {translate} keyword can also be used to reset the wall velocities to different values.  
 
-This fix returns the wall positions and forces applied by the walls to the atoms in the sample.  These can be accessed by various "output commands"_Section_howto.html#howto_15.  The number of values returned for each granular wall fix command is 5, the first one is the current position of the lower plane (lo), the second the current position of the upper plane (hi), and the third, fourth and fifth the values of the {total} force applied by {both} walls to the atoms in the Cartesian x, y and z directions respectively.
+This fix returns the wall positions and forces applied by the walls to the atoms in the sample.  These can be accessed by various "output commands"_Howto_output.html. The number of values returned for each granular wall fix command is 5, the first one is the current position of the lower plane (lo), the second the current position of the upper plane (hi), and the third, fourth and fifth the values of the {total} force applied by {both} walls to the atoms in the Cartesian x, y and z directions respectively.
 
 None of the "fix_modify"_fix_modify.html options are relevant to this
 fix.  No global or per-atom quantities are stored by this fix for
-access by various "output commands"_Howto_output.html.  No parameter
+access by various "output commands"_Howto_output.html. No parameter
 of this fix can be used with the {start/stop} keywords of the
 "run"_run.html command.  This fix is not invoked during "energy
 minimization"_minimize.html.

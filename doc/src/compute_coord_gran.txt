@@ -2,7 +2,7 @@
 
 :link(lws,http://lammps.sandia.gov)
 :link(ld,Manual.html)
-:link(lc,Section_commands.html#comm)
+:link(lc,Commands_all.html)
 
 :line
 
@@ -76,9 +76,7 @@ If single {type1} keyword is specified (or if none are specified),
 this compute calculates a per-atom vector.  If multiple {typeN}
 keywords are specified, this compute calculates a per-atom array, with
 N columns.  These values can be accessed by any command that uses
-per-atom values from a compute as input.  See "Section_howto
-15"_Section_howto.html#howto_15 for an overview of LAMMPS output
-options.
+per-atom values from a compute as input.  See the "Howto output"_Howto_output.html doc page for an overview of LAMMPS output options.
 
 The per-atom vector or array values will be a number >= 0.0, as
 explained above.
