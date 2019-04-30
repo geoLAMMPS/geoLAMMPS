@@ -453,10 +453,10 @@ void PairGranShmHistory::settings(int narg, char **arg)
 
 /* ---------------------------------------------------------------------- */
 
-double PairGranShmHistory::single(int i, int j, int itype, int jtype,
-                                    double rsq,
-                                    double factor_coul, double factor_lj,
-                                    double &fforce)
+double PairGranShmHistory::single(int i, int j, int /*itype*/, int /*jtype*/,
+				  double rsq,
+				  double /*factor_coul*/, double /*factor_lj*/,
+				  double &fforce)
 {
   /*~ Since the shear forces are stored in shear, they do
     not need to be recalculated [KH - 13 December 2012]*/

@@ -981,9 +981,9 @@ void PairGranCMDHistory::settings(int narg, char **arg)
 
 /* ---------------------------------------------------------------------- */
 
-double PairGranCMDHistory::single(int i, int j, int itype, int jtype,
+double PairGranCMDHistory::single(int i, int j, int /*itype*/, int /*jtype*/,
 				  double rsq,
-				  double factor_coul, double factor_lj,
+				  double /*factor_coul*/, double /*factor_lj*/,
 				  double &fforce)
 {
   /*~ This is more straightforward than in the other granular 

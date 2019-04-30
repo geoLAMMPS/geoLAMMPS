@@ -566,7 +566,7 @@ void FixWallGran::setup(int vflag)
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::post_force(int /*vflag*/)
+void FixWallGran::post_force(int vflag)
 {
   // virial setup
 
