@@ -61,8 +61,7 @@ void PairGranHMDHistory::compute(int eflag, int vflag)
   int *touch,**firsttouch;
   double *shear,*allshear,**firstshear;
 
-  if (eflag || vflag) ev_setup(eflag,vflag);
-  else evflag = vflag_fdotr = 0;
+  ev_init(eflag,vflag);
 
   int shearupdate = 1;
   if (update->setupflag) shearupdate = 0;
