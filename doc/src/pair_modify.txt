@@ -143,6 +143,12 @@ to zero whereas if {post_limit_index} == 1, it is held constant at
 the limiting value. The latter is always adopted for twisting 
 resistance because of its frictional nature.
 
+WARNING: SINCE EXTRA PER-CONTACT QUANTITIES ARE STORED WHEN
+ROLLING/TWISTING RESISTANCE IS ACTIVE, ROLLING/TWISTING RESISTANCE
+CANNOT BE ENABLED PART-WAY THROUGH A SIMULATION; IT MUST BE ACTIVE
+FROM THE START OF THE SIMULATION (TYPICALLY A CLOUD OF NON-CONTACTING
+PARTICLES).
+
 The {trace_energy} keyword must be specified if it is desired to
 write out per-contact energy terms during a simulation as described in
 "compute_energy_gran"_compute_energy_gran.html.

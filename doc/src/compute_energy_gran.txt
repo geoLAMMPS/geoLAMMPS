@@ -44,6 +44,11 @@ and/or {volumetric} and/or {distortional} work terms are listed
 among the energy terms, a helper fix, FixEnergyBoundary,
 is implicitly created in the code.
 
+WARNING: SINCE EXTRA PER-CONTACT QUANTITIES ARE STORED WHEN ENERGY
+TRACING IS ACTIVE, ENERGY TRACING CANNOT BE ENABLED PART-WAY THROUGH
+A SIMULATION; IT MUST BE ACTIVE FROM THE START OF THE SIMULATION
+(TYPICALLY A CLOUD OF NON-CONTACTING PARTICLES).
+
 Distortional and volumetric work are subdivisions of the total
 boundary work. See, for example, Eq. 1.33 (p.21) of 'Soil Behaviour
 and Critical State Soil Mechanics' by David Muir Wood (1990).
