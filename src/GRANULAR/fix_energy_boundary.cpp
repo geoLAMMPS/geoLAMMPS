@@ -27,7 +27,7 @@
 #include "compute.h"
 #include "comm.h"
 #include "error.h"
-#include "fix_wall_gran.h"  // added to consider wall positions [MO - 20 Aug 2015]
+#include "fix_wall_gran_oldstyle.h"  // added to consider wall positions [MO - 20 Aug 2015]
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -129,7 +129,7 @@ void FixEnergyBoundary::setup(int vflag)
   wtranslate = 0;
   wscontrol = 0;
   for (int i = 0; i < modify->nfix; i++) {
-    if (strcmp(modify->fix[i]->style,"wall/gran") == 0) {
+    if (strcmp(modify->fix[i]->style,"wall/gran/oldstyle") == 0) {
       wallactive = i;  
       wiggle     += *((int *) modify->fix[wallactive]->extract("wiggle",dim));
       wtranslate += *((int *) modify->fix[wallactive]->extract("wtranslate",dim)); 	          
@@ -177,10 +177,10 @@ void FixEnergyBoundary::end_of_step()
     double w_ierates[3];
     w_ierates[0] = w_ierates[1] = w_ierates[2] = 0.0;
     double big = 1.0e19;      
-    // fetch the updated true strain rate from fix/wall/gran [MO 20 Aug 2015]
+    // fetch the updated true strain rate from fix/wall/gran/oldstyle [MO 20 Aug 2015]
     double w_ierates_sum = 0.0;        
     for (int i = 0; i < modify->nfix; i++) {
-      if (strcmp(modify->fix[i]->style,"wall/gran") == 0 &&
+      if (strcmp(modify->fix[i]->style,"wall/gran/oldstyle") == 0 &&
 	  (*((int *) modify->fix[i]->extract("wscontrol",dim)))) {
 	double wall_hi_i = *((double *) modify->fix[i]->extract("hi",dim));
 	double wall_lo_i = *((double *) modify->fix[i]->extract("lo",dim));
@@ -238,7 +238,7 @@ void FixEnergyBoundary::end_of_step()
   // Include the work done by wiggle commnad [MO - 21 Aug 2015]
   if (wiggle > 0) { 
     for (int i = 0; i < modify->nfix; i++) {
-      if (strcmp(modify->fix[i]->style,"wall/gran") == 0 &&
+      if (strcmp(modify->fix[i]->style,"wall/gran/oldstyle") == 0 &&
 	  (*((int *) modify->fix[i]->extract("wiggle",dim)))) {
 	// this should not be active for stresscontrol command
 	double velwall = *((double *) modify->fix[i]->extract("velwall",dim));

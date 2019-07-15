@@ -278,7 +278,7 @@ void FixCrushing::init()
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
 
-  if (force->pair_match("gran/hertz",0) || force->pair_match("gran/shm",0)) {
+  if (force->pair_match("gran/hertz/history/oldstyle",1) || force->pair_match("gran/shm",0)) {
     for (int i = 0; i < nlocal; i++)
       if (mask[i] & groupbit)
 	if (cparams[i][0] > -1.0*SMALL || reallocateflag) {

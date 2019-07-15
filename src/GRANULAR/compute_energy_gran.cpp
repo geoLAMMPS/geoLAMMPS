@@ -201,13 +201,13 @@ double ComputeEnergyGran::pair_extract(const char *str)
     wallactive stores number of walls present [KH - 25 July 2014]*/
   if (!wallcheck) {
     for (int i = 0; i < modify->nfix; i++)
-      if (strcmp(modify->fix[i]->style,"wall/gran") == 0) wallactive++;
+      if (strcmp(modify->fix[i]->style,"wall/gran/oldstyle") == 0) wallactive++;
     wallcheck = 1;
   }
 
   if (wallactive > 0) //~ There is at least one wall
     for (int i = 0; i < modify->nfix; i++)
-      if (strcmp(modify->fix[i]->style,"wall/gran") == 0) {
+      if (strcmp(modify->fix[i]->style,"wall/gran/oldstyle") == 0) {
 	singleproc += *((double *) modify->fix[i]->extract(str,dim));
 	wallsfound++;
 	if (wallactive == wallsfound) break;

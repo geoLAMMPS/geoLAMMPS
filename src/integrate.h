@@ -22,7 +22,7 @@ class Integrate : protected Pointers {
   friend class FixMultistress; //~ Added to allow access to vflag [KH - 12 December 2012]
   friend class FixCrushing; //~ Ditto [KH - 15 May 2013]
   friend class FixOldOmega; //~ And again [KH - 24 October 2013]
-  friend class FixWallGran; //~ Added for FixWallGran [KH - 26 May 2017]
+  friend class FixWallGranOldstyle; //~ Added for FixWallGranOldstyle [KH - 26 May 2017]
 
 public:
   Integrate(class LAMMPS *, int, char **);

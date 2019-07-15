@@ -3349,7 +3349,7 @@ double FixWallGranOldstyle::memory_usage()
 
 void FixWallGranOldstyle::grow_arrays(int nmax)
 {
-  if (history) memory->grow(shearone,nmax,sheardim,"fix_wall_gran:shearone");
+  if (history) memory->grow(shearone,nmax,sheardim,"fix_wall_gran_oldstyle:shearone");
 }
 
 /* ----------------------------------------------------------------------
@@ -3668,8 +3668,8 @@ double FixWallGranOldstyle::compute_vector(int n)
   if (n == 5) return wcoordnos_all[0]; // added to output coordination number of wall [MO - 12 March 2015]
   // only sum across procs one time?? //if (eflag == 0) {??
   MPI_Allreduce(fwall,fwall_all,3,MPI_DOUBLE,MPI_SUM,world);
-  if (update->ntimestep == time_origin) error->warning(FLERR,"Force output by fix_wall_gran not computed properly");
-  if (n>5) error->all(FLERR,"Illegal fix_wall_gran output"); // previously n>4 [MO - 12 March 2015]
+  if (update->ntimestep == time_origin) error->warning(FLERR,"Force output by fix_wall_gran_oldstyle not computed properly");
+  if (n>5) error->all(FLERR,"Illegal fix_wall_gran_oldstyle output"); // previously n>4 [MO - 12 March 2015]
   return fwall_all[n-2];
 }
 

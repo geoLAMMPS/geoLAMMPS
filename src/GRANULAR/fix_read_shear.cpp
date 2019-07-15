@@ -59,10 +59,10 @@ FixReadShear::FixReadShear(LAMMPS *lmp, int narg, char **arg) :
     arrays in pairstyle using pair->extract [KH - 6 February 2014]*/
   Pair *pair;
 
-  if (force->pair_match("gran/hooke/history",1)) 
-    pair = force->pair_match("gran/hooke/history",1);
-  else if (force->pair_match("gran/hertz/history",1))
-    pair = force->pair_match("gran/hertz/history",1);
+  if (force->pair_match("gran/hooke/history/oldstyle",1)) 
+    pair = force->pair_match("gran/hooke/history/oldstyle",1);
+  else if (force->pair_match("gran/hertz/history/oldstyle",1))
+    pair = force->pair_match("gran/hertz/history/oldstyle",1);
   else if (force->pair_match("gran/shm/history",1))
     pair = force->pair_match("gran/shm/history",1);
   else if (force->pair_match("gran/CM/history",1))
@@ -160,10 +160,10 @@ void FixReadShear::setup_pre_force(int vflag)
   //~ Gain access to arrays in pairstyle using pair->extract
   Pair *pair;
 
-  if (force->pair_match("gran/hooke/history",1)) 
-    pair = force->pair_match("gran/hooke/history",1);
-  else if (force->pair_match("gran/hertz/history",1))
-    pair = force->pair_match("gran/hertz/history",1);
+  if (force->pair_match("gran/hooke/history/oldstyle",1)) 
+    pair = force->pair_match("gran/hooke/history/oldstyle",1);
+  else if (force->pair_match("gran/hertz/history/oldstyle",1))
+    pair = force->pair_match("gran/hertz/history/oldstyle",1);
   else if (force->pair_match("gran/shm/history",1))
     pair = force->pair_match("gran/shm/history",1);
   else if (force->pair_match("gran/CM/history",1))

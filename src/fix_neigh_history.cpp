@@ -412,7 +412,7 @@ void FixNeighHistory::pre_exchange_newton()
 
 	/*~ Force signs of traced energy terms to always be
 	  positive [KH - 23 May 2017]*/
-	if (dnum == 7 || dnum == 22) //~ hooke/hertz + history
+	if (dnum == 7 || dnum == 22) //~ hooke/hertz + history/oldstyle
 	  for (n = 3; n < 7; n++) jvalues[n] = onevalues[n];
 	else if (dnum == 8 || dnum == 23 || dnum == 28) //~ shm
 	  for (n = 4; n < 8; n++) jvalues[n] = onevalues[n];
@@ -535,7 +535,7 @@ void FixNeighHistory::pre_exchange_no_newton()
 
 	  /*~ Force signs of traced energy terms to always be
 	    positive [KH - 23 May 2017]*/
-	  if (dnum == 7 || dnum == 22) //~ hooke/hertz + history
+	  if (dnum == 7 || dnum == 22) //~ hooke/hertz + history/oldstyle
 	    for (n = 3; n < 7; n++) jvalues[n] = onevalues[n];
 	  else if (dnum == 8 || dnum == 23 || dnum == 28) //~ shm
 	    for (n = 4; n < 8; n++) jvalues[n] = onevalues[n];
