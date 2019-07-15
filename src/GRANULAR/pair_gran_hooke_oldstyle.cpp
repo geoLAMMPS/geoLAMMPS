@@ -18,7 +18,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
-#include "pair_gran_hooke.h"
+#include "pair_gran_hooke_oldstyle.h"
 #include "atom.h"
 #include "force.h"
 #include "fix.h"
@@ -34,7 +34,7 @@ using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-PairGranHooke::PairGranHooke(LAMMPS *lmp) : PairGranHookeHistory(lmp)
+PairGranHookeOldstyle::PairGranHookeOldstyle(LAMMPS *lmp) : PairGranHookeHistoryOldstyle(lmp)
 {
   no_virial_fdotr_compute = 0;
   history = 0;
@@ -47,7 +47,7 @@ PairGranHooke::PairGranHooke(LAMMPS *lmp) : PairGranHookeHistory(lmp)
 
 /* ---------------------------------------------------------------------- */
 
-void PairGranHooke::compute(int eflag, int vflag)
+void PairGranHookeOldstyle::compute(int eflag, int vflag)
 {
   int i,j,ii,jj,inum,jnum;
   double xtmp,ytmp,ztmp,delx,dely,delz,fx,fy,fz;
@@ -261,7 +261,7 @@ void PairGranHooke::compute(int eflag, int vflag)
 
 /* ---------------------------------------------------------------------- */
 
-double PairGranHooke::single(int i, int j, int /*itype*/, int /*jtype*/, double rsq,
+double PairGranHookeOldstyle::single(int i, int j, int /*itype*/, int /*jtype*/, double rsq,
                              double /*factor_coul*/, double /*factor_lj*/,
                              double &fforce)
 {

@@ -13,20 +13,20 @@
 
 #ifdef PAIR_CLASS
 
-PairStyle(gran/hertz/history,PairGranHertzHistory)
+PairStyle(gran/hertz/history/oldstyle,PairGranHertzHistoryOldstyle)
 
 #else
 
-#ifndef LMP_PAIR_GRAN_HERTZ_HISTORY_H
-#define LMP_PAIR_GRAN_HERTZ_HISTORY_H
+#ifndef LMP_PAIR_GRAN_HERTZ_HISTORY_OLDSTYLE_H
+#define LMP_PAIR_GRAN_HERTZ_HISTORY_OLDSTYLE_H
 
-#include "pair_gran_hooke_history.h"
+#include "pair_gran_hooke_history_oldstyle.h"
 
 namespace LAMMPS_NS {
 
-class PairGranHertzHistory : public PairGranHookeHistory {
+class PairGranHertzHistoryOldstyle : public PairGranHookeHistoryOldstyle {
  public:
-  PairGranHertzHistory(class LAMMPS *);
+  PairGranHertzHistoryOldstyle(class LAMMPS *);
   virtual void compute(int, int);
   void settings(int, char **);
   double single(int, int, int, int, double, double, double, double &);

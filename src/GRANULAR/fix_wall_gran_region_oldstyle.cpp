@@ -18,7 +18,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
-#include "fix_wall_gran_region.h"
+#include "fix_wall_gran_region_oldstyle.h"
 #include "region.h"
 #include "atom.h"
 #include "domain.h"
@@ -40,7 +40,7 @@ using namespace LAMMPS_NS;
 using namespace FixConst;
 using namespace MathConst;
 
-// same as FixWallGran
+// same as FixWallGranOldstyle
 
 enum{HOOKE,HOOKE_HISTORY,HERTZ_HISTORY,BONDED_HISTORY,SHM_HISTORY};
 
@@ -48,8 +48,8 @@ enum{HOOKE,HOOKE_HISTORY,HERTZ_HISTORY,BONDED_HISTORY,SHM_HISTORY};
 
 /* ---------------------------------------------------------------------- */
 
-FixWallGranRegion::FixWallGranRegion(LAMMPS *lmp, int narg, char **arg) :
-  FixWallGran(lmp, narg, arg), region(NULL), region_style(NULL), ncontact(NULL),
+FixWallGranRegionOldstyle::FixWallGranRegionOldstyle(LAMMPS *lmp, int narg, char **arg) :
+  FixWallGranOldstyle(lmp, narg, arg), region(NULL), region_style(NULL), ncontact(NULL),
   walls(NULL), shearmany(NULL), c2r(NULL)
 {
   restart_global = 1;
@@ -57,7 +57,7 @@ FixWallGranRegion::FixWallGranRegion(LAMMPS *lmp, int narg, char **arg) :
 
   int iregion = domain->find_region(idregion);
   if (iregion == -1)
-    error->all(FLERR,"Region ID for fix wall/gran/region does not exist");
+    error->all(FLERR,"Region ID for fix wall/gran/region/oldstyle does not exist");
   region = domain->regions[iregion];
   region_style = new char[strlen(region->style)+1];
   strcpy(region_style,region->style);
@@ -88,7 +88,7 @@ FixWallGranRegion::FixWallGranRegion(LAMMPS *lmp, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-FixWallGranRegion::~FixWallGranRegion()
+FixWallGranRegionOldstyle::~FixWallGranRegionOldstyle()
 {
   delete [] c2r;
   delete [] region_style;
@@ -100,13 +100,13 @@ FixWallGranRegion::~FixWallGranRegion()
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGranRegion::init()
+void FixWallGranRegionOldstyle::init()
 {
-  FixWallGran::init();
+  FixWallGranOldstyle::init();
 
   int iregion = domain->find_region(idregion);
   if (iregion == -1)
-    error->all(FLERR,"Region ID for fix wall/gran/region does not exist");
+    error->all(FLERR,"Region ID for fix wall/gran/region/oldstyle does not exist");
   region = domain->regions[iregion];
 
   // check if region properties changed between runs
@@ -133,9 +133,9 @@ void FixWallGranRegion::init()
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGranRegion::post_force(int vflag)
+void FixWallGranRegionOldstyle::post_force(int vflag)
 {
-  //~ Mirror from FixWallGran [KH - 29 May 2017]
+  //~ Mirror from FixWallGranOldstyle [KH - 29 May 2017]
   // virial setup
   //if (vflag) v_setup(vflag);  
   if (vflag > 0) v_setup(vflag);   // modified [MO - 28 December 2017] 
@@ -162,7 +162,7 @@ void FixWallGranRegion::post_force(int vflag)
     if (atom->nmax > nmax) {
       memory->destroy(mass_rigid);
       nmax = atom->nmax;
-      memory->create(mass_rigid,nmax,"wall/gran:mass_rigid");
+      memory->create(mass_rigid,nmax,"wall/gran/oldstyle:mass_rigid");
     }
     int nlocal = atom->nlocal;
     for (i = 0; i < nlocal; i++) {
@@ -174,7 +174,7 @@ void FixWallGranRegion::post_force(int vflag)
   int regiondynamic = region->dynamic_check();
   if (!regiondynamic) vwall[0] = vwall[1] = vwall[2] = 0.0;
 
-  //~ Mirror the following lines from FixWallGran [KH - 29 May 2017]
+  //~ Mirror the following lines from FixWallGranOldstyle [KH - 29 May 2017]
   // if wiggle or shear, set wall position and velocity accordingly
   // if wtranslate lo and hi track the wall position and vwall is set in the constructor
 
@@ -232,7 +232,7 @@ void FixWallGranRegion::post_force(int vflag)
 
       nc = region->surface(x[i][0],x[i][1],x[i][2],radius[i]);
       if (nc > tmax)
-        error->one(FLERR,"Too many wall/gran/region contacts for one particle");
+        error->one(FLERR,"Too many wall/gran/region/oldstyle contacts for one particle");
 
       // shear history maintenance
       // update ncontact,walls,shear2many for particle I
@@ -280,7 +280,7 @@ void FixWallGranRegion::post_force(int vflag)
         meff = rmass[i];
         if (fix_rigid && mass_rigid[i] > 0.0) meff = mass_rigid[i];
 
-	wcoordnos[0] += 1.0; // accumulate coordination number [MO - 12 March 2015]; mirrored from FixWallGran [KH - 27 May 2017]
+	wcoordnos[0] += 1.0; // accumulate coordination number [MO - 12 March 2015]; mirrored from FixWallGranOldstyle [KH - 27 May 2017]
 
         // invoke sphere/wall interaction
 
@@ -309,7 +309,7 @@ void FixWallGranRegion::post_force(int vflag)
     }
   }
 
-  //~ Mirrored from FixWallGran [KH - 27 May 2017]
+  //~ Mirrored from FixWallGranOldstyle [KH - 27 May 2017]
   if (wscontrol) { // velscontrol and move_wall are called here [MO - 28 Aug 2015]
     velscontrol(); 
     if (shearupdate) move_wall(); // move_wall will update hi & lo
@@ -324,7 +324,7 @@ void FixWallGranRegion::post_force(int vflag)
    also set c2r[i] = index of Ith contact in region list of contacts
 ------------------------------------------------------------------------- */
 
-void FixWallGranRegion::update_contacts(int i, int nc)
+void FixWallGranRegionOldstyle::update_contacts(int i, int nc)
 {
   int j,m,iold,nold,ilast,inew,iadd,iwall;
 
@@ -373,7 +373,7 @@ void FixWallGranRegion::update_contacts(int i, int nc)
    memory usage of local atom-based arrays
 ------------------------------------------------------------------------- */
 
-double FixWallGranRegion::memory_usage()
+double FixWallGranRegionOldstyle::memory_usage()
 {
   int nmax = atom->nmax;
   double bytes = 0.0;
@@ -390,12 +390,12 @@ double FixWallGranRegion::memory_usage()
    allocate local atom-based arrays
 ------------------------------------------------------------------------- */
 
-void FixWallGranRegion::grow_arrays(int nmax)
+void FixWallGranRegionOldstyle::grow_arrays(int nmax)
 {
   if (history) {
-    memory->grow(ncontact,nmax,"fix_wall_gran:ncontact");
-    memory->grow(walls,nmax,tmax,"fix_wall_gran:walls");
-    memory->grow(shearmany,nmax,tmax,sheardim,"fix_wall_gran:shearmany");
+    memory->grow(ncontact,nmax,"fix_wall_gran_oldstyle:ncontact");
+    memory->grow(walls,nmax,tmax,"fix_wall_gran_oldstyle:walls");
+    memory->grow(shearmany,nmax,tmax,sheardim,"fix_wall_gran_oldstyle:shearmany");
   }
 }
 
@@ -403,7 +403,7 @@ void FixWallGranRegion::grow_arrays(int nmax)
    copy values within local atom-based arrays
 ------------------------------------------------------------------------- */
 
-void FixWallGranRegion::copy_arrays(int i, int j, int /*delflag*/)
+void FixWallGranRegionOldstyle::copy_arrays(int i, int j, int /*delflag*/)
 {
   int m,n,iwall;
 
@@ -423,7 +423,7 @@ void FixWallGranRegion::copy_arrays(int i, int j, int /*delflag*/)
    initialize one atom's array values, called when atom is created
 ------------------------------------------------------------------------- */
 
-void FixWallGranRegion::set_arrays(int i)
+void FixWallGranRegionOldstyle::set_arrays(int i)
 {
   if (!history) return;
   ncontact[i] = 0;
@@ -433,7 +433,7 @@ void FixWallGranRegion::set_arrays(int i)
    pack values in local atom-based arrays for exchange with another proc
 ------------------------------------------------------------------------- */
 
-int FixWallGranRegion::pack_exchange(int i, double *buf)
+int FixWallGranRegionOldstyle::pack_exchange(int i, double *buf)
 {
   int m;
 
@@ -456,7 +456,7 @@ int FixWallGranRegion::pack_exchange(int i, double *buf)
    unpack values into local atom-based arrays after exchange
 ------------------------------------------------------------------------- */
 
-int FixWallGranRegion::unpack_exchange(int nlocal, double *buf)
+int FixWallGranRegionOldstyle::unpack_exchange(int nlocal, double *buf)
 {
   int m;
 
@@ -478,7 +478,7 @@ int FixWallGranRegion::unpack_exchange(int nlocal, double *buf)
    pack values in local atom-based arrays for restart file
 ------------------------------------------------------------------------- */
 
-int FixWallGranRegion::pack_restart(int i, double *buf)
+int FixWallGranRegionOldstyle::pack_restart(int i, double *buf)
 {
   int m;
 
@@ -501,7 +501,7 @@ int FixWallGranRegion::pack_restart(int i, double *buf)
    unpack values from atom->extra array to restart the fix
 ------------------------------------------------------------------------- */
 
-void FixWallGranRegion::unpack_restart(int nlocal, int nth)
+void FixWallGranRegionOldstyle::unpack_restart(int nlocal, int nth)
 {
   int k;
 
@@ -527,7 +527,7 @@ void FixWallGranRegion::unpack_restart(int nlocal, int nth)
    maxsize of any atom's restart data
 ------------------------------------------------------------------------- */
 
-int FixWallGranRegion::maxsize_restart()
+int FixWallGranRegionOldstyle::maxsize_restart()
 {
   if (!history) return 0;
   return 2 + tmax*(sheardim+1);
@@ -537,7 +537,7 @@ int FixWallGranRegion::maxsize_restart()
    size of atom nlocal's restart data
 ------------------------------------------------------------------------- */
 
-int FixWallGranRegion::size_restart(int nlocal)
+int FixWallGranRegionOldstyle::size_restart(int nlocal)
 {
   if (!history) return 0;
   return 2 + ncontact[nlocal]*(sheardim+1);
@@ -547,7 +547,7 @@ int FixWallGranRegion::size_restart(int nlocal)
    pack entire state of Fix into one write
 ------------------------------------------------------------------------- */
 
-void FixWallGranRegion::write_restart(FILE *fp)
+void FixWallGranRegionOldstyle::write_restart(FILE *fp)
 {
   if (comm->me) return;
   int len = 0;
@@ -560,7 +560,7 @@ void FixWallGranRegion::write_restart(FILE *fp)
    use state info from restart file to restart the Fix
 ------------------------------------------------------------------------- */
 
-void FixWallGranRegion::restart(char *buf)
+void FixWallGranRegionOldstyle::restart(char *buf)
 {
   int n = 0;
   if (!region->restart(buf,n)) motion_resetflag = 1;

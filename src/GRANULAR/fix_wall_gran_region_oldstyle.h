@@ -13,21 +13,21 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(wall/gran/region,FixWallGranRegion)
+FixStyle(wall/gran/region/oldstyle,FixWallGranRegionOldstyle)
 
 #else
 
-#ifndef LMP_FIX_WALL_GRAN_REGION_H
-#define LMP_FIX_WALL_GRAN_REGION_H
+#ifndef LMP_FIX_WALL_GRAN_REGION_OLDSTYLE_H
+#define LMP_FIX_WALL_GRAN_REGION_OLDSTYLE_H
 
-#include "fix_wall_gran.h"
+#include "fix_wall_gran_oldstyle.h"
 
 namespace LAMMPS_NS {
 
-class FixWallGranRegion : public FixWallGran {
+class FixWallGranRegionOldstyle : public FixWallGranOldstyle {
  public:
-  FixWallGranRegion(class LAMMPS *, int, char **);
-  ~FixWallGranRegion();
+  FixWallGranRegionOldstyle(class LAMMPS *, int, char **);
+  ~FixWallGranRegionOldstyle();
   void post_force(int);
   void write_restart(FILE *);
   void restart(char* );
@@ -71,7 +71,7 @@ class FixWallGranRegion : public FixWallGran {
 
 /* ERROR/WARNING messages:
 
-E: Region ID for fix wall/gran/region does not exist
+E: Region ID for fix wall/gran/region/oldstyle does not exist
 
 UNDOCUMENTED
 
@@ -83,7 +83,7 @@ W: Region properties for region %s are inconsistent with restart file, resetting
 
 UNDOCUMENTED
 
-E: Too many wall/gran/region contacts for one particle
+E: Too many wall/gran/region/oldstyle contacts for one particle
 
 UNDOCUMENTED
 
@@ -93,7 +93,7 @@ Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
 command-line option when running LAMMPS to see the offending line.
 
-U: Fix wall/gran requires atom style sphere
+U: Fix wall/gran/oldstyle requires atom style sphere
 
 Self-explanatory.
 
@@ -101,19 +101,19 @@ U: Cannot use wall in periodic dimension
 
 Self-explanatory.
 
-U: Cannot wiggle and shear fix wall/gran
+U: Cannot wiggle and shear fix wall/gran/oldstyle
 
 Cannot specify both options at the same time.
 
-U: Invalid wiggle direction for fix wall/gran
+U: Invalid wiggle direction for fix wall/gran/oldstyle
 
 Self-explanatory.
 
-U: Invalid shear direction for fix wall/gran
+U: Invalid shear direction for fix wall/gran/oldstyle
 
 Self-explanatory.
 
-U: Fix wall/gran is incompatible with Pair style
+U: Fix wall/gran/oldstyle is incompatible with Pair style
 
 Must use a granular pair style to define the parameters needed for
 this fix.

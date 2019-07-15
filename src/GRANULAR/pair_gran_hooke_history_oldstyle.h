@@ -13,21 +13,21 @@
 
 #ifdef PAIR_CLASS
 
-PairStyle(gran/hooke/history,PairGranHookeHistory)
+PairStyle(gran/hooke/history/oldstyle,PairGranHookeHistoryOldstyle)
 
 #else
 
-#ifndef LMP_PAIR_GRAN_HOOKE_HISTORY_H
-#define LMP_PAIR_GRAN_HOOKE_HISTORY_H
+#ifndef LMP_PAIR_GRAN_HOOKE_HISTORY_OLDSTYLE_H
+#define LMP_PAIR_GRAN_HOOKE_HISTORY_OLDSTYLE_H
 
 #include "pair.h"
 
 namespace LAMMPS_NS {
 
-class PairGranHookeHistory : public Pair {
+class PairGranHookeHistoryOldstyle : public Pair {
  public:
-  PairGranHookeHistory(class LAMMPS *);
-  virtual ~PairGranHookeHistory();
+  PairGranHookeHistoryOldstyle(class LAMMPS *);
+  virtual ~PairGranHookeHistoryOldstyle();
   virtual void compute(int, int);
   virtual void settings(int, char **);
   void coeff(int, char **);
@@ -58,8 +58,8 @@ class PairGranHookeHistory : public Pair {
   double *onerad_dynamic,*onerad_frozen;
   double *maxrad_dynamic,*maxrad_frozen;
 
-  double Geq,Poiseq,RMSf,Hp; // Added to extract for wall/gran.cpp [MO - 03 April 2015]
-  int Model,THETA1;          // Added to extract for wall/gran.cpp [MO - 12 Sep 2015]
+  double Geq,Poiseq,RMSf,Hp; // Added to extract for wall/gran/oldstyle.cpp [MO - 03 April 2015]
+  int Model,THETA1;          // Added to extract for wall/gran/oldstyle.cpp [MO - 12 Sep 2015]
 
   class FixNeighHistory *fix_history;
 

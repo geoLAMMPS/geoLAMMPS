@@ -19,7 +19,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include "pair_gran_hooke_history.h"
+#include "pair_gran_hooke_history_oldstyle.h"
 #include "atom.h"
 #include "atom_vec.h"
 #include "domain.h"
@@ -44,7 +44,7 @@ using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-PairGranHookeHistory::PairGranHookeHistory(LAMMPS *lmp) : Pair(lmp)
+PairGranHookeHistoryOldstyle::PairGranHookeHistoryOldstyle(LAMMPS *lmp) : Pair(lmp)
 {
   single_enable = 1;
   no_virial_fdotr_compute = 1;
@@ -82,7 +82,7 @@ PairGranHookeHistory::PairGranHookeHistory(LAMMPS *lmp) : Pair(lmp)
 
 /* ---------------------------------------------------------------------- */
 
-PairGranHookeHistory::~PairGranHookeHistory()
+PairGranHookeHistoryOldstyle::~PairGranHookeHistoryOldstyle()
 {
   if (copymode) return;
 
@@ -108,7 +108,7 @@ PairGranHookeHistory::~PairGranHookeHistory()
 
 /* ---------------------------------------------------------------------- */
 
-void PairGranHookeHistory::compute(int eflag, int vflag)
+void PairGranHookeHistoryOldstyle::compute(int eflag, int vflag)
 {
   /*~ This function was modified extensively so that shear force
     is stored in the shear array rather than displacement
@@ -478,7 +478,7 @@ void PairGranHookeHistory::compute(int eflag, int vflag)
    allocate all arrays
 ------------------------------------------------------------------------- */
 
-void PairGranHookeHistory::allocate()
+void PairGranHookeHistoryOldstyle::allocate()
 {
   allocated = 1;
   int n = atom->ntypes;
@@ -500,7 +500,7 @@ void PairGranHookeHistory::allocate()
    global settings
 ------------------------------------------------------------------------- */
 
-void PairGranHookeHistory::settings(int narg, char **arg)
+void PairGranHookeHistoryOldstyle::settings(int narg, char **arg)
 {
   if (narg != 6) error->all(FLERR,"Illegal pair_style command");
 
@@ -525,7 +525,7 @@ void PairGranHookeHistory::settings(int narg, char **arg)
    set coeffs for one or more type pairs
 ------------------------------------------------------------------------- */
 
-void PairGranHookeHistory::coeff(int narg, char **arg)
+void PairGranHookeHistoryOldstyle::coeff(int narg, char **arg)
 {
   if (narg > 2) error->all(FLERR,"Incorrect args for pair coefficients");
   if (!allocated) allocate();
@@ -549,7 +549,7 @@ void PairGranHookeHistory::coeff(int narg, char **arg)
    init specific to this pair style
 ------------------------------------------------------------------------- */
 
-void PairGranHookeHistory::init_style()
+void PairGranHookeHistoryOldstyle::init_style()
 {
   int i;
 
@@ -668,7 +668,7 @@ void PairGranHookeHistory::init_style()
    init for one type pair i,j and corresponding j,i
 ------------------------------------------------------------------------- */
 
-double PairGranHookeHistory::init_one(int i, int j)
+double PairGranHookeHistoryOldstyle::init_one(int i, int j)
 {
   if (!allocated) allocate();
 
@@ -685,7 +685,7 @@ double PairGranHookeHistory::init_one(int i, int j)
   proc 0 writes to restart file
 ------------------------------------------------------------------------- */
 
-void PairGranHookeHistory::write_restart(FILE *fp)
+void PairGranHookeHistoryOldstyle::write_restart(FILE *fp)
 {
   write_restart_settings(fp);
 
@@ -699,7 +699,7 @@ void PairGranHookeHistory::write_restart(FILE *fp)
   proc 0 reads from restart file, bcasts
 ------------------------------------------------------------------------- */
 
-void PairGranHookeHistory::read_restart(FILE *fp)
+void PairGranHookeHistoryOldstyle::read_restart(FILE *fp)
 {
   read_restart_settings(fp);
   allocate();
@@ -717,7 +717,7 @@ void PairGranHookeHistory::read_restart(FILE *fp)
   proc 0 writes to restart file
 ------------------------------------------------------------------------- */
 
-void PairGranHookeHistory::write_restart_settings(FILE *fp)
+void PairGranHookeHistoryOldstyle::write_restart_settings(FILE *fp)
 {
   fwrite(&kn,sizeof(double),1,fp);
   fwrite(&kt,sizeof(double),1,fp);
@@ -737,7 +737,7 @@ void PairGranHookeHistory::write_restart_settings(FILE *fp)
   proc 0 reads from restart file, bcasts
 ------------------------------------------------------------------------- */
 
-void PairGranHookeHistory::read_restart_settings(FILE *fp)
+void PairGranHookeHistoryOldstyle::read_restart_settings(FILE *fp)
 {
   if (comm->me == 0) {
     fread(&kn,sizeof(double),1,fp);
@@ -765,14 +765,14 @@ void PairGranHookeHistory::read_restart_settings(FILE *fp)
 
 /* ---------------------------------------------------------------------- */
 
-void PairGranHookeHistory::reset_dt()
+void PairGranHookeHistoryOldstyle::reset_dt()
 {
   dt = update->dt;
 }
 
 /* ---------------------------------------------------------------------- */
 
-double PairGranHookeHistory::single(int i, int j, int /*itype*/, int /*jtype*/,
+double PairGranHookeHistoryOldstyle::single(int i, int j, int /*itype*/, int /*jtype*/,
                                     double rsq,
                                     double /*factor_coul*/, double /*factor_lj*/,
                                     double &fforce)
@@ -916,7 +916,7 @@ double PairGranHookeHistory::single(int i, int j, int /*itype*/, int /*jtype*/,
 
 /* ---------------------------------------------------------------------- */
 
-int PairGranHookeHistory::pack_forward_comm(int n, int *list, double *buf,
+int PairGranHookeHistoryOldstyle::pack_forward_comm(int n, int *list, double *buf,
                                             int /*pbc_flag*/, int * /*pbc*/)
 {
   int i,j,m;
@@ -931,7 +931,7 @@ int PairGranHookeHistory::pack_forward_comm(int n, int *list, double *buf,
 
 /* ---------------------------------------------------------------------- */
 
-void PairGranHookeHistory::unpack_forward_comm(int n, int first, double *buf)
+void PairGranHookeHistoryOldstyle::unpack_forward_comm(int n, int first, double *buf)
 {
   int i,m,last;
 
@@ -943,7 +943,7 @@ void PairGranHookeHistory::unpack_forward_comm(int n, int first, double *buf)
 
 /* ---------------------------------------------------------------------- */
 
-void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int numshearq, double delx, double dely, double delz, double r, double rinv, double ccel, double maxshear, double effectivekt, double **torque, double *shear, double *dur, double *dus, double *localdM, double *globaldM)
+void PairGranHookeHistoryOldstyle::rolling_resistance(int issingle, int i, int j, int numshearq, double delx, double dely, double delz, double r, double rinv, double ccel, double maxshear, double effectivekt, double **torque, double *shear, double *dur, double *dus, double *localdM, double *globaldM)
 {
   /*~ This rolling resistance model was developed by Xin Huang during
     the summer and autumn of 2013. Note that the last two slots in 'shear'
@@ -1238,7 +1238,7 @@ void PairGranHookeHistory::rolling_resistance(int issingle, int i, int j, int nu
 
 /* -----------------------------------------------------------------------*/
 
-void PairGranHookeHistory::Deresiewicz1954_spin(int issingle, int i, int j, int numshearq, double r, double **torque, double *shear, double *dspin_i, double &dspin_stm, double &spin_stm, double *dM_i, double &dM, double &K_spin, double &theta_r, double &M_limit, double Geq, double Poiseq, double &Dspin_energy, double a, double N)
+void PairGranHookeHistoryOldstyle::Deresiewicz1954_spin(int issingle, int i, int j, int numshearq, double r, double **torque, double *shear, double *dspin_i, double &dspin_stm, double &spin_stm, double *dM_i, double &dM, double &K_spin, double &theta_r, double &M_limit, double Geq, double Poiseq, double &Dspin_energy, double a, double N)
 {
   if (!D_switch) { 
     dspin_i[0] = dspin_i[1] = dspin_i[2] = dspin_stm = spin_stm = dM_i[0] 
@@ -1578,7 +1578,7 @@ void PairGranHookeHistory::Deresiewicz1954_spin(int issingle, int i, int j, int 
 
 /* ---------------------------------------------------------------------- */
 
-void PairGranHookeHistory::add_old_omega_fix()
+void PairGranHookeHistoryOldstyle::add_old_omega_fix()
 {
   //~ Check whether this fix is already present
   int oldomegafix = -1;
@@ -1605,7 +1605,7 @@ void PairGranHookeHistory::add_old_omega_fix()
    memory usage of local atom-based arrays
 ------------------------------------------------------------------------- */
 
-double PairGranHookeHistory::memory_usage()
+double PairGranHookeHistoryOldstyle::memory_usage()
 {
   double bytes = nmax * sizeof(double);
   return bytes;
@@ -1617,7 +1617,7 @@ double PairGranHookeHistory::memory_usage()
    Now used to conveniently access various useful pair quantities externally
 ------------------------------------------------------------------------- */
 
-void *PairGranHookeHistory::extract(const char *str, int &dim)
+void *PairGranHookeHistoryOldstyle::extract(const char *str, int &dim)
 {
   dim = 0;  
   if (strcmp(str,"history") == 0) return (void *) fix_history;

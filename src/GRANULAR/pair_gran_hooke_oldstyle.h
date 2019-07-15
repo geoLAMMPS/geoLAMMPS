@@ -13,20 +13,20 @@
 
 #ifdef PAIR_CLASS
 
-PairStyle(gran/hooke,PairGranHooke)
+PairStyle(gran/hooke/oldstyle,PairGranHookeOldstyle)
 
 #else
 
-#ifndef LMP_PAIR_GRAN_HOOKE_H
-#define LMP_PAIR_GRAN_HOOKE_H
+#ifndef LMP_PAIR_GRAN_HOOKE_OLDSTYLE_H
+#define LMP_PAIR_GRAN_HOOKE_OLDSTYLE_H
 
-#include "pair_gran_hooke_history.h"
+#include "pair_gran_hooke_history_oldstyle.h"
 
 namespace LAMMPS_NS {
 
-class PairGranHooke : public PairGranHookeHistory {
+class PairGranHookeOldstyle : public PairGranHookeHistoryOldstyle {
  public:
-  PairGranHooke(class LAMMPS *);
+  PairGranHookeOldstyle(class LAMMPS *);
   virtual void compute(int, int);
   double single(int, int, int, int, double, double, double, double &);
 };

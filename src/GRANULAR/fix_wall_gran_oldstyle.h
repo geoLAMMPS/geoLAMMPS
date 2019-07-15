@@ -13,21 +13,21 @@
 
 #ifdef FIX_CLASS
 
-FixStyle(wall/gran,FixWallGran)
+FixStyle(wall/gran/oldstyle,FixWallGranOldstyle)
 
 #else
 
-#ifndef LMP_FIX_WALL_GRAN_H
-#define LMP_FIX_WALL_GRAN_H
+#ifndef LMP_FIX_WALL_GRAN_OLDSTYLE_H
+#define LMP_FIX_WALL_GRAN_OLDSTYLE_H
 
 #include "fix.h"
 
 namespace LAMMPS_NS {
 
-class FixWallGran : public Fix {
+class FixWallGranOldstyle : public Fix {
  public:
-  FixWallGran(class LAMMPS *, int, char **);
-  virtual ~FixWallGran();
+  FixWallGranOldstyle(class LAMMPS *, int, char **);
+  virtual ~FixWallGranOldstyle();
   int setmask();
   virtual void init();
   void setup(int);
@@ -149,11 +149,11 @@ Self-explanatory.  Check the input script syntax and compare to the
 documentation for the command.  You can use -echo screen as a
 command-line option when running LAMMPS to see the offending line.
 
-E: Fix wall/gran requires atom style sphere
+E: Fix wall/gran/oldstyle requires atom style sphere
 
 Self-explanatory.
 
-E: Invalid fix wall/gran interaction style
+E: Invalid fix wall/gran/oldstyle interaction style
 
 UNDOCUMENTED
 
@@ -161,23 +161,23 @@ E: Cannot use wall in periodic dimension
 
 Self-explanatory.
 
-E: Cannot wiggle and shear fix wall/gran
+E: Cannot wiggle and shear fix wall/gran/oldstyle
 
 Cannot specify both options at the same time.
 
-E: Invalid wiggle direction for fix wall/gran
+E: Invalid wiggle direction for fix wall/gran/oldstyle
 
 Self-explanatory.
 
-E: Invalid shear direction for fix wall/gran
+E: Invalid shear direction for fix wall/gran/oldstyle
 
 Self-explanatory.
 
-E: Cannot wiggle or shear with fix wall/gran/region
+E: Cannot wiggle or shear with fix wall/gran/region/oldstyle
 
 UNDOCUMENTED
 
-U: Fix wall/gran is incompatible with Pair style
+U: Fix wall/gran/oldstyle is incompatible with Pair style
 
 Must use a granular pair style to define the parameters needed for
 this fix.

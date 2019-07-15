@@ -19,7 +19,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
-#include "fix_wall_gran.h"
+#include "fix_wall_gran_oldstyle.h"
 #include "atom.h"
 #include "domain.h"
 #include "update.h"
@@ -57,14 +57,14 @@ enum{NONE,CONSTANT,EQUAL};
 
 /* ---------------------------------------------------------------------- */
 
-FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
+FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg), idregion(NULL), shearone(NULL), fix_rigid(NULL), mass_rigid(NULL)
 {
   virial_flag = 1; // this fix can contribute to compute stress/atom
-  if (narg < 4) error->all(FLERR,"Illegal fix wall/gran command");
+  if (narg < 4) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
 
   if (!atom->sphere_flag)
-    error->all(FLERR,"Fix wall/gran requires atom style sphere");
+    error->all(FLERR,"Fix wall/gran/oldstyle requires atom style sphere");
 
   //~ Global information is saved to restart file [KH - 20 February 2014]
   restart_global = 1;
@@ -75,15 +75,15 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   // set interaction style
   // disable bonded/history option for now
 
-  if (strcmp(arg[3],"hooke") == 0) pairstyle = HOOKE;
-  else if (strcmp(arg[3],"hooke/history") == 0) pairstyle = HOOKE_HISTORY;
-  else if (strcmp(arg[3],"hertz/history") == 0) pairstyle = HERTZ_HISTORY;
+  if (strcmp(arg[3],"hooke/oldstyle") == 0) pairstyle = HOOKE;
+  else if (strcmp(arg[3],"hooke/history/oldstyle") == 0) pairstyle = HOOKE_HISTORY;
+  else if (strcmp(arg[3],"hertz/history/oldstyle") == 0) pairstyle = HERTZ_HISTORY;
   else if (strcmp(arg[3],"shm/history") == 0) pairstyle = SHM_HISTORY;
   else if (strcmp(arg[3],"HMD/history") == 0) pairstyle = HMD_HISTORY;
   else if (strcmp(arg[3],"CM/history") == 0) pairstyle = CM_HISTORY;
   else if (strcmp(arg[3],"CMD/history") == 0) pairstyle = CMD_HISTORY;
   //else if (strcmp(arg[3],"bonded/history") == 0) pairstyle = BONDED_HISTORY;
-  else error->all(FLERR,"Invalid fix wall/gran interaction style");
+  else error->all(FLERR,"Invalid fix wall/gran/oldstyle interaction style");
 
   history = restart_peratom = 1;
   if (pairstyle == HOOKE) history = restart_peratom = 0;
@@ -167,7 +167,7 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     dampflag = 0;
     iarg = 11; //~ Change number of args for CMD pairstyle [MO - 12 Sep 2014]
   } else if (pairstyle == BONDED_HISTORY) {
-    if (narg < 10) error->all(FLERR,"Illegal fix wall/gran command");
+    if (narg < 10) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
 
     E = force->numeric(FLERR,arg[4]);
     G = force->numeric(FLERR,arg[5]);
@@ -197,7 +197,7 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   
   if (kn < 0.0 || kt < 0.0 || gamman < 0.0 || gammat < 0.0 ||
       xmu < 0.0 || xmu > 10000.0 || dampflag < 0 || dampflag > 1)
-    error->all(FLERR,"Illegal fix wall/gran command");
+    error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
 
   // convert Kn and Kt from pressure units to force/distance^2 if Hertzian
 
@@ -211,7 +211,7 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   idregion = NULL;
 
   if (strcmp(arg[iarg],"xplane") == 0) {
-    if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/gran command");
+    if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
     wallstyle = XPLANE;
     if (strcmp(arg[iarg+1],"NULL") == 0) lo = -BIG;
     else lo = force->numeric(FLERR,arg[iarg+1]);
@@ -219,7 +219,7 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     else hi = force->numeric(FLERR,arg[iarg+2]);
     iarg += 3;
   } else if (strcmp(arg[iarg],"yplane") == 0) {
-    if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/gran command");
+    if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
     wallstyle = YPLANE;
     if (strcmp(arg[iarg+1],"NULL") == 0) lo = -BIG;
     else lo = force->numeric(FLERR,arg[iarg+1]);
@@ -227,7 +227,7 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     else hi = force->numeric(FLERR,arg[iarg+2]);
     iarg += 3;
   } else if (strcmp(arg[iarg],"zplane") == 0) {
-    if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/gran command");
+    if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
     wallstyle = ZPLANE;
     if (strcmp(arg[iarg+1],"NULL") == 0) lo = -BIG;
     else lo = force->numeric(FLERR,arg[iarg+1]);
@@ -235,13 +235,13 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     else hi = force->numeric(FLERR,arg[iarg+2]);
     iarg += 3;
   } else if (strcmp(arg[iarg],"zcylinder") == 0) {
-    if (narg < iarg+2) error->all(FLERR,"Illegal fix wall/gran command");
+    if (narg < iarg+2) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
     wallstyle = ZCYLINDER;
     lo = hi = 0.0;
     cylradius = force->numeric(FLERR,arg[iarg+1]);
     iarg += 2;
   } else if (strcmp(arg[iarg],"region") == 0) {
-    if (narg < iarg+2) error->all(FLERR,"Illegal fix wall/gran command");
+    if (narg < iarg+2) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
     wallstyle = REGION;
     int n = strlen(arg[iarg+1]) + 1;
     idregion = new char[n];
@@ -261,26 +261,26 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
 
   while (iarg < narg) {
     if (strcmp(arg[iarg],"wiggle") == 0) {
-      if (iarg+5 > narg) error->all(FLERR,"Illegal fix wall/gran command");
+      if (iarg+5 > narg) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
       if (strcmp(arg[iarg+1],"x") == 0) axis = 0;
       else if (strcmp(arg[iarg+1],"y") == 0) axis = 1;
       else if (strcmp(arg[iarg+1],"z") == 0) axis = 2;
-      else error->all(FLERR,"Illegal fix wall/gran command");
+      else error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
       amplitude = force->numeric(FLERR,arg[iarg+2]);
       period = force->numeric(FLERR,arg[iarg+3]);
       if (strcmp(arg[iarg+4],"cos") == 0) wiggletype = 1;
       else if (strcmp(arg[iarg+4],"sin") == 0) wiggletype = 2;
-      else error->all(FLERR,"Illegal fix wall/gran command");
+      else error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
       wiggle = 1;
       //loINI = lo; 
       //hiINI = hi; 
       iarg += 5;
     } else if (strcmp(arg[iarg],"shear") == 0) {
-      if (iarg+3 > narg) error->all(FLERR,"Illegal fix wall/gran command");
+      if (iarg+3 > narg) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
       if (strcmp(arg[iarg+1],"x") == 0) axis = 0;
       else if (strcmp(arg[iarg+1],"y") == 0) axis = 1;
       else if (strcmp(arg[iarg+1],"z") == 0) axis = 2;
-      else error->all(FLERR,"Illegal fix wall/gran command");
+      else error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
       vshear = force->numeric(FLERR,arg[iarg+2]);
       wshear = 1;
       iarg += 3;
@@ -300,9 +300,9 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
         strcpy(fstr,&arg[iarg+1][2]);
       } else targetf = force->numeric(FLERR,arg[iarg+1]);
       gain = force->numeric(FLERR,arg[iarg+2]);
-      if (strcmp(arg[iarg+2],"auto") == 0) error->all(FLERR,"Illegal fix wall/gran command - more coding needed");
+      if (strcmp(arg[iarg+2],"auto") == 0) error->all(FLERR,"Illegal fix wall/gran/oldstyle command - more coding needed");
       iarg += 3;
-    } else error->all(FLERR,"Illegal fix wall/gran command");
+    } else error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
   }
 
   if (wscontrol == 1 && (lo != -BIG && hi != BIG)) error->all(FLERR,"Cannot have both lo and hi walls with stresscontrol"); // put warning message for fix output too?
@@ -318,23 +318,23 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     error->all(FLERR,"Cannot use wall in periodic dimension");
 
   if (wiggle && wshear)
-    error->all(FLERR,"Cannot wiggle and shear fix wall/gran");
+    error->all(FLERR,"Cannot wiggle and shear fix wall/gran/oldstyle");
   if (wiggle && wallstyle == ZCYLINDER && axis != 2)
-    error->all(FLERR,"Invalid wiggle direction for fix wall/gran");
+    error->all(FLERR,"Invalid wiggle direction for fix wall/gran/oldstyle");
   if (wshear && wallstyle == XPLANE && axis == 0)
-    error->all(FLERR,"Invalid shear direction for fix wall/gran");
+    error->all(FLERR,"Invalid shear direction for fix wall/gran/oldstyle");
   if (wshear && wallstyle == YPLANE && axis == 1)
-    error->all(FLERR,"Invalid shear direction for fix wall/gran");
+    error->all(FLERR,"Invalid shear direction for fix wall/gran/oldstyle");
   if (wshear && wallstyle == ZPLANE && axis == 2)
-    error->all(FLERR,"Invalid shear direction for fix wall/gran");
+    error->all(FLERR,"Invalid shear direction for fix wall/gran/oldstyle");
   if ((wtranslate || wscontrol) && (lo != -BIG && hi != BIG)) // added wscontrol [MO - 28 Aug 2015]
-    error->all(FLERR,"Cannot specify both top and bottom walls and translate for fix wall/gran");
+    error->all(FLERR,"Cannot specify both top and bottom walls and translate for fix wall/gran/oldstyle");
   if ((wtranslate || wscontrol) && wallstyle == ZCYLINDER) // added wscontrol [MO - 28 Aug 2015]
-    error->all(FLERR,"Cannot use translate with cylinder fix wall/gran");
+    error->all(FLERR,"Cannot use translate with cylinder fix wall/gran/oldstyle");
   if ((wtranslate || wscontrol) && (wiggle || wshear)) // added wscontrol [MO - 28 Aug 2015]
-    error->all(FLERR,"Cannot translate and wiggle or shear fix wall/gran");
+    error->all(FLERR,"Cannot translate and wiggle or shear fix wall/gran/oldstyle");
   if ((wiggle || wshear) && wallstyle == REGION)
-    error->all(FLERR,"Cannot wiggle or shear with fix wall/gran/region");
+    error->all(FLERR,"Cannot wiggle or shear with fix wall/gran/region/oldstyle");
 
   // setup oscillations
 
@@ -366,10 +366,10 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   // 20 quantities for Deresiewicz1954_spin model [MO - 30 November 2014]
   int dim = 1;
   Pair *pair;
-  if (force->pair_match("gran/hooke/history",1)) 
-    pair = force->pair_match("gran/hooke/history",1);
-  else if (force->pair_match("gran/hertz/history",1))
-    pair = force->pair_match("gran/hertz/history",1);
+  if (force->pair_match("gran/hooke/history/oldstyle",1)) 
+    pair = force->pair_match("gran/hooke/history/oldstyle",1);
+  else if (force->pair_match("gran/hertz/history/oldstyle",1))
+    pair = force->pair_match("gran/hertz/history/oldstyle",1);
   else if (force->pair_match("gran/shm/history",1))
     pair = force->pair_match("gran/shm/history",1);
   else if (force->pair_match("gran/CM/history",1))    //[MO - 18 July 2014]
@@ -452,7 +452,7 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
 
 /* ---------------------------------------------------------------------- */
 
-FixWallGran::~FixWallGran()
+FixWallGranOldstyle::~FixWallGranOldstyle()
 {
   // unregister callbacks to this fix from Atom class
 
@@ -469,7 +469,7 @@ FixWallGran::~FixWallGran()
 
 /* ---------------------------------------------------------------------- */
 
-int FixWallGran::setmask()
+int FixWallGranOldstyle::setmask()
 {
   int mask = 0;
   mask |= POST_FORCE;
@@ -479,7 +479,7 @@ int FixWallGran::setmask()
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::init()
+void FixWallGranOldstyle::init()
 {
   int i;
 
@@ -494,8 +494,8 @@ void FixWallGran::init()
   if (fstr) {
     fvar = input->variable->find(fstr);
     if (fvar < 0)
-      error->all(FLERR,"Variable name for fix wall/gran does not exist");
-    if (!input->variable->equalstyle(fvar)) error->all(FLERR,"Variable for fix wall/gran is invalid style");
+      error->all(FLERR,"Variable name for fix wall/gran/oldstyle does not exist");
+    if (!input->variable->equalstyle(fvar)) error->all(FLERR,"Variable for fix wall/gran/oldstyle is invalid style");
   }
     
   if (strstr(update->integrate_style,"respa"))
@@ -510,7 +510,7 @@ void FixWallGran::init()
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::setup(int vflag)
+void FixWallGranOldstyle::setup(int vflag)
 {
   /*~ Force pair::ev_setup to be run with a vflag value of 4 so that
     vflag_atom will be set equal to 1  [MO - 28 December 2017] */
@@ -566,7 +566,7 @@ void FixWallGran::setup(int vflag)
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::post_force(int vflag)
+void FixWallGranOldstyle::post_force(int vflag)
 {
   // virial setup
 
@@ -748,14 +748,14 @@ void FixWallGran::post_force(int vflag)
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::post_force_respa(int vflag, int ilevel, int /*iloop*/)
+void FixWallGranOldstyle::post_force_respa(int vflag, int ilevel, int /*iloop*/)
 {
   if (ilevel == nlevels_respa-1) post_force(vflag);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::hooke(double rsq, double dx, double dy, double dz,
+void FixWallGranOldstyle::hooke(double rsq, double dx, double dy, double dz,
                         double *vwall, double *v,
                         double *f, double *omega, double *torque,
                         double radius, double meff, int i)
@@ -839,7 +839,7 @@ void FixWallGran::hooke(double rsq, double dx, double dy, double dz,
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
+void FixWallGranOldstyle::hooke_history(double rsq, double dx, double dy, double dz,
                                 double *vwall, double *v,
                                 double *f, double *omega, double *torque,
                                 double radius, double meff, double *shear, int i)
@@ -1007,7 +1007,7 @@ void FixWallGran::hooke_history(double rsq, double dx, double dy, double dz,
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
+void FixWallGranOldstyle::hertz_history(double rsq, double dx, double dy, double dz,
                                 double *vwall, double rwall, double *v,
                                 double *f, double *omega, double *torque,
                                 double radius, double meff, double *shear, int i)
@@ -1173,7 +1173,7 @@ void FixWallGran::hertz_history(double rsq, double dx, double dy, double dz,
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::bonded_history(double rsq, double dx, double dy, double dz,
+void FixWallGranOldstyle::bonded_history(double rsq, double dx, double dy, double dz,
                                  double *vwall, double rwall, double *v,
                                  double *f, double *omega, double *torque,
                                  double radius, double meff, double *shear)
@@ -1415,7 +1415,7 @@ void FixWallGran::bonded_history(double rsq, double dx, double dy, double dz,
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::shm_history(double rsq, double dx, double dy, double dz,
+void FixWallGranOldstyle::shm_history(double rsq, double dx, double dy, double dz,
 			      double *vwall, double rwall, double *v,
 			      double *f, double *omega, double *torque,
 			      double radius, double meff, double *shear, int i)
@@ -1611,7 +1611,7 @@ void FixWallGran::shm_history(double rsq, double dx, double dy, double dz,
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::CM_history(double rsq, double dx, double dy, double dz,
+void FixWallGranOldstyle::CM_history(double rsq, double dx, double dy, double dz,
 			     double *vwall, double *v,
 			     double *f, double *omega, double *torque,
 			     double radius, double meff, double *shear, int i)
@@ -1910,7 +1910,7 @@ void FixWallGran::CM_history(double rsq, double dx, double dy, double dz,
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::HMD_history(double rsq, double dx, double dy, double dz,
+void FixWallGranOldstyle::HMD_history(double rsq, double dx, double dy, double dz,
 			      double *vwall, double *v,
 			      double *f, double *omega, double *torque,
 			      double radius, double meff, double *shear, int i)
@@ -2592,7 +2592,7 @@ void FixWallGran::HMD_history(double rsq, double dx, double dy, double dz,
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::CMD_history(double rsq, double dx, double dy, double dz,
+void FixWallGranOldstyle::CMD_history(double rsq, double dx, double dy, double dz,
 			      double *vwall, double *v,
 			      double *f, double *omega, double *torque,
 			      double radius, double meff, double *shear, int i)
@@ -3334,7 +3334,7 @@ void FixWallGran::CMD_history(double rsq, double dx, double dy, double dz,
   memory usage of local atom-based arrays
 ------------------------------------------------------------------------- */
 
-double FixWallGran::memory_usage()
+double FixWallGranOldstyle::memory_usage()
 {
   int nmax = atom->nmax;
   double bytes = 0.0;
@@ -3347,7 +3347,7 @@ double FixWallGran::memory_usage()
   allocate local atom-based arrays
 ------------------------------------------------------------------------- */
 
-void FixWallGran::grow_arrays(int nmax)
+void FixWallGranOldstyle::grow_arrays(int nmax)
 {
   if (history) memory->grow(shearone,nmax,sheardim,"fix_wall_gran:shearone");
 }
@@ -3356,7 +3356,7 @@ void FixWallGran::grow_arrays(int nmax)
    copy values within local atom-based arrays
 ------------------------------------------------------------------------- */
 
-void FixWallGran::copy_arrays(int i, int j, int /*delflag*/)
+void FixWallGranOldstyle::copy_arrays(int i, int j, int /*delflag*/)
 {
   if (history)
     for (int m = 0; m < sheardim; m++)
@@ -3367,7 +3367,7 @@ void FixWallGran::copy_arrays(int i, int j, int /*delflag*/)
    initialize one atom's array values, called when atom is created
 ------------------------------------------------------------------------- */
 
-void FixWallGran::set_arrays(int i)
+void FixWallGranOldstyle::set_arrays(int i)
 {
   if (history)
     for (int m = 0; m < sheardim; m++)
@@ -3378,7 +3378,7 @@ void FixWallGran::set_arrays(int i)
   pack values in local atom-based arrays for exchange with another proc
 ------------------------------------------------------------------------- */
 
-int FixWallGran::pack_exchange(int i, double *buf)
+int FixWallGranOldstyle::pack_exchange(int i, double *buf)
 {
   if (!history) return 0;
 
@@ -3392,7 +3392,7 @@ int FixWallGran::pack_exchange(int i, double *buf)
   unpack values into local atom-based arrays after exchange
 ------------------------------------------------------------------------- */
 
-int FixWallGran::unpack_exchange(int nlocal, double *buf)
+int FixWallGranOldstyle::unpack_exchange(int nlocal, double *buf)
 {
   if (!history) return 0;
 
@@ -3406,7 +3406,7 @@ int FixWallGran::unpack_exchange(int nlocal, double *buf)
   pack values in local atom-based arrays for restart file
 ------------------------------------------------------------------------- */
 
-int FixWallGran::pack_restart(int i, double *buf)
+int FixWallGranOldstyle::pack_restart(int i, double *buf)
 {
   if (!history) return 0;
 
@@ -3421,7 +3421,7 @@ int FixWallGran::pack_restart(int i, double *buf)
   unpack values from atom->extra array to restart the fix
 ------------------------------------------------------------------------- */
 
-void FixWallGran::unpack_restart(int nlocal, int nth)
+void FixWallGranOldstyle::unpack_restart(int nlocal, int nth)
 {
   if (!history) return;
 
@@ -3441,7 +3441,7 @@ void FixWallGran::unpack_restart(int nlocal, int nth)
   maxsize of any atom's restart data
 ------------------------------------------------------------------------- */
 
-int FixWallGran::maxsize_restart()
+int FixWallGranOldstyle::maxsize_restart()
 {
   if (!history) return 0;
   return 1 + sheardim;
@@ -3451,7 +3451,7 @@ int FixWallGran::maxsize_restart()
   size of atom nlocal's restart data
 ------------------------------------------------------------------------- */
 
-int FixWallGran::size_restart(int /*nlocal*/)
+int FixWallGranOldstyle::size_restart(int /*nlocal*/)
 {
   if (!history) return 0;
   return 1 + sheardim;
@@ -3459,7 +3459,7 @@ int FixWallGran::size_restart(int /*nlocal*/)
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::reset_dt()
+void FixWallGranOldstyle::reset_dt()
 {
   dt = update->dt;
 }
@@ -3470,7 +3470,7 @@ void FixWallGran::reset_dt()
   Returns the number of arguments read.
 ------------------------------------------------------------------------- */
 
-int FixWallGran::modify_param(int narg, char **arg)
+int FixWallGranOldstyle::modify_param(int narg, char **arg)
 {
   if (narg < 2) error->all(FLERR,"Illegal fix_modify command");
   int argsread=0;
@@ -3523,16 +3523,16 @@ int FixWallGran::modify_param(int narg, char **arg)
       fprintf(screen, "stopped wall wiggle\n");
     } else {
       // Increase argsread from +4 to +5  [MO - 09 May 2016]
-      if (argsread+5 > narg) error->all(FLERR,"Illegal fix wall/gran command");
+      if (argsread+5 > narg) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
       if (strcmp(arg[argsread+1],"x") == 0) axis = 0;
       else if (strcmp(arg[argsread+1],"y") == 0) axis = 1;
       else if (strcmp(arg[argsread+1],"z") == 0) axis = 2;
-      else error->all(FLERR,"Illegal fix wall/gran command");
+      else error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
       amplitude = force->numeric(FLERR,arg[argsread+2]);
       period = force->numeric(FLERR,arg[argsread+3]);
       if (strcmp(arg[argsread+4],"cos") == 0) wiggletype = 1;
       else if (strcmp(arg[argsread+4],"sin") == 0) wiggletype = 2;
-      else error->all(FLERR,"Illegal fix wall/gran command");
+      else error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
       wiggle = 1;
       //loINI = lo; 
       //hiINI = hi; 
@@ -3542,7 +3542,7 @@ int FixWallGran::modify_param(int narg, char **arg)
   }
   else if (strcmp(arg[argsread],"stresscontrol") == 0) {
     if (wscontrol == 0 && strcmp(arg[argsread+1],"off") == 0) { // removed wtranslate [MO - 28 Aug 2015]
-      error->all(FLERR,"Illegal fix modify wall/gran command");
+      error->all(FLERR,"Illegal fix modify wall/gran/oldstyle command");
     }
     wscontrol = 1;
     // wtranslate = 1; // removed [MO - 28 Aug 2015]
@@ -3573,16 +3573,16 @@ int FixWallGran::modify_param(int narg, char **arg)
   }
   else {
     fprintf(screen,"Argument %s not yet supported\n",arg[argsread]);
-    error->all(FLERR,"Illegal fix modify wall/gran command");
+    error->all(FLERR,"Illegal fix modify wall/gran/oldstyle command");
   }
   if (argsread==narg) {
     if (gamman <0.0 || gammat <0.0 || xmu <0.0 ) error->all(FLERR,"Check the values for the modified granular wall parameters");
     if ((wtranslate || wscontrol) && (lo != -BIG && hi != BIG)) // added wscontrol [MO - 28 Aug 2015]
-      error->all(FLERR,"Cannot specify both top and bottom walls and translate for fix wall/gran - check your fix_modify"); // this check will fail if the walls have moved..
+      error->all(FLERR,"Cannot specify both top and bottom walls and translate for fix wall/gran/oldstyle - check your fix_modify"); // this check will fail if the walls have moved..
     if ((wtranslate || wscontrol) && wallstyle == ZCYLINDER) // added wscontrol [MO - 28 Aug 2015]
-      error->all(FLERR,"Cannot use translate with cylinder fix wall/gran - check your fix_modify");
+      error->all(FLERR,"Cannot use translate with cylinder fix wall/gran/oldstyle - check your fix_modify");
     if ((wtranslate || wscontrol) && (wiggle || wshear)) // added wscontrol [MO - 28 Aug 2015]
-      error->all(FLERR,"Cannot translate and wiggle or shear fix wall/gran- check your fix_modify");
+      error->all(FLERR,"Cannot translate and wiggle or shear fix wall/gran/oldstyle - check your fix_modify");
   }
   return argsread;
 }
@@ -3591,7 +3591,7 @@ int FixWallGran::modify_param(int narg, char **arg)
   A function that implements wall movement
 ------------------------------------------------------------------------- */
 
-void FixWallGran::move_wall() {
+void FixWallGranOldstyle::move_wall() {
   //~ Only update lo or hi if not NULL [KH - 27 November 2013]
   // Upate w_boxlo & w_boxhi in Domain.cpp [MO -02 Sep 2015]
   if (lo != -BIG) { 
@@ -3611,7 +3611,7 @@ void FixWallGran::move_wall() {
   specific controller
 ------------------------------------------------------------------------- */
 
-void FixWallGran::velscontrol() {
+void FixWallGranOldstyle::velscontrol() {
 
   //MPI_Allreduce(fwall,fwall_all,3,MPI_DOUBLE,MPI_SUM,world);
   if (ftvarying == 1) {
@@ -3660,7 +3660,7 @@ void FixWallGran::velscontrol() {
   6th output:coordination number on wall [MO - 12 March 2015]
 ------------------------------------------------------------------------- */
 
-double FixWallGran::compute_vector(int n)
+double FixWallGranOldstyle::compute_vector(int n)
 { 
   if (n == 0) return lo;
   if (n == 1) return hi;
@@ -3678,7 +3678,7 @@ double FixWallGran::compute_vector(int n)
   compute stress/atom
 ------------------------------------------------------------------------- */
 
-void FixWallGran::ev_tally_wall(int i, double fx, double fy, double fz,
+void FixWallGranOldstyle::ev_tally_wall(int i, double fx, double fy, double fz,
 				double dx, double dy, double dz, double radi)
 {
 
@@ -3709,7 +3709,7 @@ void FixWallGran::ev_tally_wall(int i, double fx, double fy, double fz,
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy, double dz, double r, double radius, double ccel, double maxshear, double effectivekt, double *torque, double *shear, double *db, double *localdM, double *globaldM)
+void FixWallGranOldstyle::rolling_resistance(int i, int numshearq, double dx, double dy, double dz, double r, double radius, double ccel, double maxshear, double effectivekt, double *torque, double *shear, double *db, double *localdM, double *globaldM)
 {
   /*~ This rolling resistance model was developed by Xin Huang during
     the summer and autumn of 2013. It is the companion function of
@@ -3903,7 +3903,7 @@ void FixWallGran::rolling_resistance(int i, int numshearq, double dx, double dy,
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::Deresiewicz1954_spin(int i, int numshearq, double delx, double dely, double delz, double radius, double r, double *torque, double *shear, double *dspin_i, double &dspin_stm, double &spin_stm, double *dM_i, double &dM, double &K_spin, double &theta_r, double &M_limit, double Geq, double Poiseq, double &Dspin_energy, double a, double N)
+void FixWallGranOldstyle::Deresiewicz1954_spin(int i, int numshearq, double delx, double dely, double delz, double radius, double r, double *torque, double *shear, double *dspin_i, double &dspin_stm, double &spin_stm, double *dM_i, double &dM, double &K_spin, double &theta_r, double &M_limit, double Geq, double Poiseq, double &Dspin_energy, double a, double N)
 {
   if (!D_switch) { 
     dspin_i[0] = dspin_i[1] = dspin_i[2] = dspin_stm = spin_stm = dM_i[0] 
@@ -4234,7 +4234,7 @@ void FixWallGran::Deresiewicz1954_spin(int i, int numshearq, double delx, double
 
 /* ---------------------------------------------------------------------- */
 
-void *FixWallGran::extract(const char *str, int &dim)
+void *FixWallGranOldstyle::extract(const char *str, int &dim)
 {
   /*~ This function was added so that the accumulated energy
     terms, if computed, may be extracted by ComputeEnergyGran
@@ -4264,7 +4264,7 @@ void *FixWallGran::extract(const char *str, int &dim)
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::write_restart(FILE *fp)
+void FixWallGranOldstyle::write_restart(FILE *fp)
 {
   /*~ Added (along with the restart function below) to store the 
     accumulated energy terms, if computed. Note that the total 
@@ -4296,7 +4296,7 @@ void FixWallGran::write_restart(FILE *fp)
 
 /* ---------------------------------------------------------------------- */
 
-void FixWallGran::restart(char *buf)
+void FixWallGranOldstyle::restart(char *buf)
 {
   int n = 0;
   double *list = (double *) buf;

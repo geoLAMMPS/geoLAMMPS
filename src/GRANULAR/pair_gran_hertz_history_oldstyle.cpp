@@ -19,7 +19,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
-#include "pair_gran_hertz_history.h"
+#include "pair_gran_hertz_history_oldstyle.h"
 #include "atom.h"
 #include "update.h"
 #include "force.h"
@@ -38,12 +38,12 @@ using namespace LAMMPS_NS;
 
 /* ---------------------------------------------------------------------- */
 
-PairGranHertzHistory::PairGranHertzHistory(LAMMPS *lmp) :
-  PairGranHookeHistory(lmp) {}
+PairGranHertzHistoryOldstyle::PairGranHertzHistoryOldstyle(LAMMPS *lmp) :
+  PairGranHookeHistoryOldstyle(lmp) {}
 
 /* ---------------------------------------------------------------------- */
 
-void PairGranHertzHistory::compute(int eflag, int vflag)
+void PairGranHertzHistoryOldstyle::compute(int eflag, int vflag)
 {
   int i,j,ii,jj,inum,jnum;
   double xtmp,ytmp,ztmp,delx,dely,delz,fx,fy,fz;
@@ -400,7 +400,7 @@ void PairGranHertzHistory::compute(int eflag, int vflag)
    global settings
 ------------------------------------------------------------------------- */
 
-void PairGranHertzHistory::settings(int narg, char **arg)
+void PairGranHertzHistoryOldstyle::settings(int narg, char **arg)
 {
   if (narg != 6) error->all(FLERR,"Illegal pair_style command");
 
@@ -428,7 +428,7 @@ void PairGranHertzHistory::settings(int narg, char **arg)
 
 /* ---------------------------------------------------------------------- */
 
-double PairGranHertzHistory::single(int i, int j, int /*itype*/, int /*jtype*/,
+double PairGranHertzHistoryOldstyle::single(int i, int j, int /*itype*/, int /*jtype*/,
                                     double rsq,
                                     double /*factor_coul*/, double /*factor_lj*/,
                                     double &fforce)
