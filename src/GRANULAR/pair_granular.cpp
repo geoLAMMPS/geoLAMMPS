@@ -52,7 +52,7 @@ using namespace MathSpecial;
 #define EPSILON 1e-10
 
 enum {HOOKE, HERTZ, HERTZ_MATERIAL, DMT, JKR};
-enum {VELOCITY, VISCOELASTIC, TSUJI};
+enum {VELOCITY, MASS_VELOCITY, VISCOELASTIC, TSUJI};
 enum {TANGENTIAL_NOHISTORY, TANGENTIAL_HISTORY,
       TANGENTIAL_MINDLIN, TANGENTIAL_MINDLIN_RESCALE};
 enum {TWIST_NONE, TWIST_SDS, TWIST_MARSHALL};
@@ -345,6 +345,8 @@ void PairGranular::compute(int eflag, int vflag)
 
         if (damping_model[itype][jtype] == VELOCITY) {
           damp_normal = 1;
+        } else if (damping_model[itype][jtype] == MASS_VELOCITY) {
+          damp_normal = meff;
         } else if (damping_model[itype][jtype] == VISCOELASTIC) {
           damp_normal = a*meff;
         } else if (damping_model[itype][jtype] == TSUJI) {
@@ -473,16 +475,12 @@ void PairGranular::compute(int eflag, int vflag)
           fs3 = -Ft*vtr3;
         }
 
-        //****************************************
-        // rolling resistance
-        //****************************************
-
-        if (roll_model[itype][jtype] != ROLL_NONE) {
+	if (roll_model[itype][jtype] != ROLL_NONE ||
+	    twist_model[itype][jtype] != TWIST_NONE){
           relrot1 = omega[i][0] - omega[j][0];
           relrot2 = omega[i][1] - omega[j][1];
           relrot3 = omega[i][2] - omega[j][2];
-
-          // rolling velocity,
+	  // rolling velocity,
           // see eq. 31 of Wang et al, Particuology v 23, p 49 (2015)
           // this is different from the Marshall papers,
           // which use the Bagi/Kuhn formulation
@@ -490,7 +488,12 @@ void PairGranular::compute(int eflag, int vflag)
           // - 0.5*((radj-radi)/radsum)*vtr1;
           // - 0.5*((radj-radi)/radsum)*vtr2;
           // - 0.5*((radj-radi)/radsum)*vtr3;
+	}
+        //****************************************
+        // rolling resistance
+        //****************************************
 
+        if (roll_model[itype][jtype] != ROLL_NONE) {
           vrl1 = Reff*(relrot2*nz - relrot3*ny);
           vrl2 = Reff*(relrot3*nx - relrot1*nz);
           vrl3 = Reff*(relrot1*ny - relrot2*nx);
@@ -589,7 +592,7 @@ void PairGranular::compute(int eflag, int vflag)
         tor2 = nz*fs1 - nx*fs3;
         tor3 = nx*fs2 - ny*fs1;
 
-	dist_to_contact = radi-0.5*delta;
+        dist_to_contact = radi-0.5*delta;
         torque[i][0] -= dist_to_contact*tor1;
         torque[i][1] -= dist_to_contact*tor2;
         torque[i][2] -= dist_to_contact*tor3;
@@ -619,7 +622,7 @@ void PairGranular::compute(int eflag, int vflag)
           f[j][1] -= fy;
           f[j][2] -= fz;
 
-	  dist_to_contact = radj-0.5*delta;
+          dist_to_contact = radj-0.5*delta;
           torque[j][0] -= dist_to_contact*tor1;
           torque[j][1] -= dist_to_contact*tor2;
           torque[j][2] -= dist_to_contact*tor3;
@@ -735,24 +738,22 @@ void PairGranular::coeff(int narg, char **arg)
       normal_coeffs_one[1] = force->numeric(FLERR,arg[iarg+2]); // damping
       iarg += 3;
     } else if (strcmp(arg[iarg], "hertz") == 0) {
-      int num_coeffs = 2;
-      if (iarg + num_coeffs >= narg)
+      if (iarg + 2 >= narg)
         error->all(FLERR,"Illegal pair_coeff command, "
                    "not enough parameters provided for Hertz option");
       normal_model_one = HERTZ;
       normal_coeffs_one[0] = force->numeric(FLERR,arg[iarg+1]); // kn
       normal_coeffs_one[1] = force->numeric(FLERR,arg[iarg+2]); // damping
-      iarg += num_coeffs+1;
+      iarg += 3;
     } else if (strcmp(arg[iarg], "hertz/material") == 0) {
-      int num_coeffs = 3;
-      if (iarg + num_coeffs >= narg)
+      if (iarg + 3 >= narg)
         error->all(FLERR,"Illegal pair_coeff command, "
                    "not enough parameters provided for Hertz/material option");
       normal_model_one = HERTZ_MATERIAL;
       normal_coeffs_one[0] = force->numeric(FLERR,arg[iarg+1]); // E
       normal_coeffs_one[1] = force->numeric(FLERR,arg[iarg+2]); // damping
       normal_coeffs_one[2] = force->numeric(FLERR,arg[iarg+3]); // Poisson's ratio
-      iarg += num_coeffs+1;
+      iarg += 4;
     } else if (strcmp(arg[iarg], "dmt") == 0) {
       if (iarg + 4 >= narg)
         error->all(FLERR,"Illegal pair_coeff command, "
@@ -780,6 +781,9 @@ void PairGranular::coeff(int narg, char **arg)
                    "not enough parameters provided for damping model");
       if (strcmp(arg[iarg+1], "velocity") == 0) {
         damping_model_one = VELOCITY;
+        iarg += 1;
+      } else if (strcmp(arg[iarg+1], "mass_velocity") == 0) {
+        damping_model_one = MASS_VELOCITY;
         iarg += 1;
       } else if (strcmp(arg[iarg+1], "viscoelastic") == 0) {
         damping_model_one = VISCOELASTIC;
@@ -887,6 +891,7 @@ void PairGranular::coeff(int narg, char **arg)
       if (iarg + 1 >= narg)
         error->all(FLERR, "Illegal pair_coeff command, not enough parameters");
       cutoff_one = force->numeric(FLERR,arg[iarg+1]);
+      iarg += 2;
     } else error->all(FLERR, "Illegal pair coeff command");
   }
 
@@ -955,7 +960,7 @@ void PairGranular::coeff(int narg, char **arg)
 }
 
 /* ----------------------------------------------------------------------
-	 init specific to this pair style
+  init specific to this pair style
 ------------------------------------------------------------------------- */
 
 void PairGranular::init_style()
@@ -1227,11 +1232,11 @@ void PairGranular::write_restart(FILE *fp)
         fwrite(&tangential_model[i][j],sizeof(int),1,fp);
         fwrite(&roll_model[i][j],sizeof(int),1,fp);
         fwrite(&twist_model[i][j],sizeof(int),1,fp);
-        fwrite(&normal_coeffs[i][j],sizeof(double),4,fp);
-        fwrite(&tangential_coeffs[i][j],sizeof(double),3,fp);
-        fwrite(&roll_coeffs[i][j],sizeof(double),3,fp);
-        fwrite(&twist_coeffs[i][j],sizeof(double),3,fp);
-        fwrite(&cut[i][j],sizeof(double),1,fp);
+        fwrite(normal_coeffs[i][j],sizeof(double),4,fp);
+        fwrite(tangential_coeffs[i][j],sizeof(double),3,fp);
+        fwrite(roll_coeffs[i][j],sizeof(double),3,fp);
+        fwrite(twist_coeffs[i][j],sizeof(double),3,fp);
+        fwrite(&cutoff_type[i][j],sizeof(double),1,fp);
       }
     }
   }
@@ -1257,22 +1262,22 @@ void PairGranular::read_restart(FILE *fp)
           fread(&tangential_model[i][j],sizeof(int),1,fp);
           fread(&roll_model[i][j],sizeof(int),1,fp);
           fread(&twist_model[i][j],sizeof(int),1,fp);
-          fread(&normal_coeffs[i][j],sizeof(double),4,fp);
-          fread(&tangential_coeffs[i][j],sizeof(double),3,fp);
-          fread(&roll_coeffs[i][j],sizeof(double),3,fp);
-          fread(&twist_coeffs[i][j],sizeof(double),3,fp);
-          fread(&cut[i][j],sizeof(double),1,fp);
+          fread(normal_coeffs[i][j],sizeof(double),4,fp);
+          fread(tangential_coeffs[i][j],sizeof(double),3,fp);
+          fread(roll_coeffs[i][j],sizeof(double),3,fp);
+          fread(twist_coeffs[i][j],sizeof(double),3,fp);
+          fread(&cutoff_type[i][j],sizeof(double),1,fp);
         }
         MPI_Bcast(&normal_model[i][j],1,MPI_INT,0,world);
         MPI_Bcast(&damping_model[i][j],1,MPI_INT,0,world);
         MPI_Bcast(&tangential_model[i][j],1,MPI_INT,0,world);
         MPI_Bcast(&roll_model[i][j],1,MPI_INT,0,world);
         MPI_Bcast(&twist_model[i][j],1,MPI_INT,0,world);
-        MPI_Bcast(&normal_coeffs[i][j],4,MPI_DOUBLE,0,world);
-        MPI_Bcast(&tangential_coeffs[i][j],3,MPI_DOUBLE,0,world);
-        MPI_Bcast(&roll_coeffs[i][j],3,MPI_DOUBLE,0,world);
-        MPI_Bcast(&twist_coeffs[i][j],3,MPI_DOUBLE,0,world);
-        MPI_Bcast(&cut[i][j],1,MPI_DOUBLE,0,world);
+        MPI_Bcast(normal_coeffs[i][j],4,MPI_DOUBLE,0,world);
+        MPI_Bcast(tangential_coeffs[i][j],3,MPI_DOUBLE,0,world);
+        MPI_Bcast(roll_coeffs[i][j],3,MPI_DOUBLE,0,world);
+        MPI_Bcast(twist_coeffs[i][j],3,MPI_DOUBLE,0,world);
+        MPI_Bcast(&cutoff_type[i][j],1,MPI_DOUBLE,0,world);
       }
     }
   }
@@ -1723,9 +1728,9 @@ double PairGranular::pulloff_distance(double radi, double radj,
   double E, coh, a, Reff;
   Reff = radi*radj/(radi+radj);
   if (Reff <= 0) return 0;
-  coh = normal_coeffs[itype][itype][3];
+  coh = normal_coeffs[itype][jtype][3];
   E = normal_coeffs[itype][jtype][0]*THREEQUARTERS;
-  a = cbrt(9*MY_PI*coh*Reff/(4*E));
+  a = cbrt(9*MY_PI*coh*Reff*Reff/(4*E));
   return a*a/Reff - 2*sqrt(MY_PI*coh*a/E);
 }
 
