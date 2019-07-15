@@ -25,9 +25,6 @@
 #include "neighbor.h"
 #include "neigh_list.h"
 #include "comm.h"
-#include "domain.h" //~ Two header files were added [KH - 9 November 2011]
-#include "modify.h"
-#include "error.h" //~ And another [KH - 23 October 2013]
 #include "memory.h"
 
 using namespace LAMMPS_NS;
@@ -38,11 +35,6 @@ PairGranHooke::PairGranHooke(LAMMPS *lmp) : PairGranHookeHistory(lmp)
 {
   no_virial_fdotr_compute = 0;
   history = 0;
-
-  /*~ Since the rolling resistance parameters are stored alongside
-    the shear history, give an error if rolling flag is active
-    without shear history [KH - 23 October 2013]*/
-  if (rolling) error->all(FLERR,"Must store shear history if rolling resistance model is active");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -91,35 +83,11 @@ void PairGranHooke::compute(int eflag, int vflag)
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
   int newton_pair = force->newton_pair;
-  double deltan,cri,crj;
 
   inum = list->inum;
   ilist = list->ilist;
   numneigh = list->numneigh;
   firstneigh = list->firstneigh;
-
-  /*~ The following piece of code was added to determine whether or not
-    any periodic boundaries, if present, are moving either via fix_
-    multistress or fix_deform [KH - 9 November 2011]*/
-  int velmapflag = 0;
-
-  if (domain->xperiodic || domain->yperiodic || domain->zperiodic) {
-    for (int q = 0; q < modify->nfix; q++)
-      if (strcmp(modify->fix[q]->style,"multistress") == 0) {
-	ierates = modify->fix[q]->param_export();
-	velmapflag = 1;
-	break;
-      }
-  
-    if (velmapflag == 0)
-      for (int q = 0; q < modify->nfix; q++) {
-	if (strcmp(modify->fix[q]->style,"deform") == 0) {
-	  ierates = modify->fix[q]->param_export();
-	  velmapflag = 1;
-	  break;
-	}
-      }
-  }
 
   // loop over neighbors of my atoms
 
@@ -147,23 +115,12 @@ void PairGranHooke::compute(int eflag, int vflag)
         r = sqrt(rsq);
         rinv = 1.0/r;
         rsqinv = 1.0/rsq;
-        deltan = radsum-r;
-        cri = radi-0.5*deltan;
-        crj = radj-0.5*deltan;
 
         // relative translational velocity
 
         vr1 = v[i][0] - v[j][0];
         vr2 = v[i][1] - v[j][1];
         vr3 = v[i][2] - v[j][2];
-
-	/*~ These relative velocity components have to be updated for the
-	  periodic boundaries [KH - 14 November 2011]*/
-	if (velmapflag == 1) {
-	  vr1 += (ierates[0]*delx + ierates[3]*dely + ierates[4]*delz);
-	  vr2 += (ierates[3]*delx + ierates[1]*dely + ierates[5]*delz);
-	  vr3 += (ierates[4]*delx + ierates[5]*dely + ierates[2]*delz);
-	}
 
         // normal component
 
@@ -180,9 +137,9 @@ void PairGranHooke::compute(int eflag, int vflag)
 
         // relative rotational velocity
 
-	wr1 = (cri*omega[i][0] + crj*omega[j][0]) * rinv;
-	wr2 = (cri*omega[i][1] + crj*omega[j][1]) * rinv;
-	wr3 = (cri*omega[i][2] + crj*omega[j][2]) * rinv;
+        wr1 = (radi*omega[i][0] + radj*omega[j][0]) * rinv;
+        wr2 = (radi*omega[i][1] + radj*omega[j][1]) * rinv;
+        wr3 = (radi*omega[i][2] + radj*omega[j][2]) * rinv;
 
         // meff = effective mass of pair of particles
         // if I or J part of rigid body, use body mass
@@ -237,21 +194,21 @@ void PairGranHooke::compute(int eflag, int vflag)
         tor1 = rinv * (dely*fs3 - delz*fs2);
         tor2 = rinv * (delz*fs1 - delx*fs3);
         tor3 = rinv * (delx*fs2 - dely*fs1);
-	torque[i][0] -= cri*tor1;
-	torque[i][1] -= cri*tor2;
-	torque[i][2] -= cri*tor3;
+        torque[i][0] -= radi*tor1;
+        torque[i][1] -= radi*tor2;
+        torque[i][2] -= radi*tor3;
 
         if (newton_pair || j < nlocal) {
           f[j][0] -= fx;
           f[j][1] -= fy;
           f[j][2] -= fz;
-	  torque[j][0] -= crj*tor1;
-	  torque[j][1] -= crj*tor2;
-	  torque[j][2] -= crj*tor3;
+          torque[j][0] -= radj*tor1;
+          torque[j][1] -= radj*tor2;
+          torque[j][2] -= radj*tor3;
         }
 
-        if (evflag) ev_tally_gran(i,j,nlocal,newton_pair,fx,fy,fz,x[i][0],x[i][1],x[i][2],
-                                 radius[i],x[j][0],x[j][1],x[j][2],radius[j]);
+        if (evflag) ev_tally_xyz(i,j,nlocal,newton_pair,
+                                 0.0,0.0,fx,fy,fz,delx,dely,delz);
       }
     }
   }
@@ -271,39 +228,23 @@ double PairGranHooke::single(int i, int j, int /*itype*/, int /*jtype*/, double 
   double vtr1,vtr2,vtr3,vrel;
   double mi,mj,meff,damp,ccel;
   double fn,fs,ft;
-  double deltan,cri,crj;
 
   double *radius = atom->radius;
   radi = radius[i];
   radj = radius[j];
   radsum = radi + radj;
 
-  double **x = atom->x;
-  tagint *tag = atom->tag; //~ Write out the atom tags
-
   // zero out forces if caller requests non-touching pair outside cutoff
 
   if (rsq >= radsum*radsum) {
     fforce = 0.0;
-    svector[0] = svector[1] = svector[2] = svector[3] = 0.0;
-    //~ The tags, radii etc. will not be zero [KH - 10 January 2013]
-    svector[4] = tag[i];
-    svector[5] = tag[j];
-    for (int q = 0; q < 3; q++)
-      svector[q+6] = x[i][q];
-    svector[9] = radi;
-    for (int q = 0; q < 3; q++)
-      svector[q+10] = x[j][q];
-    svector[13] = radj;
+    for (int m = 0; m < single_extra; m++) svector[m] = 0.0;
     return 0.0;
   }
 
   r = sqrt(rsq);
   rinv = 1.0/r;
   rsqinv = 1.0/rsq;
-  deltan = radsum-r;
-  cri = radi-0.5*deltan;
-  crj = radj-0.5*deltan; 
 
   // relative translational velocity
 
@@ -314,17 +255,10 @@ double PairGranHooke::single(int i, int j, int /*itype*/, int /*jtype*/, double 
 
   // normal component
 
+  double **x = atom->x;
   delx = x[i][0] - x[j][0];
   dely = x[i][1] - x[j][1];
   delz = x[i][2] - x[j][2];
-
-  //~ Add in the periodic boundary updating code [KH - 13 December 2012]
-  if ((domain->xperiodic || domain->yperiodic || domain->zperiodic) &&
-      domain->box_change == 1) {
-    vr1 += (ierates[0]*delx + ierates[3]*dely + ierates[4]*delz);
-    vr2 += (ierates[3]*delx + ierates[1]*dely + ierates[5]*delz);
-    vr3 += (ierates[4]*delx + ierates[5]*dely + ierates[2]*delz);
-  }
 
   vnnr = vr1*delx + vr2*dely + vr3*delz;
   vn1 = delx*vnnr * rsqinv;
@@ -340,9 +274,9 @@ double PairGranHooke::single(int i, int j, int /*itype*/, int /*jtype*/, double 
   // relative rotational velocity
 
   double **omega = atom->omega;
-  wr1 = (cri*omega[i][0] + crj*omega[j][0]) * rinv;
-  wr2 = (cri*omega[i][1] + crj*omega[j][1]) * rinv;
-  wr3 = (cri*omega[i][2] + crj*omega[j][2]) * rinv;
+  wr1 = (radi*omega[i][0] + radj*omega[j][0]) * rinv;
+  wr2 = (radi*omega[i][1] + radj*omega[j][1]) * rinv;
+  wr3 = (radi*omega[i][2] + radj*omega[j][2]) * rinv;
 
   // meff = effective mass of pair of particles
   // if I or J part of rigid body, use body mass
@@ -385,9 +319,6 @@ double PairGranHooke::single(int i, int j, int /*itype*/, int /*jtype*/, double 
 
   // set force and return no energy
 
-  /*~ Some of the following are included only for convenience as
-    the data could instead be obtained from a dump of the sphere
-    coordinates [KH - 13 December 2011]*/
   fforce = ccel;
 
 
@@ -396,14 +327,15 @@ double PairGranHooke::single(int i, int j, int /*itype*/, int /*jtype*/, double 
   svector[0] = -ft*vtr1;
   svector[1] = -ft*vtr2;
   svector[2] = -ft*vtr3;
-  svector[3] = ccel;
-  svector[4] = tag[i];
-  svector[5] = tag[j];
-  for (int q = 0; q < 3; q++)
-    svector[q+6] = x[i][q];
-  svector[9] = radi;
-  for (int q = 0; q < 3; q++)
-    svector[q+10] = x[j][q];
-  svector[13] = radj;
+  svector[3] = sqrt(svector[0]*svector[0] +
+                    svector[1]*svector[1] +
+                    svector[2]*svector[2]);
+  svector[4] = vn1;
+  svector[5] = vn2;
+  svector[6] = vn3;
+  svector[7] = vt1;
+  svector[8] = vt2;
+  svector[9] = vt3;
+
   return 0.0;
 }

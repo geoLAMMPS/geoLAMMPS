@@ -31,20 +31,24 @@ class PairGranHookeHistory : public Pair {
   virtual void compute(int, int);
   virtual void settings(int, char **);
   void coeff(int, char **);
-  void init_style();
+  virtual void init_style(); //~ Made virtual [KH - 23 November 2012]
   double init_one(int, int);
-  void write_restart(FILE *);
-  void read_restart(FILE *);
-  void write_restart_settings(FILE *);
-  void read_restart_settings(FILE *);
+  virtual void write_restart(FILE *); //~ Made virtual
+  virtual void read_restart(FILE *); //~ Made virtual
+  virtual void write_restart_settings(FILE *); //~ Made virtual
+  virtual void read_restart_settings(FILE *); //~ Made virtual
   void reset_dt();
   virtual double single(int, int, int, int, double, double, double, double &);
   int pack_forward_comm(int, int *, double *, int, int *);
   void unpack_forward_comm(int, int, double *);
+  void rolling_resistance(int, int, int, int, double, double, double, double, double, double, double, double, double **, double *, double *, double *, double *, double *); //~ Added these two functions [KH - 24 October 2013]
+  void Deresiewicz1954_spin(int, int, int, int, double, double **, double *, double *, double &, double &, double *, double &, double &, double &, double &, double, double, double &, double, double); // Added D_spin model [MO - 30 November 2014]
+  void add_old_omega_fix();
   double memory_usage();
-
+  void *extract(const char *, int &);
+  
  protected:
-  double kn,kt,gamman,gammat,xmu;
+  double gamman,gammat;
   int dampflag;
   double dt;
   int freeze_group_bit;
@@ -53,6 +57,9 @@ class PairGranHookeHistory : public Pair {
   int neighprev;
   double *onerad_dynamic,*onerad_frozen;
   double *maxrad_dynamic,*maxrad_frozen;
+
+  double Geq,Poiseq,RMSf,Hp; // Added to extract for wall/gran.cpp [MO - 03 April 2015]
+  int Model,THETA1;          // Added to extract for wall/gran.cpp [MO - 12 Sep 2015]
 
   class FixNeighHistory *fix_history;
 
@@ -63,6 +70,17 @@ class PairGranHookeHistory : public Pair {
   int nmax;                // allocated size of mass_rigid
 
   void allocate();
+
+  /*~ Used for adding fix old_omega when rolling resistance model
+    is active [KH - 24 October 2013]*/
+  class Fix *deffix;
+
+  int lastwarning[2]; //~ Used to control frequencies at which warnings about failures to calculate contact stiffnesses are output in the rolling resistance model [KH - 6 November 2013]
+
+  //~ Add quantities for tracing global energy [KH - 19 February 2014]	
+  double dissipfriction, normalstrain, shearstrain, spinenergy;
+  double gatheredf, gatheredss, gatheredse; //~ Two more added [KH - 17 October 2014]
+  //~~ Two more added for D_spin [MO - 13 November 2014]
 };
 
 }
