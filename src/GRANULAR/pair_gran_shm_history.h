@@ -20,11 +20,11 @@ PairStyle(gran/shm/history,PairGranShmHistory)
 #ifndef LMP_PAIR_GRAN_SHM_HISTORY_H
 #define LMP_PAIR_GRAN_SHM_HISTORY_H
 
-#include "pair_gran_hooke_history.h"
+#include "pair_gran_hooke_history_oldstyle.h"
 
 namespace LAMMPS_NS {
 
-class PairGranShmHistory : public PairGranHookeHistory {
+class PairGranShmHistory : public PairGranHookeHistoryOldstyle {
  public:
   PairGranShmHistory(class LAMMPS *);
   void compute(int, int);

@@ -41,7 +41,7 @@ using namespace LAMMPS_NS;
 /* ---------------------------------------------------------------------- */
 
 PairGranCMDHistory::PairGranCMDHistory(LAMMPS *lmp) :
-  PairGranHookeHistory(lmp) {}
+  PairGranHookeHistoryOldstyle(lmp) {}
 
 /* ---------------------------------------------------------------------- */
 
