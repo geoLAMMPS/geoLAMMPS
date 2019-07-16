@@ -144,13 +144,7 @@ void PairGranShmHistory::compute(int eflag, int vflag)
 
   //~ Initialise the non-accumulated strain energy terms to zero
   normalstrain = 0.0;
-
-  /*~ The number of shear quantities is 19 if rolling resistance
-    is active [KH - 29 July 2013]*/
-  /*~ Another 4 shear quantities were added for per-contact energy
-    tracing [KH - 6 March 2014]. Modified by MO [4 November 2014]*/
-  int numshearquants = 4 + 15*rolling + 20*D_spin + 4*trace_energy;
-
+  
   //~ Use tags to consider contacts only once [KH - 28 February 2014]
   tagint *tag = atom->tag; 
 
@@ -531,12 +525,7 @@ double PairGranShmHistory::single(int i, int j, int /*itype*/, int /*jtype*/,
     if (neighprev >= jnum) neighprev = 0;
     if (jlist[neighprev] == j) break;
   }
-
-  /*~ The number of shear quantities is 19 if rolling resistance
-    is active [KH - 29 July 2014]*/
-  /*~ Another 4 shear quantities were added for per-contact energy
-    tracing [KH - 6 March 2014]. Modified by MO [04 November 2014]*/
-  int numshearquants = 4 + 15*rolling + 20*D_spin + 4*trace_energy;
+  
   double *shear = &allshear[numshearquants*neighprev];
 
   //~ Call function for rolling resistance model [KH - 30 October 2013]
@@ -653,8 +642,16 @@ void PairGranShmHistory::init_style()
     [KH - 29 July 2014]*/
   /*~ Another 4 shear quantities are needed for per-contact energy
     tracing [KH - 6 March 2014]. Modified by MO [4 November 2014]*/
-  int numshearquants = 4 + 15*rolling + 20*D_spin + 4*trace_energy;
+  numshearquants = 4 + 15*rolling + 20*D_spin + 4*trace_energy;
 
+  //~ Update history transfer for FixNeighHistory if reqd [KH - 19 July 2019]
+  if (trace_energy) {
+    nondefault_history_transfer = 1;
+    history_transfer_factors = new int[numshearquants];
+    for (i = 0; i < numshearquants; i++) history_transfer_factors[i] = -1;
+    for (i = 4; i < 8; i++) history_transfer_factors[i] = 1;
+  }
+  
   // need a granular neigh list and optionally a granular history neigh list
 
   int irequest = neighbor->request(this,instance_me);

@@ -148,10 +148,7 @@ void PairGranHMDHistory::compute(int eflag, int vflag)
   //***********
   dissipfriction = 0.0; // TEMPORARY [MO - 25 Sep 2015]
   //***********
-
-  // Modified for HMD and CMD model that use 26 shear quantities [MO - 17 November 2014].
-  int numshearquants = 26 + 20*D_spin + 4*trace_energy;
-
+  
   //~ Use tags to consider contacts only once [KH - 28 February 2014]
   tagint *tag = atom->tag; 
 
@@ -983,10 +980,7 @@ double PairGranHMDHistory::single(int i, int j, int /*itype*/, int /*jtype*/,
     if (neighprev >= jnum) neighprev = 0;
     if (jlist[neighprev] == j) break;
   }
-
-  /*~ Another 4 shear quantities were added for per-contact energy
-    tracing [KH - 6 March 2014]*/
-  int numshearquants = 26 + 20*D_spin + 4*trace_energy;
+  
   double *shear = &allshear[numshearquants*neighprev];
 
   // Call function for spin resistance model [MO - 19 November 2014]
@@ -1070,8 +1064,16 @@ void PairGranHMDHistory::init_style()
   /* 20 shear quantities were added for D_spin [MO - 19 November 2014]*/
   /*~ Another 4 shear quantities are needed for per-contact energy
     tracing [KH - 6 March 2014]*/
-  int numshearquants = 26 + 20*D_spin + 4*trace_energy;
+  numshearquants = 26 + 20*D_spin + 4*trace_energy;
 
+  //~ Update history transfer for FixNeighHistory if reqd [KH - 19 July 2019]
+  if (trace_energy) {
+    nondefault_history_transfer = 1;
+    history_transfer_factors = new int[numshearquants];
+    for (i = 0; i < numshearquants; i++) history_transfer_factors[i] = -1;
+    for (i = 26; i < 30; i++) history_transfer_factors[i] = 1;
+  }
+  
   // need a granular neigh list
 
   int irequest = neighbor->request(this,instance_me);

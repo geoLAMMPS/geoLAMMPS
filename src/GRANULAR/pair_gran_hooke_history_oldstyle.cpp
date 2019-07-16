@@ -78,6 +78,10 @@ PairGranHookeHistoryOldstyle::PairGranHookeHistoryOldstyle(LAMMPS *lmp) : Pair(l
     anyway [KH - 27 February 2014]*/
   // Added for D_spin model [MO - 13 November 2014]
   dissipfriction = shearstrain = gatheredf = gatheredss = spinenergy = gatheredse = 0.0;
+
+  //~ Initialise; update later if energy tracing active [KH - 16 July 2019]
+  nondefault_history_transfer = 0;
+  history_transfer_factors = NULL;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -212,12 +216,6 @@ void PairGranHookeHistoryOldstyle::compute(int eflag, int vflag)
   //~ Initialise the strain energy terms to zero
   normalstrain = shearstrain = 0.0;
 
-  /*~ The number of shear quantities is 18 if rolling resistance
-    is active [KH - 29 July 2014]*/
-  /*~ Another 4 shear quantities were added for per-contact energy
-    tracing [KH - 6 March 2014]*/
-  int numshearquants = 3 + 15*rolling + 4*trace_energy;
-  
   //~ Use tags to consider contacts only once [KH - 28 February 2014]
   tagint *tag = atom->tag; 
 
@@ -564,7 +562,15 @@ void PairGranHookeHistoryOldstyle::init_style()
     [KH - 29 July 2014]*/
   /*~ Another 4 shear quantities are needed for per-contact energy
     tracing [KH - 6 March 2014]*/
-  int numshearquants = 3 + 15*rolling + 4*trace_energy;
+  numshearquants = 3 + 15*rolling + 4*trace_energy;
+
+  //~ Update history transfer for FixNeighHistory if reqd [KH - 19 July 2019]
+  if (trace_energy) {
+    nondefault_history_transfer = 1;
+    history_transfer_factors = new int[numshearquants];
+    for (i = 0; i < numshearquants; i++) history_transfer_factors[i] = -1;
+    for (i = 3; i < 7; i++) history_transfer_factors[i] = 1;
+  }
   
   // need a granular neigh list
 
@@ -848,11 +854,6 @@ double PairGranHookeHistoryOldstyle::single(int i, int j, int /*itype*/, int /*j
     if (jlist[neighprev] == j) break;
   }
 
-  /*~ The number of shear quantities is 18 if rolling resistance
-    is active [KH - 29 July 2014]*/
-  /*~ Another 4 shear quantities were added for per-contact energy
-    tracing [KH - 6 March 2014]*/
-  int numshearquants = 3 + 15*rolling + 4*trace_energy;
   double *shear = &allshear[numshearquants*neighprev];
 
   //~ Call function for rolling resistance model [KH - 30 October 2013]
@@ -1646,4 +1647,15 @@ void *PairGranHookeHistoryOldstyle::extract(const char *str, int &dim)
   // Added for new HMD [MO - 12 Sep 2015]
   else if (strcmp(str,"THETA1") == 0) return (void *) &THETA1; 
   return NULL;
+}
+
+/* ----------------------------------------------------------------------
+   transfer history during fix/neigh/history exchange
+   only needed if any history entries i-j are not just negative of j-i entries
+------------------------------------------------------------------------- */
+
+void PairGranHookeHistoryOldstyle::transfer_history(double* source, double* target)
+{
+  for (int i = 0; i < numshearquants; i++)
+    target[i] = history_transfer_factors[i]*source[i];
 }

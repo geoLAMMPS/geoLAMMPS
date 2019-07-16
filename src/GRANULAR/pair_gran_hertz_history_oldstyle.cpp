@@ -142,12 +142,6 @@ void PairGranHertzHistoryOldstyle::compute(int eflag, int vflag)
   //~ Initialise the non-accumulated strain energy terms to zero
   normalstrain = 0.0;
 
-  /*~ The number of shear quantities is 18 if rolling resistance
-    is active [KH - 29 July 2014]*/
-  /*~ Another 4 shear quantities were added for per-contact energy
-    tracing [KH - 6 March 2014]*/
-  int numshearquants = 3 + 15*rolling + 4*trace_energy;
-
   //~ Use tags to consider contacts only once [KH - 28 February 2014]
   tagint *tag = atom->tag; 
 
@@ -579,11 +573,6 @@ double PairGranHertzHistoryOldstyle::single(int i, int j, int /*itype*/, int /*j
     if (jlist[neighprev] == j) break;
   }
 
- /*~ The number of shear quantities is 18 if rolling resistance
-    is active [KH - 29 July 2014]*/
-  /*~ Another 4 shear quantities were added for per-contact energy
-    tracing [KH - 6 March 2014]*/
-  int numshearquants = 3 + 15*rolling + 4*trace_energy;
   double *shear = &allshear[numshearquants*neighprev];
 
   // rotate shear displacements - not needed- shear already updated by compute!

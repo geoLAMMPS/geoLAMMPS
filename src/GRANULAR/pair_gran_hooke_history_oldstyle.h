@@ -81,6 +81,11 @@ class PairGranHookeHistoryOldstyle : public Pair {
   double dissipfriction, normalstrain, shearstrain, spinenergy;
   double gatheredf, gatheredss, gatheredse; //~ Two more added [KH - 17 October 2014]
   //~~ Two more added for D_spin [MO - 13 November 2014]
+
+  //~ Added the function and ints below [KH - 16 July 2019]
+  void transfer_history(double*, double*);
+  int *history_transfer_factors;
+  int numshearquants;
 };
 
 }
