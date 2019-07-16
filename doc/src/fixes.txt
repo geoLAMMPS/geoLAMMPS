@@ -41,6 +41,7 @@ Fixes :h1
    fix_dt_reset
    fix_efield
    fix_ehex
+   fix_electron_stopping
    fix_enforce2d
    fix_eos_cv
    fix_eos_table
@@ -87,6 +88,7 @@ Fixes :h1
    fix_multistress
    fix_mvv_dpd
    fix_neb
+   fix_neb_spin
    fix_nh
    fix_nh_eff
    fix_nh_uef

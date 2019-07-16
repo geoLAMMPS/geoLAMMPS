@@ -408,18 +408,9 @@ void FixNeighHistory::pre_exchange_newton()
         m = npartner[j]++;
         partner[j][m] = tag[i];
         jvalues = &valuepartner[j][dnum*m];
-        for (n = 0; n < dnum; n++) jvalues[n] = -onevalues[n];
-
-	/*~ Force signs of traced energy terms to always be
-	  positive [KH - 23 May 2017]*/
-	if (dnum == 7 || dnum == 22) //~ hooke/hertz + history/oldstyle
-	  for (n = 3; n < 7; n++) jvalues[n] = onevalues[n];
-	else if (dnum == 8 || dnum == 23 || dnum == 28) //~ shm
-	  for (n = 4; n < 8; n++) jvalues[n] = onevalues[n];
-	else if (dnum == 9 || dnum == 29) //~ CM
-	  for (n = 5; n < 9; n++) jvalues[n] = onevalues[n];
-	else if (dnum == 30 || dnum == 50) //~ HMD
-	  for (n = 26; n < 30; n++) jvalues[n] = onevalues[n];
+        if (pair->nondefault_history_transfer) 
+          pair->transfer_history(onevalues,jvalues);
+        else for (n = 0; n < dnum; n++) jvalues[n] = -onevalues[n];
       }
     }
   }
@@ -531,18 +522,9 @@ void FixNeighHistory::pre_exchange_no_newton()
           m = npartner[j]++;
           partner[j][m] = tag[i];
           jvalues = &valuepartner[j][dnum*m];
-          for (n = 0; n < dnum; n++) jvalues[n] = -onevalues[n];
-
-	  /*~ Force signs of traced energy terms to always be
-	    positive [KH - 23 May 2017]*/
-	  if (dnum == 7 || dnum == 22) //~ hooke/hertz + history/oldstyle
-	    for (n = 3; n < 7; n++) jvalues[n] = onevalues[n];
-	  else if (dnum == 8 || dnum == 23 || dnum == 28) //~ shm
-	    for (n = 4; n < 8; n++) jvalues[n] = onevalues[n];
-	  else if (dnum == 9 || dnum == 29) //~ CM
-	    for (n = 5; n < 9; n++) jvalues[n] = onevalues[n];
-	  else if (dnum == 30 || dnum == 50) //~ HMD
-	    for (n = 26; n < 30; n++) jvalues[n] = onevalues[n];
+          if (pair->nondefault_history_transfer) 
+            pair->transfer_history(onevalues, jvalues);
+          else for (n = 0; n < dnum; n++) jvalues[n] = -onevalues[n];
         }
       }
     }
@@ -626,7 +608,7 @@ void FixNeighHistory::post_neighbor()
 
     for (jj = 0; jj < jnum; jj++) {
       j = jlist[jj];
-      rflag = sbmask(j);
+      rflag = sbmask(j) | pair->beyond_contact;
       j &= NEIGHMASK;
       jlist[jj] = j;
 

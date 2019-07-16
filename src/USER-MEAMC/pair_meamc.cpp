@@ -226,6 +226,9 @@ void PairMEAMC::coeff(int narg, char **arg)
   }
   nelements = narg - 4 - atom->ntypes;
   if (nelements < 1) error->all(FLERR,"Incorrect args for pair coefficients");
+  if (nelements > maxelt)
+    error->all(FLERR,"Too many elements extracted from MEAM library. "
+                      "Increase 'maxelt' in meam.h and recompile.");
   elements = new char*[nelements];
   mass = new double[nelements];
 
@@ -456,6 +459,9 @@ void PairMEAMC::read_files(char *globalfile, char *userfile)
     t3[i] = atof(words[16]);
     rozero[i] = atof(words[17]);
     ibar[i] = atoi(words[18]);
+
+    if (!iszero(t0[i]-1.0))
+      error->all(FLERR,"Unsupported parameter in MEAM potential file");
 
     nset++;
   }
