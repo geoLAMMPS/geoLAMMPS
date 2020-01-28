@@ -23,16 +23,14 @@
    and molecular dynamics. Journal of Computational Physics.
 ------------------------------------------------------------------------- */
 
+#include "atom_vec_spin.h"
 #include <cmath>
-#include <cstdlib>
 #include <cstring>
 #include "atom.h"
-#include "atom_vec_spin.h"
 #include "comm.h"
 #include "domain.h"
 #include "error.h"
 #include "fix.h"
-#include "force.h"
 #include "memory.h"
 #include "modify.h"
 #include "utils.h"
@@ -263,10 +261,10 @@ int AtomVecSpin::pack_comm_hybrid(int n, int *list, double *buf)
   m = 0;
   for (i = 0; i < n; i++) {
     j = list[i];
+    buf[m++] = sp[j][3];
     buf[m++] = sp[j][0];
     buf[m++] = sp[j][1];
     buf[m++] = sp[j][2];
-    buf[m++] = sp[j][3];
   }
   return m;
 }
@@ -321,10 +319,10 @@ int AtomVecSpin::unpack_comm_hybrid(int n, int first, double *buf)
   m = 0;
   last = first + n;
   for (i = first; i < last; i++) {
+    sp[i][3] = buf[m++];
     sp[i][0] = buf[m++];
     sp[i][1] = buf[m++];
     sp[i][2] = buf[m++];
-    sp[i][3] = buf[m++];
   }
   return m;
 }
@@ -524,10 +522,10 @@ int AtomVecSpin::pack_border_hybrid(int n, int *list, double *buf)
   m = 0;
   for (i = 0; i < n; i++) {
     j = list[i];
+    buf[m++] = sp[j][3];
     buf[m++] = sp[j][0];
     buf[m++] = sp[j][1];
     buf[m++] = sp[j][2];
-    buf[m++] = sp[j][3];
   }
 
   return m;
@@ -603,10 +601,10 @@ int AtomVecSpin::unpack_border_hybrid(int n, int first, double *buf)
   m = 0;
   last = first + n;
   for (i = first; i < last; i++) {
+    sp[i][3] = buf[m++];
     sp[i][0] = buf[m++];
     sp[i][1] = buf[m++];
     sp[i][2] = buf[m++];
-    sp[i][3] = buf[m++];
   }
 
   return m;
@@ -850,17 +848,16 @@ void AtomVecSpin::data_atom(double *coord, imageint imagetmp, char **values)
 
 int AtomVecSpin::data_atom_hybrid(int nlocal, char **values)
 {
-
-  sp[nlocal][0] = utils::numeric(FLERR,values[0],true,lmp);
-  sp[nlocal][1] = utils::numeric(FLERR,values[1],true,lmp);
-  sp[nlocal][2] = utils::numeric(FLERR,values[2],true,lmp);
+  sp[nlocal][3] = utils::numeric(FLERR,values[0],true,lmp);
+  sp[nlocal][0] = utils::numeric(FLERR,values[1],true,lmp);
+  sp[nlocal][1] = utils::numeric(FLERR,values[2],true,lmp);
+  sp[nlocal][2] = utils::numeric(FLERR,values[3],true,lmp);
   double inorm = 1.0/sqrt(sp[nlocal][0]*sp[nlocal][0] +
                           sp[nlocal][1]*sp[nlocal][1] +
                           sp[nlocal][2]*sp[nlocal][2]);
   sp[nlocal][0] *= inorm;
   sp[nlocal][1] *= inorm;
   sp[nlocal][2] *= inorm;
-  sp[nlocal][3] = utils::numeric(FLERR,values[3],true,lmp);
 
   return 4;
 }
@@ -894,10 +891,10 @@ void AtomVecSpin::pack_data(double **buf)
 
 int AtomVecSpin::pack_data_hybrid(int i, double *buf)
 {
-  buf[0] = sp[i][0];
-  buf[1] = sp[i][1];
-  buf[2] = sp[i][2];
-  buf[3] = sp[i][3];
+  buf[0] = sp[i][3];
+  buf[1] = sp[i][0];
+  buf[2] = sp[i][1];
+  buf[3] = sp[i][2];
   return 4;
 }
 
@@ -924,7 +921,7 @@ void AtomVecSpin::write_data(FILE *fp, int n, double **buf)
 
 int AtomVecSpin::write_data_hybrid(FILE *fp, double *buf)
 {
-  fprintf(fp," %-1.16e %-1.16e %-1.16e %-1.16e %-1.16e",buf[0],buf[1],buf[2],buf[3],buf[4]);
+  fprintf(fp," %-1.16e %-1.16e %-1.16e %-1.16e",buf[0],buf[1],buf[2],buf[3]);
   return 4;
 }
 

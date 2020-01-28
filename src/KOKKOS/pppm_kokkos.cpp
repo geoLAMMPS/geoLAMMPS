@@ -15,23 +15,18 @@
    Contributing author: Stan Moore (SNL)
 ------------------------------------------------------------------------- */
 
-#include <mpi.h>
-#include <cstring>
-#include <cstdio>
-#include <cstdlib>
-#include <cmath>
 #include "pppm_kokkos.h"
+#include <mpi.h>
+#include <cmath>
 #include "atom_kokkos.h"
 #include "comm.h"
 #include "gridcomm_kokkos.h"
 #include "neighbor.h"
 #include "force.h"
 #include "pair.h"
-#include "bond.h"
-#include "angle.h"
 #include "domain.h"
-#include "fft3d_wrap.h"
-#include "remap_wrap.h"
+#include "fft3d_kokkos.h"
+#include "remap_kokkos.h"
 #include "memory_kokkos.h"
 #include "error.h"
 #include "atom_masks.h"
@@ -215,6 +210,10 @@ void PPPMKokkos<DeviceType>::init()
     error->all(FLERR,str);
   }
 
+  // compute two charge force
+
+  two_charge();
+
   // extract short-range Coulombic cutoff from pair style
 
   triclinic = domain->triclinic;
@@ -306,12 +305,6 @@ void PPPMKokkos<DeviceType>::init()
 
   if (me == 0) {
 
-#ifdef FFT_SINGLE
-    const char fft_prec[] = "single";
-#else
-    const char fft_prec[] = "double";
-#endif
-
     if (screen) {
       fprintf(screen,"  G vector (1/distance) = %g\n",g_ewald);
       fprintf(screen,"  grid = %d %d %d\n",nx_pppm,ny_pppm,nz_pppm);
@@ -320,7 +313,7 @@ void PPPMKokkos<DeviceType>::init()
               estimated_accuracy);
       fprintf(screen,"  estimated relative force accuracy = %g\n",
               estimated_accuracy/two_charge_force);
-      fprintf(screen,"  using %s precision FFTs\n",fft_prec);
+      fprintf(screen,"  using " LMP_FFT_PREC " precision " LMP_FFT_LIB "\n");
       fprintf(screen,"  3d grid and FFT values/proc = %d %d\n",
               ngrid_max,nfft_both_max);
     }
@@ -332,7 +325,7 @@ void PPPMKokkos<DeviceType>::init()
               estimated_accuracy);
       fprintf(logfile,"  estimated relative force accuracy = %g\n",
               estimated_accuracy/two_charge_force);
-      fprintf(logfile,"  using %s precision FFTs\n",fft_prec);
+      fprintf(logfile,"  using " LMP_FFT_PREC " precision " LMP_FFT_LIB "\n");
       fprintf(logfile,"  3d grid and FFT values/proc = %d %d\n",
               ngrid_max,nfft_both_max);
     }
@@ -849,19 +842,19 @@ void PPPMKokkos<DeviceType>::allocate()
 
   int tmp;
 
-  fft1 = new FFT3d(lmp,world,nx_pppm,ny_pppm,nz_pppm,
-                   nxlo_fft,nxhi_fft,nylo_fft,nyhi_fft,nzlo_fft,nzhi_fft,
-                   nxlo_fft,nxhi_fft,nylo_fft,nyhi_fft,nzlo_fft,nzhi_fft,
-                   0,0,&tmp,collective_flag);
+  fft1 = new FFT3dKokkos<DeviceType>(lmp,world,nx_pppm,ny_pppm,nz_pppm,
+                         nxlo_fft,nxhi_fft,nylo_fft,nyhi_fft,nzlo_fft,nzhi_fft,
+                         nxlo_fft,nxhi_fft,nylo_fft,nyhi_fft,nzlo_fft,nzhi_fft,
+                         0,0,&tmp,collective_flag);
 
-  fft2 = new FFT3d(lmp,world,nx_pppm,ny_pppm,nz_pppm,
-                   nxlo_fft,nxhi_fft,nylo_fft,nyhi_fft,nzlo_fft,nzhi_fft,
-                   nxlo_in,nxhi_in,nylo_in,nyhi_in,nzlo_in,nzhi_in,
-                   0,0,&tmp,collective_flag);
-  remap = new Remap(lmp,world,
-                    nxlo_in,nxhi_in,nylo_in,nyhi_in,nzlo_in,nzhi_in,
-                    nxlo_fft,nxhi_fft,nylo_fft,nyhi_fft,nzlo_fft,nzhi_fft,
-                    1,0,0,FFT_PRECISION,collective_flag);
+  fft2 = new FFT3dKokkos<DeviceType>(lmp,world,nx_pppm,ny_pppm,nz_pppm,
+                         nxlo_fft,nxhi_fft,nylo_fft,nyhi_fft,nzlo_fft,nzhi_fft,
+                         nxlo_in,nxhi_in,nylo_in,nyhi_in,nzlo_in,nzhi_in,
+                         0,0,&tmp,collective_flag);
+  remap = new RemapKokkos<DeviceType>(lmp,world,
+                          nxlo_in,nxhi_in,nylo_in,nyhi_in,nzlo_in,nzhi_in,
+                          nxlo_fft,nxhi_fft,nylo_fft,nyhi_fft,nzlo_fft,nzhi_fft,
+                          1,0,0,FFT_PRECISION,collective_flag);
 
   // create ghost grid object for rho and electric field communication
 
@@ -1790,12 +1783,7 @@ void PPPMKokkos<DeviceType>::brick2fft()
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagPPPM_brick2fft>(0,inum_inout),*this);
   copymode = 0;
 
-  k_density_fft.template modify<DeviceType>();
-  k_density_fft.template sync<LMPHostType>();
-  remap->perform(density_fft,density_fft,work1);
-  k_density_fft.template modify<LMPHostType>();
-  k_density_fft.template sync<DeviceType>();
-
+  remap->perform(d_density_fft,d_density_fft,d_work1);
 }
 
 template<class DeviceType>
@@ -1837,11 +1825,7 @@ void PPPMKokkos<DeviceType>::poisson_ik()
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagPPPM_poisson_ik1>(0,nfft),*this);
   copymode = 0;
 
-  k_work1.template modify<DeviceType>();
-  k_work1.template sync<LMPHostType>();
-  fft1->compute(work1,work1,1);
-  k_work1.template modify<LMPHostType>();
-  k_work1.template sync<DeviceType>();
+  fft1->compute(d_work1,d_work1,1);
 
 
   // global energy and virial contribution
@@ -1905,11 +1889,7 @@ void PPPMKokkos<DeviceType>::poisson_ik()
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagPPPM_poisson_ik5>(0,inum_fft),*this);
   copymode = 0;
 
-  k_work2.template modify<DeviceType>();
-  k_work2.template sync<LMPHostType>();
-  fft2->compute(work2,work2,-1);
-  k_work2.template modify<LMPHostType>();
-  k_work2.template sync<DeviceType>();
+  fft2->compute(d_work2,d_work2,-1);
 
 
   copymode = 1;
@@ -1923,11 +1903,7 @@ void PPPMKokkos<DeviceType>::poisson_ik()
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagPPPM_poisson_ik7>(0,inum_fft),*this);
   copymode = 0;
 
-  k_work2.template modify<DeviceType>();
-  k_work2.template sync<LMPHostType>();
-  fft2->compute(work2,work2,-1);
-  k_work2.template modify<LMPHostType>();
-  k_work2.template sync<DeviceType>();
+  fft2->compute(d_work2,d_work2,-1);
 
 
   copymode = 1;
@@ -1940,11 +1916,7 @@ void PPPMKokkos<DeviceType>::poisson_ik()
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagPPPM_poisson_ik9>(0,inum_fft),*this);
   copymode = 0;
 
-  k_work2.template modify<DeviceType>();
-  k_work2.template sync<LMPHostType>();
-  fft2->compute(work2,work2,-1);
-  k_work2.template modify<LMPHostType>();
-  k_work2.template sync<DeviceType>();
+  fft2->compute(d_work2,d_work2,-1);
 
 
   copymode = 1;
@@ -2200,11 +2172,7 @@ void PPPMKokkos<DeviceType>::poisson_peratom()
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagPPPM_poisson_peratom1>(0,nfft),*this);
     copymode = 0;
 
-    k_work2.template modify<DeviceType>();
-    k_work2.template sync<LMPHostType>();
-    fft2->compute(work2,work2,-1);
-    k_work2.template modify<LMPHostType>();
-    k_work2.template sync<DeviceType>();
+    fft2->compute(d_work2,d_work2,-1);
 
 
     copymode = 1;
@@ -2221,11 +2189,7 @@ void PPPMKokkos<DeviceType>::poisson_peratom()
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagPPPM_poisson_peratom3>(0,nfft),*this);
   copymode = 0;
 
-  k_work2.template modify<DeviceType>();
-  k_work2.template sync<LMPHostType>();
-  fft2->compute(work2,work2,-1);
-  k_work2.template modify<LMPHostType>();
-  k_work2.template sync<DeviceType>();
+  fft2->compute(d_work2,d_work2,-1);
 
 
   copymode = 1;
@@ -2237,11 +2201,7 @@ void PPPMKokkos<DeviceType>::poisson_peratom()
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagPPPM_poisson_peratom5>(0,nfft),*this);
   copymode = 0;
 
-  k_work2.template modify<DeviceType>();
-  k_work2.template sync<LMPHostType>();
-  fft2->compute(work2,work2,-1);
-  k_work2.template modify<LMPHostType>();
-  k_work2.template sync<DeviceType>();
+  fft2->compute(d_work2,d_work2,-1);
 
 
   copymode = 1;
@@ -2253,11 +2213,7 @@ void PPPMKokkos<DeviceType>::poisson_peratom()
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagPPPM_poisson_peratom7>(0,nfft),*this);
   copymode = 0;
 
-  k_work2.template modify<DeviceType>();
-  k_work2.template sync<LMPHostType>();
-  fft2->compute(work2,work2,-1);
-  k_work2.template modify<LMPHostType>();
-  k_work2.template sync<DeviceType>();
+  fft2->compute(d_work2,d_work2,-1);
 
 
   copymode = 1;
@@ -2268,11 +2224,7 @@ void PPPMKokkos<DeviceType>::poisson_peratom()
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagPPPM_poisson_peratom9>(0,nfft),*this);
   copymode = 0;
 
-  k_work2.template modify<DeviceType>();
-  k_work2.template sync<LMPHostType>();
-  fft2->compute(work2,work2,-1);
-  k_work2.template modify<LMPHostType>();
-  k_work2.template sync<DeviceType>();
+  fft2->compute(d_work2,d_work2,-1);
 
 
   copymode = 1;
@@ -2284,11 +2236,7 @@ void PPPMKokkos<DeviceType>::poisson_peratom()
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagPPPM_poisson_peratom11>(0,nfft),*this);
   copymode = 0;
 
-  k_work2.template modify<DeviceType>();
-  k_work2.template sync<LMPHostType>();
-  fft2->compute(work2,work2,-1);
-  k_work2.template modify<LMPHostType>();
-  k_work2.template sync<DeviceType>();
+  fft2->compute(d_work2,d_work2,-1);
 
 
   copymode = 1;
@@ -2300,11 +2248,7 @@ void PPPMKokkos<DeviceType>::poisson_peratom()
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagPPPM_poisson_peratom13>(0,nfft),*this);
   copymode = 0;
 
-  k_work2.template modify<DeviceType>();
-  k_work2.template sync<LMPHostType>();
-  fft2->compute(work2,work2,-1);
-  k_work2.template modify<LMPHostType>();
-  k_work2.template sync<DeviceType>();
+  fft2->compute(d_work2,d_work2,-1);
 
 
   copymode = 1;
@@ -3044,10 +2988,10 @@ int PPPMKokkos<DeviceType>::timing_1d(int n, double &time1d)
   time1 = MPI_Wtime();
 
   for (int i = 0; i < n; i++) {
-    fft1->timing1d(work1,nfft_both,1);
-    fft2->timing1d(work1,nfft_both,-1);
-    fft2->timing1d(work1,nfft_both,-1);
-    fft2->timing1d(work1,nfft_both,-1);
+    fft1->timing1d(d_work1,nfft_both,1);
+    fft2->timing1d(d_work1,nfft_both,-1);
+    fft2->timing1d(d_work1,nfft_both,-1);
+    fft2->timing1d(d_work1,nfft_both,-1);
   }
 
   MPI_Barrier(world);
@@ -3081,10 +3025,10 @@ int PPPMKokkos<DeviceType>::timing_3d(int n, double &time3d)
   time1 = MPI_Wtime();
 
   for (int i = 0; i < n; i++) {
-    fft1->compute(work1,work1,1);
-    fft2->compute(work1,work1,-1);
-    fft2->compute(work1,work1,-1);
-    fft2->compute(work1,work1,-1);
+    fft1->compute(d_work1,d_work1,1);
+    fft2->compute(d_work1,d_work1,-1);
+    fft2->compute(d_work1,d_work1,-1);
+    fft2->compute(d_work1,d_work1,-1);
   }
 
   MPI_Barrier(world);

@@ -15,12 +15,10 @@
    Contributing authors: Paul Crozier, Stan Moore, Stephen Bond, (all SNL)
 ------------------------------------------------------------------------- */
 
+#include "msm.h"
 #include <mpi.h>
 #include <cstring>
-#include <cstdio>
-#include <cstdlib>
 #include <cmath>
-#include "msm.h"
 #include "atom.h"
 #include "comm.h"
 #include "gridcomm.h"
@@ -182,6 +180,10 @@ void MSM::init()
   if (sizeof(FFT_SCALAR) != 8)
     error->all(FLERR,"Cannot (yet) use single precision with MSM "
                "(remove -DFFT_SINGLE from Makefile and re-compile)");
+
+  // compute two charge force
+
+  two_charge();
 
   // extract short-range Coulombic cutoff from pair style
 
