@@ -85,6 +85,10 @@ action comm_kokkos.cpp
 action comm_kokkos.h
 action comm_tiled_kokkos.cpp
 action comm_tiled_kokkos.h
+action compute_coord_atom_kokkos.cpp
+action compute_coord_atom_kokkos.h
+action compute_orientorder_atom_kokkos.cpp
+action compute_orientorder_atom_kokkos.h
 action compute_temp_kokkos.cpp
 action compute_temp_kokkos.h
 action dihedral_charmm_kokkos.cpp dihedral_charmm.cpp
@@ -160,6 +164,7 @@ action kissfft_kokkos.h kissfft.h
 action kokkos.cpp
 action kokkos.h
 action kokkos_base.h
+action kokkos_base_fft.h fft3d.h
 action kokkos_few.h
 action kokkos_type.h
 action memory_kokkos.h
