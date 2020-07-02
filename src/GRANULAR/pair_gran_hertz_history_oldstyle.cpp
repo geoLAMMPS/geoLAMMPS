@@ -339,7 +339,7 @@ void PairGranHertzHistoryOldstyle::compute(int eflag, int vflag)
 	double incdissipf, nstr, sstr;
 
 	int consideronce = 0; //~ Consider contacts only once
-	if (j < nlocal || tag[j] < tag[i]) consideronce = 1;
+	if (newton_pair || j < nlocal || tag[j] < tag[i]) consideronce = 1;
 
 	//~ Call function for rolling resistance model [KH - 25 October 2013]
 	if (rolling && shearupdate && consideronce) {

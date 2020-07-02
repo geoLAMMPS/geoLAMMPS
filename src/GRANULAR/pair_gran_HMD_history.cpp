@@ -684,7 +684,7 @@ void PairGranHMDHistory::compute(int eflag, int vflag)
 	double dspin_i[3],dspin_stm,spin_stm,dM_i[3],dM,K_spin,theta_r,M_limit,Dspin_energy;
 	
 	int consideronce = 0; //~ Consider contacts only once
-	if (j < nlocal || tag[j] < tag[i]) consideronce = 1;
+	if (newton_pair || j < nlocal || tag[j] < tag[i]) consideronce = 1;
 
 	//~~ Call function for twisting resistance model [MO - 04 November 2014]]
 	if (D_spin && shearupdate && consideronce) {
