@@ -45,7 +45,7 @@ fix 1 all multistress 0.5 1000 0.05 x stress 100000 y stress 50000 z stress 3000
 fix 2 all multistress 1 40000 1.5 x stress 100000 y stress 100000 z erate -0.01 units box
 fix 1 all multistress 1 40000 x erate 0.01 y erate 0.04 z erate -0.03 units box
 fix 3 all multistress 0.5 100000 10 z vel -0.01 linkvolstress x y units box
-fix 3 all multistress 0.5 100000 10 x stress 100000 y constantb z x z erate -0.01 units box
+fix 3 all multistress 0.5 100000 10 x stress 100000 y constantb 0.5 z x z erate -0.01 units box
 fix 3 all multistress 1 50000 1 z erate -0.01 constantp x y units box
 fix name all multistress 1 100000 1 x vel -0.5 constantq y z units box :pre
 
