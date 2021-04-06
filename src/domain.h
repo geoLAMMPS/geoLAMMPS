@@ -98,7 +98,7 @@ class Domain : protected Pointers {
 
   /*~ Added for persistent storage of the number of timesteps for 
     which cyclic loading was active [KH - 10 October 2012]*/
-  int ncyclicsteps;
+  unsigned int ncyclicsteps;
 
   /*~ Added to store the initial value of mean effective stress 
     [KH - 13 November 2012]*/

@@ -1587,7 +1587,7 @@ void FixMultistress::restart(char *buf)
 {
   int n = 0;
   double *list = (double *) buf;
-  ncyclicsteps = static_cast<int> (list[n++]);
+  ncyclicsteps = static_cast<unsigned int> (list[n++]);
   initialvolume = static_cast<double> (list[n++]);
   meaneffectivestress = static_cast<double> (list[n++]);
   deviatorstress = static_cast<double> (list[n++]);

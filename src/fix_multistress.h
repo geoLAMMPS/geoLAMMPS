@@ -66,7 +66,7 @@ namespace LAMMPS_NS {
     int constqflag; //~ 1 if constantq is active, otherwise 0
     int maxrateflag; //~ 1 if a maximum strain rate is defined, otherwise 0
     int extrasteps; //~ The number of additional steps to run
-    int ncyclicsteps; //~ Number of steps for which cyclic loading is active
+    unsigned int ncyclicsteps; //~ Number of steps for which cyclic loading is active
     int iterateflag; //~ May be needed for conditional code branches
     double tolerance; //~ The percentage accuracy required for the stresses
     double maxrate[6]; //~ Optional user-defined maximum engineering strain rates (x 6)
