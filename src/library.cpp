@@ -14,14 +14,12 @@
 // C or Fortran style library interface to LAMMPS
 // customize by adding new LAMMPS-specific functions
 
+#include "library.h"
 #include <mpi.h>
+#include <cctype>
 #include <cstring>
 #include <cstdlib>
-#include "library.h"
-#include "lmptype.h"
-#include "lammps.h"
 #include "universe.h"
-#include "input.h"
 #include "atom_vec.h"
 #include "atom.h"
 #include "domain.h"
@@ -39,6 +37,14 @@
 #include "error.h"
 #include "force.h"
 #include "info.h"
+#include "fix_external.h"
+#include "neighbor.h"
+#include "neigh_list.h"
+#include "neigh_request.h"
+
+#if defined(LAMMPS_EXCEPTIONS)
+#include "exceptions.h"
+#endif
 
 using namespace LAMMPS_NS;
 
@@ -808,7 +814,10 @@ void lammps_gather_atoms(void *ptr, char * /*name */,
   LAMMPS *lmp = (LAMMPS *) ptr;
 
   BEGIN_CAPTURE
-  lmp->error->all(FLERR,"Library function lammps_gather_atoms() not compatible with -DLAMMPS_BIGBIG");
+  {
+    lmp->error->all(FLERR,"Library function lammps_gather_atoms() "
+                    "is not compatible with -DLAMMPS_BIGBIG");
+  }
   END_CAPTURE
 }
 #else
@@ -946,7 +955,10 @@ void lammps_gather_atoms_concat(void *ptr, char * /*name */,
   LAMMPS *lmp = (LAMMPS *) ptr;
 
   BEGIN_CAPTURE
-  lmp->error->all(FLERR,"Library function lammps_gather_atoms_concat() not compatible with -DLAMMPS_BIGBIG");
+  {
+    lmp->error->all(FLERR,"Library function lammps_gather_atoms_concat() "
+                    "is not compatible with -DLAMMPS_BIGBIG");
+  }
   END_CAPTURE
 }
 #else
@@ -1103,7 +1115,10 @@ void lammps_gather_atoms_subset(void *ptr, char * /*name */,
   LAMMPS *lmp = (LAMMPS *) ptr;
 
   BEGIN_CAPTURE
-  lmp->error->all(FLERR,"Library function lammps_gather_atoms_subset() not compatible with -DLAMMPS_BIGBIG");
+  {
+    lmp->error->all(FLERR,"Library function lammps_gather_atoms_subset() "
+                    "is not compatible with -DLAMMPS_BIGBIG");
+  }
   END_CAPTURE
 }
 #else
@@ -1249,7 +1264,10 @@ void lammps_scatter_atoms(void *ptr, char * /*name */,
   LAMMPS *lmp = (LAMMPS *) ptr;
 
   BEGIN_CAPTURE
-  lmp->error->all(FLERR,"Library function lammps_scatter_atoms() not compatible with -DLAMMPS_BIGBIG");
+  {
+    lmp->error->all(FLERR,"Library function lammps_scatter_atoms() "
+                    "is not compatible with -DLAMMPS_BIGBIG");
+  }
   END_CAPTURE
 }
 #else
@@ -1375,7 +1393,10 @@ void lammps_scatter_atoms_subset(void *ptr, char * /*name */,
   LAMMPS *lmp = (LAMMPS *) ptr;
 
   BEGIN_CAPTURE
-  lmp->error->all(FLERR,"Library function lammps_scatter_atoms_subset() not compatible with -DLAMMPS_BIGBIG");
+  {
+    lmp->error->all(FLERR,"Library function lammps_scatter_atoms_subset() "
+                    "is not compatible with -DLAMMPS_BIGBIG");
+  }
   END_CAPTURE
 }
 #else
@@ -1578,7 +1599,7 @@ void lammps_create_atoms(void *ptr, int n, tagint *id, int *type,
 
     if (lmp->atom->natoms != natoms_prev + n) {
       char str[128];
-      sprintf(str,"Library warning in lammps_create_atoms, "
+      snprintf(str, 128, "Library warning in lammps_create_atoms, "
               "invalid total atoms " BIGINT_FORMAT " " BIGINT_FORMAT,
               lmp->atom->natoms,natoms_prev+n);
       if (lmp->comm->me == 0)
@@ -1587,6 +1608,40 @@ void lammps_create_atoms(void *ptr, int n, tagint *id, int *type,
   }
   END_CAPTURE
 }
+
+/* ----------------------------------------------------------------------
+   find fix external with given ID and set the callback function
+   and caller pointer
+------------------------------------------------------------------------- */
+
+void lammps_set_fix_external_callback(void *ptr, char *id, FixExternalFnPtr callback_ptr, void * caller)
+{
+  LAMMPS *lmp = (LAMMPS *) ptr;
+  FixExternal::FnPtr callback = (FixExternal::FnPtr) callback_ptr;
+
+  BEGIN_CAPTURE
+  {
+    int ifix = lmp->modify->find_fix(id);
+    if (ifix < 0) {
+      char str[128];
+      snprintf(str, 128, "Can not find fix with ID '%s'!", id);
+      lmp->error->all(FLERR,str);
+    }
+
+    Fix *fix = lmp->modify->fix[ifix];
+
+    if (strcmp("external",fix->style) != 0){
+      char str[128];
+      snprintf(str, 128, "Fix '%s' is not of style external!", id);
+      lmp->error->all(FLERR,str);
+    }
+
+    FixExternal * fext = (FixExternal*) fix;
+    fext->set_callback(callback, caller);
+  }
+  END_CAPTURE
+}
+
 
 // ----------------------------------------------------------------------
 // library API functions for accessing LAMMPS configuration
@@ -1675,3 +1730,133 @@ int lammps_get_last_error_message(void *ptr, char * buffer, int buffer_size) {
 }
 
 #endif
+
+/* ----------------------------------------------------------------------
+   Find neighbor list index for pair style
+------------------------------------------------------------------------- */
+int lammps_find_pair_neighlist(void* ptr, char * style, int nsub, int request) {
+  LAMMPS *  lmp = (LAMMPS *) ptr;
+  Pair* pair = lmp->force->pair_match(style, 1, nsub);
+
+  if (pair != NULL) {
+    // find neigh list
+    for (int i = 0; i < lmp->neighbor->nlist; i++) {
+      NeighList * list = lmp->neighbor->lists[i];
+      if (list->requestor_type != NeighList::PAIR || pair != list->requestor) continue;
+
+      if (list->index == request) {
+          return i;
+      }
+    }
+  }
+  return -1;
+}
+
+/* ----------------------------------------------------------------------
+   Find neighbor list index for compute with given fix ID
+   The request ID identifies which request it is in case of there are
+   multiple neighbor lists for this fix
+------------------------------------------------------------------------- */
+int lammps_find_fix_neighlist(void* ptr, char * id, int request) {
+  LAMMPS *  lmp = (LAMMPS *) ptr;
+  Fix* fix = NULL;
+  const int nfix = lmp->modify->nfix;
+
+  // find fix with name
+  for (int ifix = 0; ifix < nfix; ifix++) {
+    if (strcmp(lmp->modify->fix[ifix]->id, id) == 0) {
+        fix = lmp->modify->fix[ifix];
+        break;
+    }
+  }
+
+  if (fix != NULL) {
+    // find neigh list
+    for (int i = 0; i < lmp->neighbor->nlist; i++) {
+      NeighList * list = lmp->neighbor->lists[i];
+      if (list->requestor_type != NeighList::FIX || fix != list->requestor) continue;
+
+      if (list->index == request) {
+          return i;
+      }
+    }
+  }
+  return -1;
+}
+
+/* ----------------------------------------------------------------------
+   Find neighbor list index for compute with given compute ID
+   The request ID identifies which request it is in case of there are
+   multiple neighbor lists for this compute
+------------------------------------------------------------------------- */
+
+int lammps_find_compute_neighlist(void* ptr, char * id, int request) {
+  LAMMPS *  lmp = (LAMMPS *) ptr;
+  Compute* compute = NULL;
+  const int ncompute = lmp->modify->ncompute;
+
+  // find compute with name
+  for (int icompute = 0; icompute < ncompute; icompute++) {
+    if (strcmp(lmp->modify->compute[icompute]->id, id) == 0) {
+        compute = lmp->modify->compute[icompute];
+        break;
+    }
+  }
+
+  if (compute == NULL) {
+    // find neigh list
+    for (int i = 0; i < lmp->neighbor->nlist; i++) {
+      NeighList * list = lmp->neighbor->lists[i];
+      if (list->requestor_type != NeighList::COMPUTE || compute != list->requestor) continue;
+
+      if (list->index == request) {
+          return i;
+      }
+    }
+  }
+  return -1;
+}
+
+/* ----------------------------------------------------------------------
+   Return the number of entries in the neighbor list with given index
+------------------------------------------------------------------------- */
+
+int lammps_neighlist_num_elements(void * ptr, int idx) {
+  LAMMPS *  lmp = (LAMMPS *) ptr;
+  Neighbor * neighbor = lmp->neighbor;
+
+  if(idx < 0 || idx >= neighbor->nlist) {
+    return -1;
+  }
+
+  NeighList * list = neighbor->lists[idx];
+  return list->inum;
+}
+
+/* ----------------------------------------------------------------------
+   Return atom index, number of neighbors and neighbor array for neighbor
+   list entry
+------------------------------------------------------------------------- */
+
+void lammps_neighlist_element_neighbors(void * ptr, int idx, int element, int * iatom, int * numneigh, int ** neighbors) {
+  LAMMPS *  lmp = (LAMMPS *) ptr;
+  Neighbor * neighbor = lmp->neighbor;
+  *iatom = -1;
+  *numneigh = 0;
+  *neighbors = NULL;
+
+  if(idx < 0 || idx >= neighbor->nlist) {
+    return;
+  }
+
+  NeighList * list = neighbor->lists[idx];
+
+  if(element < 0 || element >= list->inum) {
+    return;
+  }
+
+  int i = list->ilist[element];
+  *iatom     = i;
+  *numneigh  = list->numneigh[i];
+  *neighbors = list->firstneigh[i];
+}

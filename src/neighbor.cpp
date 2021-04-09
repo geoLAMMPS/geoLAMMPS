@@ -15,11 +15,10 @@
    Contributing author (triclinic and multi-neigh) : Pieter in 't Veld (SNL)
 ------------------------------------------------------------------------- */
 
+#include "neighbor.h"
 #include <mpi.h>
 #include <cmath>
-#include <cstdlib>
 #include <cstring>
-#include "neighbor.h"
 #include "neigh_list.h"
 #include "neigh_request.h"
 #include "nbin.h"
@@ -47,8 +46,6 @@
 #include "memory.h"
 #include "error.h"
 #include "utils.h"
-
-#include <map>
 
 using namespace LAMMPS_NS;
 using namespace NeighConst;
@@ -704,6 +701,15 @@ int Neighbor::init_pair()
       create_kokkos_list(i);
     else lists[i] = new NeighList(lmp);
     lists[i]->index = i;
+    lists[i]->requestor = requests[i]->requestor;
+
+    if(requests[i]->pair) {
+        lists[i]->requestor_type = NeighList::PAIR;
+    } else if(requests[i]->fix) {
+        lists[i]->requestor_type = NeighList::FIX;
+    } else if(requests[i]->compute) {
+        lists[i]->requestor_type = NeighList::COMPUTE;
+    }
 
     if (requests[i]->pair && i < nrequest_original) {
       Pair *pair = (Pair *) requests[i]->requestor;
