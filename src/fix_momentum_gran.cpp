@@ -11,9 +11,9 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
+#include "fix_momentum_gran.h"
 #include <cstdlib>
 #include <cstring>
-#include "fix_momentum_gran.h"
 #include "atom.h"
 #include "group.h"
 #include "error.h"

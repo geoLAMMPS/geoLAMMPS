@@ -11,10 +11,10 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
+#include "fix_damp_local.h"
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
-#include "fix_damp_local.h"
 #include "atom.h"
 #include "update.h"
 #include "respa.h"

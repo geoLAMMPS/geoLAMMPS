@@ -15,13 +15,13 @@
    Contributing author: Kevin Hanley (Imperial)
 ------------------------------------------------------------------------- */
 
+#include "fix_multistress.h"
 #include <mpi.h>
 #include <cstring>
 #include <cstdlib>
 #include <cmath>
 #include "atom.h"
 #include "modify.h"
-#include "fix_multistress.h"
 #include "fix_deform.h"
 #include "compute.h"
 #include "error.h"

@@ -15,11 +15,11 @@
    Contributing author: Kevin Hanley (Imperial)
 ------------------------------------------------------------------------- */
 
+#include "fix_crushing.h"
 #include <mpi.h>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
-#include "fix_crushing.h"
 #include "atom.h"
 #include "atom_vec.h"
 #include "update.h"
