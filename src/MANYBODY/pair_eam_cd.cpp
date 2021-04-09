@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://lammps.sandia.gov, Sandia National Laboratories
+   https://lammps.sandia.gov/, Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -18,9 +18,9 @@
 ------------------------------------------------------------------------- */
 
 #include "pair_eam_cd.h"
-#include <mpi.h>
+
 #include <cmath>
-#include <cstdlib>
+
 #include <cstring>
 #include "atom.h"
 #include "force.h"
@@ -29,6 +29,8 @@
 #include "memory.h"
 #include "error.h"
 #include "tokenizer.h"
+
+
 
 using namespace LAMMPS_NS;
 
@@ -40,10 +42,11 @@ PairEAMCD::PairEAMCD(LAMMPS *lmp, int _cdeamVersion)
 {
   single_enable = 0;
   restartinfo = 0;
+  unit_convert_flag = utils::get_supported_conversions(utils::ENERGY);
 
-  rhoB = NULL;
-  D_values = NULL;
-  hcoeff = NULL;
+  rhoB = nullptr;
+  D_values = nullptr;
+  hcoeff = nullptr;
 
   // Set communication buffer sizes needed by this pair style.
 
@@ -62,7 +65,7 @@ PairEAMCD::~PairEAMCD()
 {
   memory->destroy(rhoB);
   memory->destroy(D_values);
-  if (hcoeff) delete[] hcoeff;
+  delete[] hcoeff;
 }
 
 void PairEAMCD::compute(int eflag, int vflag)
@@ -500,31 +503,31 @@ void PairEAMCD::read_h_coeff(char *filename)
     FILE *fptr;
     char line[MAXLINE];
     char nextline[MAXLINE];
-    fptr = force->open_potential(filename);
-    if (fptr == NULL) {
-      char str[128];
-      snprintf(str,128,"Cannot open EAM potential file %s", filename);
-      error->one(FLERR,str);
-    }
+    int convert_flag = unit_convert_flag;
+    fptr = utils::open_potential(filename, lmp, &convert_flag);
+    if (fptr == nullptr)
+      error->one(FLERR,fmt::format("Cannot open EAMCD potential file {}",
+                                   filename));
 
     // h coefficients are stored at the end of the file.
     // Skip to last line of file.
 
-    while(fgets(nextline, MAXLINE, fptr) != NULL) {
+    while (fgets(nextline, MAXLINE, fptr) != nullptr) {
       strcpy(line, nextline);
     }
 
-    ValueTokenizer values(line, " \t\n\r\f");
+    ValueTokenizer values(line);
     int degree = values.next_int();
     nhcoeff = degree+1;
 
-    if (values.count() != nhcoeff + 1 || nhcoeff < 1)
+    if ((int)values.count() != nhcoeff + 1 || nhcoeff < 1)
       error->one(FLERR, "Failed to read h(x) function coefficients in EAM file.");
 
+    delete[] hcoeff;
     hcoeff = new double[nhcoeff];
 
     int i = 0;
-    while(values.has_next()) {
+    while (values.has_next()) {
       hcoeff[i++] = values.next_double();
     }
 
@@ -534,7 +537,10 @@ void PairEAMCD::read_h_coeff(char *filename)
   }
 
   MPI_Bcast(&nhcoeff, 1, MPI_INT, 0, world);
-  if (comm->me != 0) hcoeff = new double[nhcoeff];
+  if (comm->me != 0) {
+    delete[] hcoeff;
+    hcoeff = new double[nhcoeff];
+  }
   MPI_Bcast(hcoeff, nhcoeff, MPI_DOUBLE, 0, world);
 }
 

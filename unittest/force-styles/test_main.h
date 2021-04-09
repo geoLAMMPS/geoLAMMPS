@@ -22,19 +22,24 @@ extern bool print_stats;
 extern bool verbose;
 extern std::string INPUT_FOLDER;
 
-#define EXPECT_FP_LE_WITH_EPS(val1,val2,eps)                \
-    do {                                                    \
-        const double diff = fabs(val1-val2);                \
-        const double div = std::min(fabs(val1),fabs(val2)); \
-        const double err = (div == 0.0) ? diff : diff/div;  \
-        stats.add(err);                                     \
-        EXPECT_PRED_FORMAT2(::testing::DoubleLE, err, eps); \
-    } while (0);
+// convenience method to write out common entries
+void write_yaml_header(class YamlWriter *writer, TestConfig *cfg,
+                       const char *version);
 
-#endif
+#define EXPECT_FP_LE_WITH_EPS(val1, val2, eps)                \
+    do {                                                      \
+        const double diff = fabs(val1 - val2);                \
+        const double div  = std::min(fabs(val1), fabs(val2)); \
+        const double err  = (div == 0.0) ? diff : diff / div; \
+        stats.add(err);                                       \
+        EXPECT_PRED_FORMAT2(::testing::DoubleLE, err, eps);   \
+    } while (0);
 
 #if defined _WIN32
 static const char PATH_SEP = '\\';
 #else
 static const char PATH_SEP = '/';
 #endif
+
+#endif
+

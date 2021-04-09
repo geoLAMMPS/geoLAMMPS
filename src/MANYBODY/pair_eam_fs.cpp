@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://lammps.sandia.gov, Sandia National Laboratories
+   https://lammps.sandia.gov/, Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -16,16 +16,15 @@
 ------------------------------------------------------------------------- */
 
 #include "pair_eam_fs.h"
-#include <mpi.h>
-#include <cstring>
+
 #include "atom.h"
 #include "comm.h"
-#include "force.h"
-#include "memory.h"
 #include "error.h"
-#include "utils.h"
-#include "tokenizer.h"
+#include "memory.h"
 #include "potential_file_reader.h"
+#include "tokenizer.h"
+
+#include <cstring>
 
 using namespace LAMMPS_NS;
 
@@ -35,6 +34,7 @@ PairEAMFS::PairEAMFS(LAMMPS *lmp) : PairEAM(lmp)
 {
   one_coeff = 1;
   manybody_flag = 1;
+  he_flag = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -71,7 +71,7 @@ void PairEAMFS::coeff(int narg, char **arg)
   read_file(arg[2]);
 
   // read args that map atom types to elements in potential file
-  // map[i] = which element the Ith atom type is, -1 if NULL
+  // map[i] = which element the Ith atom type is, -1 if "NULL"
 
   for (i = 3; i < narg; i++) {
     if (strcmp(arg[i],"NULL") == 0) {
@@ -118,22 +118,27 @@ void PairEAMFS::read_file(char *filename)
   Fs *file = fs;
 
   // read potential file
-  if(comm->me == 0) {
-    PotentialFileReader reader(lmp, filename, "EAM");
+  if (comm->me == 0) {
+    PotentialFileReader reader(lmp, filename, he_flag ? "eam/he" : "eam/fs",
+                               unit_convert_flag);
 
+    // transparently convert units for supported conversions
+
+    // transparently convert units for supported conversions
+
+    int unit_convert = reader.get_unit_convert();
+    double conversion_factor = utils::get_conversion_factor(utils::ENERGY,
+                                                            unit_convert);
     try {
-      char * line = nullptr;
-
       reader.skip_line();
       reader.skip_line();
       reader.skip_line();
 
       // extract element names from nelements line
-      line = reader.next_line(1);
-      ValueTokenizer values(line);
+      ValueTokenizer values = reader.next_values(1);
       file->nelements = values.next_int();
 
-      if (values.count() != file->nelements + 1)
+      if ((int)values.count() != file->nelements + 1)
         error->one(FLERR,"Incorrect element names in EAM potential file");
 
       file->elements = new char*[file->nelements];
@@ -146,13 +151,14 @@ void PairEAMFS::read_file(char *filename)
 
       //
 
-      line = reader.next_line(5);
-      values = ValueTokenizer(line);
+      if (he_flag) values = reader.next_values(6);
+      else values = reader.next_values(5);
       file->nrho = values.next_int();
       file->drho = values.next_double();
       file->nr   = values.next_int();
       file->dr   = values.next_double();
       file->cut  = values.next_double();
+      if (he_flag) rhomax = values.next_double();
 
       if ((file->nrho <= 0) || (file->nr <= 0) || (file->dr <= 0.0))
         error->one(FLERR,"Invalid EAM potential file");
@@ -163,24 +169,31 @@ void PairEAMFS::read_file(char *filename)
       memory->create(file->z2r, file->nelements, file->nelements, file->nr + 1, "pair:z2r");
 
       for (int i = 0; i < file->nelements; i++) {
-        line = reader.next_line(2);
-        values = ValueTokenizer(line);
+        values = reader.next_values(2);
         values.next_int(); // ignore
         file->mass[i] = values.next_double();
 
-        reader.next_dvector(file->nrho, &file->frho[i][1]);
+        reader.next_dvector(&file->frho[i][1], file->nrho);
+        if (unit_convert) {
+          for (int j = 1; j <= file->nrho; ++j)
+            file->frho[i][j] *= conversion_factor;
+        }
 
         for (int j = 0; j < file->nelements; j++) {
-          reader.next_dvector(file->nr, &file->rhor[i][j][1]);
+          reader.next_dvector(&file->rhor[i][j][1], file->nr);
         }
       }
 
       for (int i = 0; i < file->nelements; i++) {
         for (int j = 0; j <= i; j++) {
-          reader.next_dvector(file->nr, &file->z2r[i][j][1]);
+          reader.next_dvector(&file->z2r[i][j][1], file->nr);
+          if (unit_convert) {
+            for (int k = 1; k <= file->nr; ++k)
+              file->z2r[i][j][k] *= conversion_factor;
+          }
         }
       }
-    } catch (TokenizerException & e) {
+    } catch (TokenizerException &e) {
       error->one(FLERR, e.what());
     }
   }
@@ -193,6 +206,7 @@ void PairEAMFS::read_file(char *filename)
   MPI_Bcast(&file->nr, 1, MPI_INT, 0, world);
   MPI_Bcast(&file->dr, 1, MPI_DOUBLE, 0, world);
   MPI_Bcast(&file->cut, 1, MPI_DOUBLE, 0, world);
+  MPI_Bcast(&rhomax, 1, MPI_DOUBLE, 0, world);
 
   // allocate memory on other procs
   if (comm->me != 0) {
@@ -246,7 +260,8 @@ void PairEAMFS::file2array()
   nr = fs->nr;
   drho = fs->drho;
   dr = fs->dr;
-  rhomax = (nrho-1) * drho;
+  if (he_flag) rhomin = rhomax - (nrho-1) * drho;
+  else rhomax = (nrho-1) * drho;
 
   // ------------------------------------------------------------------
   // setup frho arrays
