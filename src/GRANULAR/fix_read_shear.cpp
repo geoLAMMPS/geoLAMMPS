@@ -11,12 +11,11 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
+#include "fix_read_shear.h"
 #include <cmath>
 #include <cstdlib>
-#include <cstdio>
 #include <cstring>
 #include <fstream>
-#include "fix_read_shear.h"
 #include "atom.h"
 #include "update.h"
 #include "neighbor.h"

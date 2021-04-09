@@ -11,12 +11,11 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
+#include "fix_write_insurance_shear_history.h"
 #include <mpi.h>
 #include <cmath>
 #include <cstdlib>
-#include <cstdio>
 #include <cstring>
-#include "fix_write_insurance_shear_history.h"
 #include "atom.h"
 #include "update.h"
 #include "neighbor.h"

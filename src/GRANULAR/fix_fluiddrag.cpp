@@ -11,12 +11,11 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
+#include "fix_fluiddrag.h"
 #include <mpi.h> //~ Added for MPI gathering of quantities on different procs
 #include <cmath>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include "fix_fluiddrag.h"
 #include "atom.h"
 #include "update.h"
 #include "domain.h"

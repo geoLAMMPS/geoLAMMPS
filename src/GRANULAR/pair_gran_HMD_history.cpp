@@ -15,11 +15,10 @@
   Contributing authors: Leo Silbert (SNL), Gary Grest (SNL)
 ------------------------------------------------------------------------- */
 
+#include "pair_gran_HMD_history.h"
 #include <cmath>
 #include <cstdlib>
-#include <cstdio>
 #include <cstring>
-#include "pair_gran_HMD_history.h"
 #include "atom.h"
 #include "update.h"
 #include "force.h"
