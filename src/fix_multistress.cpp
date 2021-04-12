@@ -541,13 +541,20 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) :
 
   //~ Set flags to indicate whether or not the box changes size/shape
   for (int i = 0; i < 3; i++)
-    if (strflag[i] == 1 || defflag[i] == 1 || linkvolstress[i] == 1 || constantpq[i] == 1)
-      box_change_size = 1;
+    if (strflag[i] == 1 || defflag[i] == 1 || linkvolstress[i] == 1 || constantpq[i] == 1) {
+      if (i == 0) box_change |= BOX_CHANGE_X;
+      else if (i == 1) box_change |= BOX_CHANGE_Y;
+      else box_change |= BOX_CHANGE_Z;
+    }
 
+  //~ Note that the order, confusingly, differs from that in FixDeform [KH - 12 April 2021]
   for (int i = 3; i < 6; i++)
-    if (strflag[i] == 1 || defflag[i] == 1)
-      box_change_shape = 1;
-
+    if (strflag[i] == 1 || defflag[i] == 1) {
+      if (i == 3) box_change |= BOX_CHANGE_XY;
+      else if (i == 4) box_change |= BOX_CHANGE_XZ;
+      else box_change |= BOX_CHANGE_YZ;
+    }
+  
   if (dimension == 2 && (strflag[2] != 0 || strflag[4] != 0 || strflag[5] != 0 ||
 			 defflag[2] != 0 || defflag[4] != 0 || defflag[5] != 0))
     error->all(FLERR,"No z specifier in fix multistress for 2D simulations");
