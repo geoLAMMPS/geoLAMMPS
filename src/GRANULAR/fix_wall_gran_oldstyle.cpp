@@ -1892,14 +1892,13 @@ void FixWallGranOldstyle::CM_history(double rsq, double dx, double dy, double dz
     }
     if (shearupdate && i == 7 && update->ntimestep % 1000 == 0) {
     fprintf(screen,"timestep %i tag %i & %i N_step %i overlap %1.6e N %1.6e kn %1.6e kt %1.6e poly_eff %1.6e poly %1.6e alpha %1.6e\n",update->ntimestep,i,i,N_step,overlap,N,effectivekn,effectivekt,polyhertz_effective,polyhertz,alpha);
-    }*/
+    }
   
-  /*************************************************************************
   if (shearupdate) {
     shear[3] = overlap_max;
     if (nstr_plast > energy_asperity_max) shear[4] = nstr_plast;
   }
-  //*************************************************************************/
+  */
   
   fwall[0] += fx;
   fwall[1] += fy;
@@ -3796,7 +3795,7 @@ void FixWallGranOldstyle::rolling_resistance(int i, int numshearq, double dx, do
   } else {
     //~ Issue a warning and broadcast lastwarning int to all procs
     if (update->ntimestep-lastwarning[0] >= warnfrequency) {
-      fprintf(screen,"Cannot estimate either contact stiffness in rolling resistance model on timestep "BIGINT_FORMAT"\n",update->ntimestep);
+      fprintf(screen,"Cannot estimate either contact stiffness in rolling resistance model on timestep " BIGINT_FORMAT "\n",update->ntimestep);
       lastwarning[0] = lastwarning[1] = update->ntimestep;
       MPI_Bcast(&lastwarning[0],2,MPI_INT,comm->me,world);
     }
@@ -3818,7 +3817,7 @@ void FixWallGranOldstyle::rolling_resistance(int i, int numshearq, double dx, do
   else if (shear[numshearq-3] > tolerance) ksbar = fabs(shear[numshearq-3]);
   else {
     if (kt >= tolerance && update->ntimestep-lastwarning[1] >= warnfrequency) {
-      fprintf(screen,"Cannot estimate tangential contact stiffness in rolling resistance model on timestep "BIGINT_FORMAT"\n",update->ntimestep);
+      fprintf(screen,"Cannot estimate tangential contact stiffness in rolling resistance model on timestep " BIGINT_FORMAT "\n",update->ntimestep);
       lastwarning[1] = update->ntimestep;
       MPI_Bcast(&lastwarning[1],1,MPI_INT,comm->me,world);
     }

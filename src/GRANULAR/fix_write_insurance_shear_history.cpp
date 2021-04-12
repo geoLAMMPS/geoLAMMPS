@@ -167,7 +167,7 @@ void FixWriteInsuranceShearHistory::setup(int vflag)
 
   //~ Now write the shear history to a file
   char buffer[30];
-  int strstep = sprintf(buffer,"%d",update->ntimestep);
+  int strstep = sprintf(buffer,"" BIGINT_FORMAT "",update->ntimestep);
   int n = strlen("Shear_History_.txt") + 1 + strstep;
   char *filename = new char[n];
   strcpy(filename,"Shear_History_");

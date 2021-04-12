@@ -856,7 +856,7 @@ void FixCrushing::change_strengths(int i, double radius, int a)
       counter++;
       if (counter > counterlimit) {
 	newcstrength = cparams[i][0];
-	fprintf(screen,"Loop exit condition invoked in FixCrushing on timestep "BIGINT_FORMAT" to prevent an infinite loop.\n",update->ntimestep);
+	fprintf(screen,"Loop exit condition invoked in FixCrushing on timestep " BIGINT_FORMAT " to prevent an infinite loop.\n",update->ntimestep);
       
 	break; //~ To prevent an infinite loop
       }
@@ -869,7 +869,7 @@ void FixCrushing::change_strengths(int i, double radius, int a)
       counter++;
       if (counter > counterlimit) {
 	newcstrength = cparams[i][0];
-	fprintf(screen,"Loop exit condition invoked in FixCrushing on timestep "BIGINT_FORMAT" to prevent an infinite loop.\n",update->ntimestep);
+	fprintf(screen,"Loop exit condition invoked in FixCrushing on timestep " BIGINT_FORMAT " to prevent an infinite loop.\n",update->ntimestep);
 	
 	break; //~ To prevent an infinite loop
       }
@@ -1045,8 +1045,8 @@ double FixCrushing::insert_particles(int nnew)
   //~ Write a message for the user
   if (me == 0 && displaymessages) {
     if (numinserted < nnew)
-      fprintf(screen,"WARNING: Inserted only %u of %u required particles on timestep "BIGINT_FORMAT".\n",numinserted,nnew,update->ntimestep);
-    else fprintf(screen,"Inserted all %u required particles on timestep "BIGINT_FORMAT".\n",numinserted,update->ntimestep);
+      fprintf(screen,"WARNING: Inserted only %u of %u required particles on timestep " BIGINT_FORMAT ".\n",numinserted,nnew,update->ntimestep);
+    else fprintf(screen,"Inserted all %u required particles on timestep " BIGINT_FORMAT ".\n",numinserted,update->ntimestep);
 
     if (allowoverlaps)
       fprintf(screen,"The largest percentage overlap was %1.2f%%.\n",biggestoverlap);
@@ -1313,9 +1313,9 @@ void FixCrushing::print_optional_info(double **data, int nrows)
     if (data[i][0] < 0.5) continue;
     else {//~ Equal to 1.0 if particle failure and comminution limit not previously reached
       if (data[i][1] > 0.5) //~ Comminution limit reached
-	fprintf(screen,"\nFailure number %u of particle %u on timestep "BIGINT_FORMAT".\n\tRadius changed from %1.3e to %1.3e (comminution limit).\n\tStrengths changed from \t%1.3e (compressive) and %1.3e (tensile)\n\t\t\tto\t%1.3e (compressive) and %1.3e (tensile).\n",static_cast<int> (data[i][3]),static_cast<int> (data[i][2]),update->ntimestep,data[i][4],data[i][5],data[i][6],data[i][7],data[i][8],data[i][9]);
+	fprintf(screen,"\nFailure number %u of particle %u on timestep " BIGINT_FORMAT ".\n\tRadius changed from %1.3e to %1.3e (comminution limit).\n\tStrengths changed from \t%1.3e (compressive) and %1.3e (tensile)\n\t\t\tto\t%1.3e (compressive) and %1.3e (tensile).\n",static_cast<int> (data[i][3]),static_cast<int> (data[i][2]),update->ntimestep,data[i][4],data[i][5],data[i][6],data[i][7],data[i][8],data[i][9]);
       else
-	fprintf(screen,"\nFailure number %u of particle %u on timestep "BIGINT_FORMAT".\n\tRadius changed from %1.3e to %1.3e.\n\tStrengths changed from \t%1.3e (compressive) and %1.3e (tensile)\n\t\t\tto\t%1.3e (compressive) and %1.3e (tensile).\n",static_cast<int> (data[i][3]),static_cast<int> (data[i][2]),update->ntimestep,data[i][4],data[i][5],data[i][6],data[i][7],data[i][8],data[i][9]);
+	fprintf(screen,"\nFailure number %u of particle %u on timestep " BIGINT_FORMAT ".\n\tRadius changed from %1.3e to %1.3e.\n\tStrengths changed from \t%1.3e (compressive) and %1.3e (tensile)\n\t\t\tto\t%1.3e (compressive) and %1.3e (tensile).\n",static_cast<int> (data[i][3]),static_cast<int> (data[i][2]),update->ntimestep,data[i][4],data[i][5],data[i][6],data[i][7],data[i][8],data[i][9]);
     }
   }
 }

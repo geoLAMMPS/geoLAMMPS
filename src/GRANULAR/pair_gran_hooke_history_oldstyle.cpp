@@ -38,6 +38,7 @@
 #include "math_special.h"
 #include <mpi.h>
 #include "compute_energy_gran.h" //~ For energy tracing [KH - 19 February 2014]
+#include "utils.h" //~ Required for the new sfread [KH - 12 April 2021]
 
 using namespace LAMMPS_NS;
 
@@ -1122,7 +1123,7 @@ void PairGranHookeHistoryOldstyle::rolling_resistance(int issingle, int i, int j
   else {
     //~ Issue a warning and broadcast lastwarning int to all procs
     if (update->ntimestep-lastwarning[0] >= warnfrequency) {
-      fprintf(screen,"Cannot estimate either contact stiffness in rolling resistance model on timestep "BIGINT_FORMAT"\n",update->ntimestep);
+      fprintf(screen,"Cannot estimate either contact stiffness in rolling resistance model on timestep " BIGINT_FORMAT "\n",update->ntimestep);
       lastwarning[0] = lastwarning[1] = update->ntimestep;
       MPI_Bcast(&lastwarning[0],2,MPI_INT,comm->me,world);
     }
@@ -1144,7 +1145,7 @@ void PairGranHookeHistoryOldstyle::rolling_resistance(int issingle, int i, int j
   else if (shear[numshearq-3] > tolerance) ksbar = fabs(shear[numshearq-3]);
   else {
     if (kt >= tolerance && update->ntimestep-lastwarning[1] >= warnfrequency) {
-      fprintf(screen,"Cannot estimate tangential contact stiffness in rolling resistance model on timestep "BIGINT_FORMAT"\n",update->ntimestep);
+      fprintf(screen,"Cannot estimate tangential contact stiffness in rolling resistance model on timestep " BIGINT_FORMAT "\n",update->ntimestep);
       lastwarning[1] = update->ntimestep;
       MPI_Bcast(&lastwarning[1],1,MPI_INT,comm->me,world);
     }
@@ -1375,7 +1376,7 @@ void PairGranHookeHistoryOldstyle::Deresiewicz1954_spin(int issingle, int i, int
 	else if (dir_ST*dspin_stm >= 0.0 && fabs(M_old) < fabs(M_star1))                               step = 135;
 	else if (dir_ST*dspin_stm <  0.0 && fabs(M_old) <= fabs(M_star1) && fabs(M_star2)>= tolerance) step = 145;
 	else {
-	  fprintf(screen,"time %i step %i step_old %i tag %i & %i dir_ST %i dspin_stm %1.8e M_old %1.8e M* %1.8e M** %1.8e Unexpected case occurred in zone A of spin model. ERROR!!\n",
+	  fprintf(screen,"time " BIGINT_FORMAT " step %i step_old %i tag %i & %i dir_ST %i dspin_stm %1.8e M_old %1.8e M* %1.8e M** %1.8e Unexpected case occurred in zone A of spin model. ERROR!!\n",
 		  update->ntimestep,step,step_old,tag[i],tag[j],dir_ST,dspin_stm,M_old,M_star1,M_star1);
 	}
 	// if the special case was invoked in the previous step and is stil l active
@@ -1440,7 +1441,7 @@ void PairGranHookeHistoryOldstyle::Deresiewicz1954_spin(int issingle, int i, int
       }
       // warning!
       else {
-	fprintf(screen,"time %i step %i step_old %i tag %i & %i dir_ST %i dspin_stm %1.8e M_old %1.8e M* %1.8e M** %1.8e Unexpected case occurred in zone B of spin model. ERROR!!\n",
+	fprintf(screen,"time " BIGINT_FORMAT " step %i step_old %i tag %i & %i dir_ST %i dspin_stm %1.8e M_old %1.8e M* %1.8e M** %1.8e Unexpected case occurred in zone B of spin model. ERROR!!\n",
 		update->ntimestep,step,step_old,tag[i],tag[j],dir_ST,dspin_stm,M_old,M_star1,M_star1);
       }
       if (t < 0.0) t = tolerance; // 0 < t <= 1;

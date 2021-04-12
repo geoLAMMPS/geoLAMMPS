@@ -34,6 +34,7 @@
 #include "fix_neigh_history.h"
 #include "memory.h"
 #include "compute_energy_gran.h" //~ For energy tracing [KH - 20 February 2014]
+#include "utils.h" //~ Required for the new sfread [KH - 12 April 2021]
 
 using namespace LAMMPS_NS;
 
@@ -461,21 +462,18 @@ void PairGranCMHistory::compute(int eflag, int vflag)
 	  }
 	}
 	
-	//*************************************
 	/*if (shearupdate && tag[i] == 7 && tag[j] == 23 && update->ntimestep == 1) {
 	  fprintf(screen,"timestep %i tag %i & %i overlap_p_sum %1.6e N_T200 %1.6e N_T2 %1.6e overlap_T200 %1.6e overlap_T2 %1.6e b_coeff %1.6e c_coeff %1.6e\n",update->ntimestep,tag[i],tag[j],overlap_p_sum,N_T200,N_T2,overlap_T200,overlap_T2,b_coeff,c_coeff); 
 
 	}
 	if (shearupdate && tag[i] == 7 && tag[j] == 23 && update->ntimestep % 100 == 0) {
 	  fprintf(screen,"timestep %i tag %i & %i N_step %i overlap %1.6e N %1.6e kn %1.6e kt %1.6e poly_eff %1.6e poly %1.6e alpha %1.6e\n",update->ntimestep,tag[i],tag[j],N_step,overlap,N,effectivekn,effectivekt,polyhertz_effective,polyhertz,alpha);
-	  }*/
+	  }
 
-	/*************************************************************************
 	if (shearupdate) {
        	shear[3] = overlap_max;
 	if (nstr_plast > energy_asperity_max) shear[4] = nstr_plast;
-	}
-	//*************************************************************************/
+	}*/
 
 	if (evflag) ev_tally_gran(i,j,nlocal,newton_pair,fx,fy,fz,x[i][0],x[i][1],x[i][2],radius[i],x[j][0],x[j][1],x[j][2],radius[j]);
       }

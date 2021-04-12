@@ -34,6 +34,7 @@
 #include "fix_neigh_history.h"
 #include "memory.h"
 #include "compute_energy_gran.h" //~ For energy tracing [KH - 20 February 2014]
+#include "utils.h" //~ Required for the new sfread [KH - 12 April 2021]
 
 using namespace LAMMPS_NS;
 
