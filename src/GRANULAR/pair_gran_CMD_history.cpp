@@ -1249,7 +1249,7 @@ void PairGranCMDHistory::read_restart(FILE *fp)
   int me = comm->me;
   for (i = 1; i <= atom->ntypes; i++)
     for (j = i; j <= atom->ntypes; j++) {
-      if (me == 0) fread(&setflag[i][j],sizeof(int),1,fp);
+      if (me == 0) utils::sfread(FLERR,&setflag[i][j],sizeof(int),1,fp,NULL,error);
       MPI_Bcast(&setflag[i][j],1,MPI_INT,0,world);
     }
 }
@@ -1284,23 +1284,23 @@ void PairGranCMDHistory::write_restart_settings(FILE *fp)
 void PairGranCMDHistory::read_restart_settings(FILE *fp)
 {
   if (comm->me == 0) {
-    fread(&kn,sizeof(double),1,fp);
-    fread(&kt,sizeof(double),1,fp);
-    fread(&Geq,sizeof(double),1,fp);
-    fread(&Poiseq,sizeof(double),1,fp);
-    fread(&xmu,sizeof(double),1,fp);
-    fread(&RMSf,sizeof(double),1,fp);
-    fread(&Hp,sizeof(double),1,fp);
-    fread(&Model,sizeof(int),1,fp);
-    fread(&THETA1,sizeof(int),1,fp);
-
+    utils::sfread(FLERR,&kn,sizeof(double),1,fp,NULL,error);
+    utils::sfread(FLERR,&kt,sizeof(double),1,fp,NULL,error);
+    utils::sfread(FLERR,&Geq,sizeof(double),1,fp,NULL,error);
+    utils::sfread(FLERR,&Poiseq,sizeof(double),1,fp,NULL,error);
+    utils::sfread(FLERR,&xmu,sizeof(double),1,fp,NULL,error);
+    utils::sfread(FLERR,&RMSf,sizeof(double),1,fp,NULL,error);
+    utils::sfread(FLERR,&Hp,sizeof(double),1,fp,NULL,error);
+    utils::sfread(FLERR,&Model,sizeof(int),1,fp,NULL,error);
+    utils::sfread(FLERR,&THETA1,sizeof(int),1,fp,NULL,error);
+    
     /*~ Added energy terms. The total energy is read to the root
       proc and is NOT broadcast to all procs as only the total summed
       across all procs is of interest [KH - 28 February 2014]*/
     //~~ Added for D_spin model [MO - 13 November 2014]
-    fread(&dissipfriction,sizeof(double),1,fp);
-    fread(&shearstrain,sizeof(double),1,fp);
-    fread(&spinenergy,sizeof(double),1,fp);
+    utils::sfread(FLERR,&dissipfriction,sizeof(double),1,fp,NULL,error);
+    utils::sfread(FLERR,&shearstrain,sizeof(double),1,fp,NULL,error);
+    utils::sfread(FLERR,&spinenergy,sizeof(double),1,fp,NULL,error);
   }
   MPI_Bcast(&kn,1,MPI_DOUBLE,0,world);
   MPI_Bcast(&kt,1,MPI_DOUBLE,0,world);
