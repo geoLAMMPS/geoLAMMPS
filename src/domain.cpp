@@ -384,6 +384,11 @@ void Domain::set_local_box()
 void Domain::reset_box()
 {
   // perform shrink-wrapping
+
+  // nothing to do for empty systems
+
+  if (atom->natoms == 0) return;
+
   // compute extent of atoms on this proc
   // for triclinic, this is done in lamda space
 

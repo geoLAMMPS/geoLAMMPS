@@ -26,6 +26,7 @@ class Pair : protected Pointers {
   friend class DihedralCharmm;
   friend class DihedralCharmmOMP;
   friend class FixGPU;
+  friend class FixIntel;
   friend class FixOMP;
   friend class ThrOMP;
   friend class Info;
@@ -39,6 +40,7 @@ class Pair : protected Pointers {
   double eng_vdwl,eng_coul;      // accumulated energies
   double virial[6];              // accumulated virial
   double *eatom,**vatom;         // accumulated per-atom energy/virial
+  double **cvatom;               // accumulated per-atom centroid virial
 
   double cutforce;               // max cutoff for all atom pairs
   double **cutsq;                // cutoff sq for each atom pair
@@ -68,13 +70,18 @@ class Pair : protected Pointers {
   int spinflag;                  // 1 if compatible with spin solver
   int reinitflag;                // 1 if compatible with fix adapt and alike
 
+  int centroidstressflag;        // compatibility with centroid atomic stress
+                                 // 1 if same as two-body atomic stress
+                                 // 2 if implemented and different from two-body
+                                 // 4 if not compatible/implemented
+
   int tail_flag;                 // pair_modify flag for LJ tail correction
   double etail,ptail;            // energy/pressure tail corrections
   double etail_ij,ptail_ij;
 
   int evflag;                    // energy,virial settings
   int eflag_either,eflag_global,eflag_atom;
-  int vflag_either,vflag_global,vflag_atom;
+  int vflag_either,vflag_global,vflag_atom,cvflag_atom;
 
   int ncoultablebits;            // size of Coulomb table, accessed by KSpace
   int ndisptablebits;            // size of dispersion table
@@ -240,7 +247,7 @@ class Pair : protected Pointers {
 
  protected:
   int vflag_fdotr;
-  int maxeatom,maxvatom;
+  int maxeatom,maxvatom,maxcvatom;
   double kn,kt,xmu; //~ Moved from pair/gran/hooke/history [KH - 14 December 2012]
 
   /*~ rolling was added as an integer which specifies whether or not
@@ -262,7 +269,7 @@ class Pair : protected Pointers {
   /*~ Added flag which indicates whether per-contact energy tracing is
     active or not [KH - 6 March 2014]*/
   int trace_energy;
-
+  
   int copymode;   // if set, do not deallocate during destruction
                   // required when classes are used as functors by Kokkos
 
