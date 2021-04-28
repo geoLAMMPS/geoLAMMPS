@@ -63,6 +63,7 @@ class Fix : protected Pointers {
   int respa_level;               // which respa level to apply fix (1-Nrespa)
   int maxexchange;               // max # of per-atom values for Comm::exchange()
   int maxexchange_dynamic;       // 1 if fix sets maxexchange dynamically
+  int pre_exchange_migrate;      // 1 if fix migrates atoms in pre_exchange()
 
   int scalar_flag;               // 0/1 if compute_scalar() function exists
   int vector_flag;               // 0/1 if compute_vector() function exists
@@ -136,7 +137,7 @@ class Fix : protected Pointers {
   virtual void end_of_step() {}
   virtual void post_run() {}
   virtual void write_restart(FILE *) {}
-  virtual void write_restart_file(char *) {}
+  virtual void write_restart_file(const char *) {}
   virtual void restart(char *) {}
 
   virtual void grow_arrays(int) {}

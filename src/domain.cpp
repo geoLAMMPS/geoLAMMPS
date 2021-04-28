@@ -40,6 +40,7 @@
 #include "error.h"
 #include "utils.h"
 #include "fix_wall_gran_oldstyle.h"  // added to consider wall positions [MO - 19 Aug 2015]
+#include "fmt/format.h"
 
 using namespace LAMMPS_NS;
 
@@ -162,7 +163,7 @@ void Domain::init()
   std::string mesg = "Must not have multiple fixes change box parameter ";
 
 #define CHECK_BOX_FIX_ERROR(par)                                        \
-  if (box_change_ ## par > 1) error->all(FLERR,(mesg + #par).c_str())
+  if (box_change_ ## par > 1) error->all(FLERR,(mesg + #par))
 
   CHECK_BOX_FIX_ERROR(x);
   CHECK_BOX_FIX_ERROR(y);
@@ -1793,8 +1794,7 @@ void Domain::add_region(int narg, char **arg)
 
   if (lmp->suffix_enable) {
     if (lmp->suffix) {
-      char estyle[256];
-      snprintf(estyle,256,"%s/%s",arg[1],lmp->suffix);
+      std::string estyle = std::string(arg[1]) + "/" + lmp->suffix;
       if (region_map->find(estyle) != region_map->end()) {
         RegionCreator region_creator = (*region_map)[estyle];
         regions[nregion] = region_creator(lmp, narg, arg);
@@ -1805,8 +1805,7 @@ void Domain::add_region(int narg, char **arg)
     }
 
     if (lmp->suffix2) {
-      char estyle[256];
-      snprintf(estyle,256,"%s/%s",arg[1],lmp->suffix2);
+      std::string estyle = std::string(arg[1]) + "/" + lmp->suffix2;
       if (region_map->find(estyle) != region_map->end()) {
         RegionCreator region_creator = (*region_map)[estyle];
         regions[nregion] = region_creator(lmp, narg, arg);
@@ -1820,7 +1819,7 @@ void Domain::add_region(int narg, char **arg)
   if (region_map->find(arg[1]) != region_map->end()) {
     RegionCreator region_creator = (*region_map)[arg[1]];
     regions[nregion] = region_creator(lmp, narg, arg);
-  } else error->all(FLERR,utils::check_packages_for_style("region",arg[1],lmp).c_str());
+  } else error->all(FLERR,utils::check_packages_for_style("region",arg[1],lmp));
 
   // initialize any region variables via init()
   // in case region is used between runs, e.g. to print a variable
@@ -1967,33 +1966,20 @@ void Domain::set_box(int narg, char **arg)
    print box info, orthogonal or triclinic
 ------------------------------------------------------------------------- */
 
-void Domain::print_box(const char *str)
+void Domain::print_box(const std::string &prefix)
 {
   if (comm->me == 0) {
-    if (screen) {
-      if (triclinic == 0)
-        fprintf(screen,"%sorthogonal box = (%g %g %g) to (%g %g %g)\n",
-                str,boxlo[0],boxlo[1],boxlo[2],boxhi[0],boxhi[1],boxhi[2]);
-      else {
-        char *format = (char *)
-          "%striclinic box = (%g %g %g) to (%g %g %g) with tilt (%g %g %g)\n";
-        fprintf(screen,format,
-                str,boxlo[0],boxlo[1],boxlo[2],boxhi[0],boxhi[1],boxhi[2],
-                xy,xz,yz);
-      }
+    std::string mesg = prefix;
+    if (triclinic == 0) {
+      mesg += fmt::format("orthogonal box = ({} {} {}) to ({} {} {})\n",
+                          boxlo[0],boxlo[1],boxlo[2],
+                          boxhi[0],boxhi[1],boxhi[2]);
+    } else {
+      mesg += fmt::format("triclinic box = ({} {} {}) to ({} {} {}) "
+                          "with tilt ({} {} {})\n",boxlo[0],boxlo[1],
+                          boxlo[2],boxhi[0],boxhi[1],boxhi[2],xy,xz,yz);
     }
-    if (logfile) {
-      if (triclinic == 0)
-        fprintf(logfile,"%sorthogonal box = (%g %g %g) to (%g %g %g)\n",
-                str,boxlo[0],boxlo[1],boxlo[2],boxhi[0],boxhi[1],boxhi[2]);
-      else {
-        char *format = (char *)
-          "%striclinic box = (%g %g %g) to (%g %g %g) with tilt (%g %g %g)\n";
-        fprintf(logfile,format,
-                str,boxlo[0],boxlo[1],boxlo[2],boxhi[0],boxhi[1],boxhi[2],
-                xy,xz,yz);
-      }
-    }
+    utils::logmesg(lmp,mesg);
   }
 }
 
