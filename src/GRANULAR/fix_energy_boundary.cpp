@@ -18,6 +18,7 @@
 #include "fix_energy_boundary.h"
 #include <cstdlib>
 #include <cstring>
+#include <string>
 #include "update.h"
 #include "memory.h"
 #include "force.h"
@@ -27,6 +28,7 @@
 #include "compute.h"
 #include "comm.h"
 #include "error.h"
+#include "fmt/format.h"
 #include "fix_wall_gran_oldstyle.h"  // added to consider wall positions [MO - 20 Aug 2015]
 
 using namespace LAMMPS_NS;
@@ -88,19 +90,10 @@ void FixEnergyBoundary::setup(int vflag)
       break;
     }
 
-  if (!sfound) { //~ Need to set up a new compute stress/atom  
-    char **snewarg = new char*[7];
-    snewarg[0] = (char *) "e_stress_comp";
-    snewarg[1] = (char *) "all";
-    snewarg[2] = (char *) "stress/atom";
-    snewarg[3] = (char *) "NULL";
-    snewarg[4] = (char *) "pair";
-    snewarg[5] = (char *) "fix";
-    snewarg[6] = (char *) "bond";
-    
-    modify->add_compute(7,snewarg);
+  if (!sfound) { //~ Need to set up a new compute stress/atom
+    std::string tcmd = std::string("e_stress_comp all stress/atom NULL pair fix bond");
+    modify->add_compute(tcmd);
     stressatom = modify->compute[modify->find_compute("e_stress_comp")];
-    delete [] snewarg;
   }
 
   //~ Also find fix multistress/deform if either exists

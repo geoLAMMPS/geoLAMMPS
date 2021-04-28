@@ -20,6 +20,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 #include "atom.h"
 #include "atom_vec.h"
 #include "update.h"
@@ -38,6 +39,7 @@
 #include "comm.h"
 #include "compute.h"
 #include "fix_multistress.h"
+#include "fmt/format.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -400,17 +402,9 @@ void FixCrushing::setup(int vflag)
   int icompute = modify->find_compute(id_stress);
 
   if (mstressid < 0 && icompute < 0) {
-    char **snewarg = new char*[7];
-    snewarg[0] = id_stress;
-    snewarg[1] = (char *) "all";
-    snewarg[2] = (char *) "stress/atom";
-    snewarg[3] = (char *) "NULL"; //~ No temperature [KH - 11 March 2014]
-    snewarg[4] = (char *) "pair";
-    snewarg[5] = (char *) "fix";
-    snewarg[6] = (char *) "bond";
-
-    modify->add_compute(7,snewarg);
-    delete [] snewarg;
+    std::string tcmd = id + std::string("_stress");
+    tcmd += " all stress/atom NULL pair fix bond";
+    modify->add_compute(tcmd);
   }
 
   //~ Confirm that the compute exists now
@@ -419,14 +413,9 @@ void FixCrushing::setup(int vflag)
   tstress = modify->compute[icompute];
 
   //~ Also set up a compute coord/gran to identify rattlers
-  if (modify->find_compute("crush_coord") < 0) {;
-    char **tnewarg = new char*[3];
-    tnewarg[0] = (char *) "crush_coord";
-    tnewarg[1] = (char *) "all";
-    tnewarg[2] = (char *) "coord/gran";
-    
-    modify->add_compute(3,tnewarg);
-    delete [] tnewarg;
+  if (modify->find_compute("crush_coord") < 0) {
+    std::string ccmd = std::string("crush_coord all coord/gran");
+    modify->add_compute(ccmd);
     
     //~ Confirm that the compute exists
     icompute = modify->find_compute("crush_coord");

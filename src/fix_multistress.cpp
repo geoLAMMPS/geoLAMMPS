@@ -18,6 +18,7 @@
 #include "fix_multistress.h"
 #include <mpi.h>
 #include <cstring>
+#include <string>
 #include <cstdlib>
 #include <cmath>
 #include "atom.h"
@@ -32,6 +33,7 @@
 #include "pair.h"
 #include "integrate.h"
 #include "fix_crushing.h"
+#include "fmt/format.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -584,22 +586,12 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) :
     error->all(FLERR,"Cannot simultaneously use the cyclicdeviator option on multiple boundaries");
 
   //~ Create a new compute stress/atom style
-  int n = strlen(id) + strlen("_stress") + 1;
-  id_stress = new char[n];
-  strcpy(id_stress,id);
-  strcat(id_stress,"_stress");
-  
-  char **snewarg = new char*[7];
-  snewarg[0] = id_stress;
-  snewarg[1] = (char *) "all";
-  snewarg[2] = (char *) "stress/atom";
-  snewarg[3] = (char *) "NULL"; //~ No temperature [KH - 14 Feb. 2014]
-  snewarg[4] = (char *) "pair";
-  snewarg[5] = (char *) "fix";
-  snewarg[6] = (char *) "bond";
+  std::string tcmd = id + std::string("_stress");
+  id_stress = new char[tcmd.size()+1];
+  strcpy(id_stress,tcmd.c_str());
 
-  modify->add_compute(7,snewarg);
-  delete [] snewarg;
+  tcmd += " all stress/atom NULL pair fix bond";
+  modify->add_compute(tcmd);
 }
 
 /* ---------------------------------------------------------------------- */

@@ -19,6 +19,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 #include "atom.h"
 #include "atom_vec.h"
 #include "domain.h"
@@ -87,13 +88,7 @@ PairGranHookeHistoryOldstyle::PairGranHookeHistoryOldstyle(LAMMPS *lmp) : Pair(l
   // this is so final order of Modify:fix will conform to input script
 
   fix_history = NULL;
-
-  char **fixarg = new char*[3];
-  fixarg[0] = (char *) "NEIGH_HISTORY_HH_DUMMY";
-  fixarg[1] = (char *) "all";
-  fixarg[2] = (char *) "DUMMY";
-  modify->add_fix(3,fixarg,1);
-  delete [] fixarg;
+  modify->add_fix("NEIGH_HISTORY_HH_DUMMY all DUMMY");
   fix_dummy = (FixDummy *) modify->fix[modify->nfix-1];
 }
 
@@ -1603,16 +1598,9 @@ void PairGranHookeHistoryOldstyle::add_old_omega_fix()
   int oldomegafix = -1;
   for (int q = 0; q < modify->nfix; q++)
     if (strcmp(modify->fix[q]->style,"old_omega") == 0) oldomegafix = q;
-
-  if (oldomegafix < 0) {//~ Fix not presently active
-    char **newarg = new char*[3];
-    newarg[0] = (char *) "pair_oldomega";
-    newarg[1] = (char *) "all";
-    newarg[2] = (char *) "old_omega";
-
-    modify->add_fix(3,newarg);
-    delete [] newarg;
-  }
+  
+  //~ Fix not presently active
+  if (oldomegafix < 0) modify->add_fix("pair_oldomega all old_omega");
   
   //~ Set pointers for this newly-created fix
   int accfix = modify->find_fix("pair_oldomega");

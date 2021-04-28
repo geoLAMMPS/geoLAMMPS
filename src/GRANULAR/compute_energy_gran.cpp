@@ -264,15 +264,8 @@ void ComputeEnergyGran::add_fix_energy_boundary()
   for (int q = 0; q < modify->nfix; q++)
     if (strcmp(modify->fix[q]->style,"energy/boundary") == 0) feb = q;
 
-  if (feb < 0) { //~ Fix not presently active
-    char **newarg = new char*[3];
-    newarg[0] = (char *) "ceg_feb";
-    newarg[1] = (char *) "all";
-    newarg[2] = (char *) "energy/boundary";
-
-    modify->add_fix(3,newarg);
-    delete [] newarg;
-  }
+  //~ Fix not presently active
+  if (feb < 0) modify->add_fix("ceg_feb all energy/boundary");
   
   //~ Set pointers for this newly-created fix
   int accfix = modify->find_fix("ceg_feb");

@@ -20,6 +20,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 #include "atom.h"
 #include "domain.h"
 #include "update.h"
@@ -42,6 +43,7 @@
 #include "compute.h"
 #include "compute_energy_gran.h"
 #include "integrate.h" // Added [KH - 26 May 2017]
+#include "fmt/format.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -529,19 +531,9 @@ void FixWallGranOldstyle::setup(int vflag)
       }
    
     if (!sfound) { //~ Need to set up a new compute stress/atom  
-      char **snewarg = new char*[7];
-      snewarg[0] = (char *) "e_stress_comp";
-      snewarg[1] = (char *) "all";
-      snewarg[2] = (char *) "stress/atom";
-      snewarg[3] = (char *) "NULL";
-      snewarg[4] = (char *) "pair";
-      snewarg[5] = (char *) "fix";
-      snewarg[6] = (char *) "bond";
-      
-      modify->add_compute(7,snewarg);
+      std::string tcmd = std::string("e_stress_comp all stress/atom NULL pair fix bond");
+      modify->add_compute(tcmd);
       stressatom = modify->compute[modify->find_compute("e_stress_comp")];
-     
-      delete [] snewarg;
     }
   }
   ////////////////////////////////////////////////////////////////
