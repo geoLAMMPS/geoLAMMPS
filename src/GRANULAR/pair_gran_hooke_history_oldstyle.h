@@ -61,6 +61,7 @@ class PairGranHookeHistoryOldstyle : public Pair {
   double Geq,Poiseq,RMSf,Hp; // Added to extract for wall/gran/oldstyle.cpp [MO - 03 April 2015]
   int Model,THETA1;          // Added to extract for wall/gran/oldstyle.cpp [MO - 12 Sep 2015]
 
+  class FixDummy *fix_dummy;
   class FixNeighHistory *fix_history;
 
   // storage of rigid body masses for use in granular interactions

@@ -1082,22 +1082,25 @@ void PairGranHMDHistory::init_style()
 
   dt = update->dt;
 
-  // if first init, create Fix needed for storing shear history
+  // if history is stored and first init, create Fix to store history
+  // it replaces FixDummy, created in the constructor
+  // this is so its order in the fix list is preserved
 
   if (history && fix_history == NULL) {
     char dnumstr[16];
-    sprintf(dnumstr,"%d",numshearquants); //~ Now variable [KH - 23 May 2017]
+    sprintf(dnumstr,"%d",numshearquants);
     char **fixarg = new char*[4];
-    fixarg[0] = (char *) "NEIGH_HISTORY";
+    fixarg[0] = (char *) "NEIGH_HISTORY_HH";
     fixarg[1] = (char *) "all";
     fixarg[2] = (char *) "NEIGH_HISTORY";
     fixarg[3] = dnumstr;
-    modify->add_fix(4,fixarg,1);
+    modify->replace_fix("NEIGH_HISTORY_HH_DUMMY",4,fixarg,1);
     delete [] fixarg;
-    fix_history = (FixNeighHistory *) modify->fix[modify->nfix-1];
+    int ifix = modify->find_fix("NEIGH_HISTORY_HH");
+    fix_history = (FixNeighHistory *) modify->fix[ifix];
     fix_history->pair = this;
   }
-
+  
   // check for FixFreeze and set freeze_group_bit
 
   for (i = 0; i < modify->nfix; i++)
@@ -1157,6 +1160,14 @@ void PairGranHMDHistory::init_style()
                 MPI_DOUBLE,MPI_MAX,world);
   MPI_Allreduce(&onerad_frozen[1],&maxrad_frozen[1],atom->ntypes,
                 MPI_DOUBLE,MPI_MAX,world);
+
+  // set fix which stores history info
+
+  if (history) {
+    int ifix = modify->find_fix("NEIGH_HISTORY_HH");
+    if (ifix < 0) error->all(FLERR,"Could not find pair fix neigh history ID");
+    fix_history = (FixNeighHistory *) modify->fix[ifix];
+  }
 }
 
 /* ----------------------------------------------------------------------
