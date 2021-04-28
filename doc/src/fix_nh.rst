@@ -432,7 +432,7 @@ equilibrium liquids can not support a shear stress and that
 equilibrium solids can not support shear stresses that exceed the
 yield stress.
 
-One exception to this rule is if the 1st dimension in the tilt factor
+One exception to this rule is if the first dimension in the tilt factor
 (x for xy) is non-periodic.  In that case, the limits on the tilt
 factor are not enforced, since flipping the box in that dimension does
 not change the atom positions due to non-periodicity.  In this mode,
@@ -568,23 +568,7 @@ the various ways to do this.
 
 ----------
 
-Styles with a *gpu*\ , *intel*\ , *kk*\ , *omp*\ , or *opt* suffix are
-functionally the same as the corresponding style without the suffix.
-They have been optimized to run faster, depending on your available
-hardware, as discussed on the :doc:`Speed packages <Speed_packages>` doc
-page.  The accelerated styles take the same arguments and should
-produce the same results, except for round-off and precision issues.
-
-These accelerated styles are part of the GPU, USER-INTEL, KOKKOS,
-USER-OMP and OPT packages, respectively.  They are only enabled if
-LAMMPS was built with those packages.  See the :doc:`Build package <Build_package>` doc page for more info.
-
-You can specify the accelerated styles explicitly in your input script
-by including their suffix, or you can use the :doc:`-suffix command-line switch <Run_options>` when you invoke LAMMPS, or you can use the
-:doc:`suffix <suffix>` command in your input script.
-
-See the :doc:`Speed packages <Speed_packages>` doc page for more
-instructions on how to use the accelerated styles effectively.
+.. include:: accel_styles.rst
 
 ----------
 
@@ -673,7 +657,7 @@ Restrictions
 
 *X*\ , *y*\ , *z* cannot be barostatted if the associated dimension is not
 periodic.  *Xy*\ , *xz*\ , and *yz* can only be barostatted if the
-simulation domain is triclinic and the 2nd dimension in the keyword
+simulation domain is triclinic and the second dimension in the keyword
 (\ *y* dimension in *xy*\ ) is periodic.  *Z*\ , *xz*\ , and *yz*\ , cannot be
 barostatted for 2D simulations.  The :doc:`create_box <create_box>`,
 :doc:`read data <read_data>`, and :doc:`read_restart <read_restart>`
@@ -687,7 +671,7 @@ is not allowed in the Nose/Hoover formulation.
 
 The *scaleyz yes* and *scalexz yes* keyword/value pairs can not be used
 for 2D simulations. *scaleyz yes*\ , *scalexz yes*\ , and *scalexy yes* options
-can only be used if the 2nd dimension in the keyword is periodic,
+can only be used if the second dimension in the keyword is periodic,
 and if the tilt factor is not coupled to the barostat via keywords
 *tri*\ , *yz*\ , *xz*\ , and *xy*\ .
 
@@ -710,7 +694,7 @@ Default
 
 The keyword defaults are tchain = 3, pchain = 3, mtk = yes, tloop = 1,
 ploop = 1, nreset = 0, drag = 0.0, dilate = all, couple = none,
-flip = yes, scaleyz = scalexz = scalexy = yes if periodic in 2nd
+flip = yes, scaleyz = scalexz = scalexy = yes if periodic in second
 dimension and not coupled to barostat, otherwise no.
 
 ----------
