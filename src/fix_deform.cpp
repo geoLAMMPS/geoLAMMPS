@@ -206,19 +206,31 @@ rfix(NULL), irregular(NULL), set(NULL)
   options(narg-iarg,&arg[iarg]);
   if (remapflag != Domain::X_REMAP) restart_pbc = 1;
 
+  /*~ The following code was added to determine whether there is (= 1)
+    or is not (= 0) a fix_multistress active [KH - 13 December 2011]*/
+  mstractive = 0;
+
+  for (int q = 0; q < modify->nfix; q++)
+    if (strcmp(modify->fix[q]->style,"multistress") == 0) mstractive = 1;
+  
   // setup dimflags used by other classes to check for volume-change conflicts
 
   for (int i = 0; i < 6; i++)
     if (set[i].style == NONE) dimflag[i] = 0;
     else dimflag[i] = 1;
 
-  if (dimflag[0]) box_change |= BOX_CHANGE_X;
-  if (dimflag[1]) box_change |= BOX_CHANGE_Y;
-  if (dimflag[2]) box_change |= BOX_CHANGE_Z;
-  if (dimflag[3]) box_change |= BOX_CHANGE_YZ;
-  if (dimflag[4]) box_change |= BOX_CHANGE_XZ;
-  if (dimflag[5]) box_change |= BOX_CHANGE_XY;
-
+  if (!mstractive) {
+    /*~ FixMultistress also sets these box_change flags. They cannot
+      be set twice for an individual box parameter or the Domain class
+      will issue an error [KH - 29 April 2021]*/
+    if (dimflag[0]) box_change |= BOX_CHANGE_X;
+    if (dimflag[1]) box_change |= BOX_CHANGE_Y;
+    if (dimflag[2]) box_change |= BOX_CHANGE_Z;
+    if (dimflag[3]) box_change |= BOX_CHANGE_YZ;
+    if (dimflag[4]) box_change |= BOX_CHANGE_XZ;
+    if (dimflag[5]) box_change |= BOX_CHANGE_XY;
+  }
+  
   // no tensile deformation on shrink-wrapped dims
   // b/c shrink wrap will change box-length
 
@@ -356,13 +368,6 @@ rfix(NULL), irregular(NULL), set(NULL)
   else irregular = NULL;
 
   TWOPI = 2.0*MY_PI;
-
-  /*~ The following code was added to determine whether there is (= 1)
-    or is not (= 0) a fix_multistress active [KH - 13 December 2011]*/
-  mstractive = 0;
-
-  for (int q = 0; q < modify->nfix; q++)
-    if (strcmp(modify->fix[q]->style,"multistress") == 0) mstractive = 1;
 }
 
 /* ---------------------------------------------------------------------- */
