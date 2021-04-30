@@ -100,9 +100,9 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
   //~~ Added for CM, HMD and CMD pairstyle [MO - 05 January 2015]
   int iarg = 10;
   if (pairstyle == SHM_HISTORY) {
-    Geq = force->numeric(FLERR,arg[4]);
-    Poiseq = force->numeric(FLERR,arg[5]);
-    xmu = force->numeric(FLERR,arg[6]);
+    Geq = utils::numeric(FLERR,arg[4],false,lmp);
+    Poiseq = utils::numeric(FLERR,arg[5],false,lmp);
+    xmu = utils::numeric(FLERR,arg[6],false,lmp);
 
     if (Geq < 0.0 || Poiseq < 0.0 || Poiseq > 0.5)
       error->all(FLERR,"Illegal shm pair parameter values in fix wall gran");
@@ -115,12 +115,12 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
     dampflag = 0;
     iarg = 7; //~ Reduce number of args for SHM pairstyle [KH - 10 June 2014]
   } else if (pairstyle == CM_HISTORY) {
-    Geq = force->numeric(FLERR,arg[4]);
-    Poiseq = force->numeric(FLERR,arg[5]);
-    xmu = force->numeric(FLERR,arg[6]);
-    RMSf = force->numeric(FLERR,arg[7]);
-    Hp = force->numeric(FLERR,arg[8]);
-    Model = force->inumeric(FLERR,arg[9]);
+    Geq = utils::numeric(FLERR,arg[4],false,lmp);
+    Poiseq = utils::numeric(FLERR,arg[5],false,lmp);
+    xmu = utils::numeric(FLERR,arg[6],false,lmp);
+    RMSf = utils::numeric(FLERR,arg[7],false,lmp);
+    Hp = utils::numeric(FLERR,arg[8],false,lmp);
+    Model = utils::inumeric(FLERR,arg[9],false,lmp);
     
     if (Geq < 0.0 || Poiseq < 0.0 || Poiseq > 0.5 || (Model != 0 && Model != 1))
       error->all(FLERR,"Illegal CM pair parameter values in fix wall gran");
@@ -132,10 +132,10 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
     gamman = gammat = 0.0;
     dampflag = 0;
   } else if (pairstyle == HMD_HISTORY) {
-    Geq = force->numeric(FLERR,arg[4]);
-    Poiseq = force->numeric(FLERR,arg[5]);
-    xmu = force->numeric(FLERR,arg[6]);
-    THETA1 = force->inumeric(FLERR,arg[7]);
+    Geq = utils::numeric(FLERR,arg[4],false,lmp);
+    Poiseq = utils::numeric(FLERR,arg[5],false,lmp);
+    xmu = utils::numeric(FLERR,arg[6],false,lmp);
+    THETA1 = utils::inumeric(FLERR,arg[7],false,lmp);
 
     if (Geq < 0.0 || Poiseq < 0.0 || Poiseq > 0.5 || (THETA1 != 0 && THETA1 != 1))
       error->all(FLERR,"Illegal HMD pair parameter values in fix wall gran");
@@ -148,13 +148,13 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
     dampflag = 0;
     iarg = 8; //~ Reduce number of args for HMD pairstyle [MO - 12 Sept 2015]
   } else if (pairstyle == CMD_HISTORY) {     
-    Geq = force->numeric(FLERR,arg[4]);
-    Poiseq = force->numeric(FLERR,arg[5]);
-    xmu = force->numeric(FLERR,arg[6]);
-    RMSf = force->numeric(FLERR,arg[7]);
-    Hp = force->numeric(FLERR,arg[8]);
-    Model = force->inumeric(FLERR,arg[9]);
-    THETA1 = force->inumeric(FLERR,arg[10]);
+    Geq = utils::numeric(FLERR,arg[4],false,lmp);
+    Poiseq = utils::numeric(FLERR,arg[5],false,lmp);
+    xmu = utils::numeric(FLERR,arg[6],false,lmp);
+    RMSf = utils::numeric(FLERR,arg[7],false,lmp);
+    Hp = utils::numeric(FLERR,arg[8],false,lmp);
+    Model = utils::inumeric(FLERR,arg[9],false,lmp);
+    THETA1 = utils::inumeric(FLERR,arg[10],false,lmp);
     
     if (Geq < 0.0 || Poiseq < 0.0 || Poiseq > 0.5 || (Model != 0 && Model != 1) || (THETA1 != 0 && THETA1 != 1))
       error->all(FLERR,"Illegal CMD pair parameter values in fix wall gran");
@@ -169,29 +169,29 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
   } else if (pairstyle == BONDED_HISTORY) {
     if (narg < 10) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
 
-    E = force->numeric(FLERR,arg[4]);
-    G = force->numeric(FLERR,arg[5]);
-    SurfEnergy = force->numeric(FLERR,arg[6]);
+    E = utils::numeric(FLERR,arg[4],false,lmp);
+    G = utils::numeric(FLERR,arg[5],false,lmp);
+    SurfEnergy = utils::numeric(FLERR,arg[6],false,lmp);
     // Note: this doesn't get used, check w/ Jeremy?
-    gamman = force->numeric(FLERR,arg[7]);
+    gamman = utils::numeric(FLERR,arg[7],false,lmp);
 
-    xmu = force->numeric(FLERR,arg[8]);
+    xmu = utils::numeric(FLERR,arg[8],false,lmp);
     // pois = E/(2.0*G) - 1.0;
     // kn = 2.0*E/(3.0*(1.0+pois)*(1.0-pois));
     // gammat=0.5*gamman;
 
     iarg = 9;
   } else {
-    kn = force->numeric(FLERR,arg[4]);
+    kn = utils::numeric(FLERR,arg[4],false,lmp);
     if (strcmp(arg[5],"NULL") == 0) kt = kn * 2.0/7.0;
-    else kt = force->numeric(FLERR,arg[5]);
+    else kt = utils::numeric(FLERR,arg[5],false,lmp);
     
-    gamman = force->numeric(FLERR,arg[6]);
+    gamman = utils::numeric(FLERR,arg[6],false,lmp);
     if (strcmp(arg[7],"NULL") == 0) gammat = 0.5 * gamman;
-    else gammat = force->numeric(FLERR,arg[7]);
+    else gammat = utils::numeric(FLERR,arg[7],false,lmp);
 
-    xmu = force->numeric(FLERR,arg[8]);
-    dampflag = force->inumeric(FLERR,arg[9]);
+    xmu = utils::numeric(FLERR,arg[8],false,lmp);
+    dampflag = utils::inumeric(FLERR,arg[9],false,lmp);
     if (dampflag == 0) gammat = 0.0;
   }
   
@@ -214,31 +214,31 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
     if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
     wallstyle = XPLANE;
     if (strcmp(arg[iarg+1],"NULL") == 0) lo = -BIG;
-    else lo = force->numeric(FLERR,arg[iarg+1]);
+    else lo = utils::numeric(FLERR,arg[iarg+1],false,lmp);
     if (strcmp(arg[iarg+2],"NULL") == 0) hi = BIG;
-    else hi = force->numeric(FLERR,arg[iarg+2]);
+    else hi = utils::numeric(FLERR,arg[iarg+2],false,lmp);
     iarg += 3;
   } else if (strcmp(arg[iarg],"yplane") == 0) {
     if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
     wallstyle = YPLANE;
     if (strcmp(arg[iarg+1],"NULL") == 0) lo = -BIG;
-    else lo = force->numeric(FLERR,arg[iarg+1]);
+    else lo = utils::numeric(FLERR,arg[iarg+1],false,lmp);
     if (strcmp(arg[iarg+2],"NULL") == 0) hi = BIG;
-    else hi = force->numeric(FLERR,arg[iarg+2]);
+    else hi = utils::numeric(FLERR,arg[iarg+2],false,lmp);
     iarg += 3;
   } else if (strcmp(arg[iarg],"zplane") == 0) {
     if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
     wallstyle = ZPLANE;
     if (strcmp(arg[iarg+1],"NULL") == 0) lo = -BIG;
-    else lo = force->numeric(FLERR,arg[iarg+1]);
+    else lo = utils::numeric(FLERR,arg[iarg+1],false,lmp);
     if (strcmp(arg[iarg+2],"NULL") == 0) hi = BIG;
-    else hi = force->numeric(FLERR,arg[iarg+2]);
+    else hi = utils::numeric(FLERR,arg[iarg+2],false,lmp);
     iarg += 3;
   } else if (strcmp(arg[iarg],"zcylinder") == 0) {
     if (narg < iarg+2) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
     wallstyle = ZCYLINDER;
     lo = hi = 0.0;
-    cylradius = force->numeric(FLERR,arg[iarg+1]);
+    cylradius = utils::numeric(FLERR,arg[iarg+1],false,lmp);
     iarg += 2;
   } else if (strcmp(arg[iarg],"region") == 0) {
     if (narg < iarg+2) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
@@ -266,8 +266,8 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
       else if (strcmp(arg[iarg+1],"y") == 0) axis = 1;
       else if (strcmp(arg[iarg+1],"z") == 0) axis = 2;
       else error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
-      amplitude = force->numeric(FLERR,arg[iarg+2]);
-      period = force->numeric(FLERR,arg[iarg+3]);
+      amplitude = utils::numeric(FLERR,arg[iarg+2],false,lmp);
+      period = utils::numeric(FLERR,arg[iarg+3],false,lmp);
       if (strcmp(arg[iarg+4],"cos") == 0) wiggletype = 1;
       else if (strcmp(arg[iarg+4],"sin") == 0) wiggletype = 2;
       else error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
@@ -281,14 +281,14 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
       else if (strcmp(arg[iarg+1],"y") == 0) axis = 1;
       else if (strcmp(arg[iarg+1],"z") == 0) axis = 2;
       else error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
-      vshear = force->numeric(FLERR,arg[iarg+2]);
+      vshear = utils::numeric(FLERR,arg[iarg+2],false,lmp);
       wshear = 1;
       iarg += 3;
     } else if (strcmp(arg[iarg],"translate") == 0) {
       wtranslate = 1;
-      vwall[0] = force->numeric(FLERR,arg[iarg+1]);
-      vwall[1] = force->numeric(FLERR,arg[iarg+2]);
-      vwall[2] = force->numeric(FLERR,arg[iarg+3]);
+      vwall[0] = utils::numeric(FLERR,arg[iarg+1],false,lmp);
+      vwall[1] = utils::numeric(FLERR,arg[iarg+2],false,lmp);
+      vwall[2] = utils::numeric(FLERR,arg[iarg+3],false,lmp);
       iarg += 4;
     } else if (strcmp(arg[iarg],"stresscontrol") == 0) {
       wscontrol = 1;
@@ -298,8 +298,8 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
         int nn = strlen(&arg[iarg+1][2]) + 1;
         fstr = new char[nn];
         strcpy(fstr,&arg[iarg+1][2]);
-      } else targetf = force->numeric(FLERR,arg[iarg+1]);
-      gain = force->numeric(FLERR,arg[iarg+2]);
+      } else targetf = utils::numeric(FLERR,arg[iarg+1],false,lmp);
+      gain = utils::numeric(FLERR,arg[iarg+2],false,lmp);
       if (strcmp(arg[iarg+2],"auto") == 0) error->all(FLERR,"Illegal fix wall/gran/oldstyle command - more coding needed");
       iarg += 3;
     } else error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
@@ -3466,24 +3466,24 @@ int FixWallGranOldstyle::modify_param(int narg, char **arg)
 
   if (strcmp(arg[argsread],"gamman") == 0) {// do while loop instead?
     fprintf(screen, "changed wall gamman from %f to ",gamman);
-    gamman=force->numeric(FLERR,arg[argsread+1]);
+    gamman=utils::numeric(FLERR,arg[argsread+1],false,lmp);
     argsread+=2;
     fprintf(screen, "%f\n",gamman);
   }
   else if (strcmp(arg[argsread],"gammat") == 0) {
     fprintf(screen, "changed wall gammat from %f to ",gammat);
-    gammat=force->numeric(FLERR,arg[argsread+1]);
+    gammat=utils::numeric(FLERR,arg[argsread+1],false,lmp);
     argsread+=2;
     fprintf(screen, "%f\n",gammat);
   }
   else if (strcmp(arg[argsread],"mu") == 0) {
     fprintf(screen, "changed wall friction coefficient from %f to ",xmu);
-    xmu=force->numeric(FLERR,arg[argsread+1]);
+    xmu=utils::numeric(FLERR,arg[argsread+1],false,lmp);
     argsread+=2;
     fprintf(screen, "%f\n",xmu);
   }
   else if (strcmp(arg[argsread],"dampflag") == 0) {
-    dampflag=force->inumeric(FLERR,arg[argsread+1]);
+    dampflag=utils::inumeric(FLERR,arg[argsread+1],false,lmp);
     argsread+=2;
     fprintf(screen, "changed wall dampflag to %d \n",dampflag);
   }
@@ -3495,9 +3495,9 @@ int FixWallGranOldstyle::modify_param(int narg, char **arg)
       fprintf(screen, "stopped wall translation\n");
     } else {
       wtranslate = 1;
-      vwall[0] = force->numeric(FLERR,arg[argsread+1]);
-      vwall[1] = force->numeric(FLERR,arg[argsread+2]);
-      vwall[2] = force->numeric(FLERR,arg[argsread+3]);
+      vwall[0] = utils::numeric(FLERR,arg[argsread+1],false,lmp);
+      vwall[1] = utils::numeric(FLERR,arg[argsread+2],false,lmp);
+      vwall[2] = utils::numeric(FLERR,arg[argsread+3],false,lmp);
       argsread+= 4;
       fprintf(screen, "changed wall velocity to [ %e %e %e ]\n",vwall[0],vwall[1],vwall[2]);
     }
@@ -3517,8 +3517,8 @@ int FixWallGranOldstyle::modify_param(int narg, char **arg)
       else if (strcmp(arg[argsread+1],"y") == 0) axis = 1;
       else if (strcmp(arg[argsread+1],"z") == 0) axis = 2;
       else error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
-      amplitude = force->numeric(FLERR,arg[argsread+2]);
-      period = force->numeric(FLERR,arg[argsread+3]);
+      amplitude = utils::numeric(FLERR,arg[argsread+2],false,lmp);
+      period = utils::numeric(FLERR,arg[argsread+3],false,lmp);
       if (strcmp(arg[argsread+4],"cos") == 0) wiggletype = 1;
       else if (strcmp(arg[argsread+4],"sin") == 0) wiggletype = 2;
       else error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
@@ -3549,13 +3549,13 @@ int FixWallGranOldstyle::modify_param(int narg, char **arg)
       if (fstr) delete [] fstr;// command to extend fstr?
       fstr = new char[nn];
       strcpy(fstr,&arg[argsread+1][2]);
-      gain = force->numeric(FLERR,arg[argsread+2]);
+      gain = utils::numeric(FLERR,arg[argsread+2],false,lmp);
       argsread += 3;
       fprintf(screen, "Set wall stress control with varying target force\n");
     } else {
-      targetf = force->numeric(FLERR,arg[argsread+1]);
+      targetf = utils::numeric(FLERR,arg[argsread+1],false,lmp);
       ftvarying = 0;
-      gain = force->numeric(FLERR,arg[argsread+2]);
+      gain = utils::numeric(FLERR,arg[argsread+2],false,lmp);
       argsread += 3;
       fprintf(screen, "Set wall stress control with constant target force\n");
     }

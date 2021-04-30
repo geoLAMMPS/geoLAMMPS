@@ -99,19 +99,19 @@ FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
     error->warning(FLERR,"SI units are best when using fix crushing");
 
   //~ Read in all user-specified data
-  displaymessages = force->inumeric(FLERR,arg[3]); //~ Write information to the screen (1) or not (0)
-  seed = force->inumeric(FLERR,arg[4]);
+  displaymessages = utils::inumeric(FLERR,arg[3],false,lmp); //~ Write information to the screen (1) or not (0)
+  seed = utils::inumeric(FLERR,arg[4],false,lmp);
 
   for (int i = 0; i < 5; i++)
-    weibullparams[i][0] = force->numeric(FLERR,arg[5+i]);
+    weibullparams[i][0] = utils::numeric(FLERR,arg[5+i],false,lmp);
 
-  chiplusone = force->numeric(FLERR,arg[10])+1.0;
-  alphafactor = force->numeric(FLERR,arg[11]);
-  redtype = force->inumeric(FLERR,arg[12]);
+  chiplusone = utils::numeric(FLERR,arg[10],false,lmp)+1.0;
+  alphafactor = utils::numeric(FLERR,arg[11],false,lmp);
+  redtype = utils::inumeric(FLERR,arg[12],false,lmp);
 
   int iarg = 13;
   if (redtype == 0) {
-    reduction = force->numeric(FLERR,arg[iarg]);
+    reduction = utils::numeric(FLERR,arg[iarg],false,lmp);
 
     if (reduction <= 0 || reduction >= 1)
       error->all(FLERR,"Radius reduction in fix crushing must be between 0 and 1");
@@ -119,7 +119,7 @@ FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
     iarg++;
   } else if (redtype != 1) error->all(FLERR,"Illegal redtype specification in fix crushing command");
 
-  constante = force->inumeric(FLERR,arg[iarg]);
+  constante = utils::inumeric(FLERR,arg[iarg],false,lmp);
 
   //~ Check if the reallocate keyword is present
   reallocateflag = 0;
@@ -132,14 +132,14 @@ FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
 
   if (numarg == iarg+1 || numarg == iarg+6) commlimit = -1.0;
   else if (numarg == iarg+2 || numarg == iarg+7) {
-    commlimit = force->numeric(FLERR,arg[iarg+1]);
+    commlimit = utils::numeric(FLERR,arg[iarg+1],false,lmp);
     iarg++;
   } else error->all(FLERR,"Illegal number of arguments in fix crushing command");
   
   if (numarg == iarg+6) {
     //~ Read in m, sigma0, d0, a and b for second and subsequent breakages
     for (int i = 0; i < 5; i++)
-      weibullparams[i][1] = force->numeric(FLERR,arg[iarg+1+i]);
+      weibullparams[i][1] = utils::numeric(FLERR,arg[iarg+1+i],false,lmp);
   } else { //~ Use the same values for the first, second... breakages
     for (int i = 0; i < 5; i++)
       weibullparams[i][1] = weibullparams[i][0];

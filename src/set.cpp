@@ -193,21 +193,21 @@ void Set::command(int narg, char **arg)
     } else if (strcmp(arg[iarg],"omegax") == 0) { 
       if (iarg+2 > narg) error->all(FLERR,"Illegal set command");
       if (strstr(arg[iarg+1],"v_") == arg[iarg+1]) varparse(arg[iarg+1],1);
-      else dvalue = force->numeric(FLERR,arg[iarg+1]);
+      else dvalue = utils::numeric(FLERR,arg[iarg+1],false,lmp);
       set(OMEGAX);
       iarg += 2;
 
     } else if (strcmp(arg[iarg],"omegay") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal set command");
       if (strstr(arg[iarg+1],"v_") == arg[iarg+1]) varparse(arg[iarg+1],1);
-      else dvalue = force->numeric(FLERR,arg[iarg+1]);
+      else dvalue = utils::numeric(FLERR,arg[iarg+1],false,lmp);
       set(OMEGAY);
       iarg += 2;
 
     } else if (strcmp(arg[iarg],"omegaz") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal set command");
       if (strstr(arg[iarg+1],"v_") == arg[iarg+1]) varparse(arg[iarg+1],1);
-      else dvalue = force->numeric(FLERR,arg[iarg+1]);
+      else dvalue = utils::numeric(FLERR,arg[iarg+1],false,lmp);
       set(OMEGAZ);
       iarg += 2;
 

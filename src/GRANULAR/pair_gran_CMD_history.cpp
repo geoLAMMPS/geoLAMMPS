@@ -953,13 +953,13 @@ void PairGranCMDHistory::settings(int narg, char **arg)
   if (narg != 7) error->all(FLERR,"Illegal pair_style command");
   if (domain->dimension == 2) error->all(FLERR,"PairGranCMDHistory formulae only valid for 3D simulations");
 
-  Geq = force->numeric(FLERR,arg[0]);//0.5 * (Gi+Gj)
-  Poiseq = force->numeric(FLERR,arg[1]);//0.5 * (Poisi+Poisj)
-  xmu = force->numeric(FLERR,arg[2]);
-  RMSf = force->numeric(FLERR,arg[3]);//RMSf value for a particle where all the particles are assumed to have the same value
-  Hp = force->numeric(FLERR,arg[4]);
-  Model = force->inumeric(FLERR,arg[5]);// 0:elastic version, 1: plasto-elastic version [MO - 04 April 2015]
-  THETA1 = force->inumeric(FLERR,arg[6]);// HMD with THETA1 = shm [MO - 12 Sep 2015]
+  Geq = utils::numeric(FLERR,arg[0],false,lmp);//0.5 * (Gi+Gj)
+  Poiseq = utils::numeric(FLERR,arg[1],false,lmp);//0.5 * (Poisi+Poisj)
+  xmu = utils::numeric(FLERR,arg[2],false,lmp);
+  RMSf = utils::numeric(FLERR,arg[3],false,lmp);//RMSf value for a particle where all the particles are assumed to have the same value
+  Hp = utils::numeric(FLERR,arg[4],false,lmp);
+  Model = utils::inumeric(FLERR,arg[5],false,lmp);// 0:elastic version, 1: plasto-elastic version [MO - 04 April 2015]
+  THETA1 = utils::inumeric(FLERR,arg[6],false,lmp);// HMD with THETA1 = shm [MO - 12 Sep 2015]
   
   if (Geq < 0.0 || Poiseq < 0.0 || xmu < 0.0 || Poiseq > 0.5 || RMSf < 0.0 || Hp < 0.0 || (Model != 0 && Model != 1) || (THETA1 != 0 && THETA1 != 1)) error->all(FLERR,"Illegal CMD pair parameter values");
 

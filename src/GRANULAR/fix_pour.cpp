@@ -979,8 +979,8 @@ void FixPour::options(int narg, char **arg)
         iarg += 3;
       } else if (strcmp(arg[iarg+1],"gaussian") == 0) {
 	if (iarg+4 > narg) error->all(FLERR,"Illegal fix pour command");
-        meanrad = 0.5 * force->numeric(FLERR,arg[iarg+2]);
-        stdevrad = 0.5 * force->numeric(FLERR,arg[iarg+3]);
+        meanrad = 0.5 * utils::numeric(FLERR,arg[iarg+2],false,lmp);
+        stdevrad = 0.5 * utils::numeric(FLERR,arg[iarg+3],false,lmp);
         radius_hi = meanrad; //so that volume_one is calculated OK..
         dstyle = GAUSS;
         iarg += 4; //one extra argument

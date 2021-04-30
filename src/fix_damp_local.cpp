@@ -49,7 +49,7 @@ FixDampLocal::FixDampLocal(LAMMPS *lmp, int narg, char **arg) :
   if (alpha>1.0 || alpha<0.0) error->all(FLERR,"Please check local damping coefficient - should be between 0 and 1");
 
   if (narg == 4) flag_gravity = 1;
-  else           flag_gravity = force->inumeric(FLERR,arg[4]);
+  else           flag_gravity = utils::inumeric(FLERR,arg[4],false,lmp);
   if (flag_gravity != 1 && flag_gravity != 0) error->all(FLERR,"Please check flag for gravitational forces - should be 0 or 1"); 
 
   //~ check whether gravity is active [MO - 28 December 2017]

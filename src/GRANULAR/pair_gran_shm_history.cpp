@@ -427,9 +427,9 @@ void PairGranShmHistory::settings(int narg, char **arg)
   if (narg != 3) error->all(FLERR,"Illegal pair_style command");
   if (domain->dimension == 2) error->all(FLERR,"PairGranShmHistory formulae only valid for 3D simulations");
 
-  Geq = force->numeric(FLERR,arg[0]);//0.5 * (Gi+Gj)
-  Poiseq = force->numeric(FLERR,arg[1]);//0.5 * (Poisi+Poisj)
-  xmu = force->numeric(FLERR,arg[2]);
+  Geq = utils::numeric(FLERR,arg[0],false,lmp);//0.5 * (Gi+Gj)
+  Poiseq = utils::numeric(FLERR,arg[1],false,lmp);//0.5 * (Poisi+Poisj)
+  xmu = utils::numeric(FLERR,arg[2],false,lmp);
 
   if (Geq < 0.0 || Poiseq < 0.0 || xmu < 0.0 || Poiseq > 0.5) error->all(FLERR,"Illegal Shm pair parameter values");
 
