@@ -38,12 +38,10 @@
 #include "fix_old_omega.h"
 #include "math_special.h"
 #include "comm.h"
-#include <mpi.h>
 //~ Added compute header files for energy tracing [KH - 20 February 2014]
 #include "compute.h"
 #include "compute_energy_gran.h"
 #include "integrate.h" // Added [KH - 26 May 2017]
-#include "fmt/format.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;

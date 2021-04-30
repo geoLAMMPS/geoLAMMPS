@@ -12,7 +12,6 @@
 ------------------------------------------------------------------------- */
 
 #include "fix_write_insurance_shear_history.h"
-#include <mpi.h>
 #include <cmath>
 #include <cstdlib>
 #include <cstring>

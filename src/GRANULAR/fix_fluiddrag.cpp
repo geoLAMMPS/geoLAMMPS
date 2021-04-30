@@ -12,7 +12,6 @@
 ------------------------------------------------------------------------- */
 
 #include "fix_fluiddrag.h"
-#include <mpi.h> //~ Added for MPI gathering of quantities on different procs
 #include <cmath>
 #include <cstdlib>
 #include <cstring>

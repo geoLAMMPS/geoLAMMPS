@@ -16,7 +16,6 @@
 ------------------------------------------------------------------------- */
 
 #include "fix_multistress.h"
-#include <mpi.h>
 #include <cstring>
 #include <string>
 #include <cstdlib>
@@ -33,7 +32,6 @@
 #include "pair.h"
 #include "integrate.h"
 #include "fix_crushing.h"
-#include "fmt/format.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;

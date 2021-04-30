@@ -34,9 +34,7 @@
 #include "region.h"
 #include "thermo.h"
 #include "universe.h"
-#include "utils.h"
 #include "fix_wall_gran_oldstyle.h"  // added to consider wall positions [MO - 19 Aug 2015]
-#include "fmt/format.h"
 #include "update.h"
 
 #include <cstring>

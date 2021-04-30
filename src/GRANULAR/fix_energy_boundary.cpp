@@ -28,7 +28,6 @@
 #include "compute.h"
 #include "comm.h"
 #include "error.h"
-#include "fmt/format.h"
 #include "fix_wall_gran_oldstyle.h"  // added to consider wall positions [MO - 20 Aug 2015]
 
 using namespace LAMMPS_NS;
