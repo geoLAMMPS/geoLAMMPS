@@ -20,7 +20,6 @@ FixStyle(widom,FixWidom)
 #ifndef LMP_FIX_WIDOM_H
 #define LMP_FIX_WIDOM_H
 
-#include <cstdio>
 #include "fix.h"
 
 namespace LAMMPS_NS {
@@ -32,7 +31,7 @@ class FixWidom : public Fix {
   int setmask();
   void init();
   void pre_exchange();
-  
+
   void attempt_atomic_insertion();
   void attempt_molecule_insertion();
 
@@ -207,7 +206,7 @@ is on.
 
 E: Cannot use fix Widom in a 2d simulation
 
-Fix Widom is set up to run in 3d only. No 2d simulations with fix Widom 
+Fix Widom is set up to run in 3d only. No 2d simulations with fix Widom
 are allowed.
 
 E: Could not find fix Widom exclusion group ID

@@ -12,13 +12,14 @@
 ------------------------------------------------------------------------- */
 
 #include "fix_gravity_kokkos.h"
-#include "atom_masks.h"
-#include "modify.h"
-#include "input.h"
-#include "variable.h"
-#include "update.h"
+
 #include "atom_kokkos.h"
+#include "atom_masks.h"
 #include "atom_vec.h"
+#include "input.h"
+#include "modify.h"
+#include "update.h"
+#include "variable.h"
 
 using namespace LAMMPS_NS;
 
@@ -115,7 +116,7 @@ void FixGravityKokkos<DeviceType>::operator()(TagFixGravityMass, const int i, do
 
 namespace LAMMPS_NS {
 template class FixGravityKokkos<LMPDeviceType>;
-#ifdef KOKKOS_ENABLE_CUDA
+#ifdef LMP_KOKKOS_GPU
 template class FixGravityKokkos<LMPHostType>;
 #endif
 }

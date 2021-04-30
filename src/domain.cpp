@@ -16,31 +16,31 @@
 ------------------------------------------------------------------------- */
 
 #include "domain.h"
-#include <mpi.h>
-#include <cstring>
-#include <cmath>
-#include <string>
-#include "style_region.h"
+#include "style_region.h"   // IWYU pragma: keep
+
 #include "atom.h"
 #include "atom_vec.h"
-#include "molecule.h"
-#include "force.h"
-#include "kspace.h"
-#include "update.h"
-#include "modify.h"
+#include "comm.h"
+#include "error.h"
 #include "fix.h"
 #include "fix_deform.h"
-#include "region.h"
+#include "force.h"
+#include "kspace.h"
 #include "lattice.h"
-#include "comm.h"
+#include "memory.h"
+#include "modify.h"
+#include "molecule.h"
 #include "output.h"
+#include "region.h"
 #include "thermo.h"
 #include "universe.h"
-#include "memory.h"
-#include "error.h"
 #include "utils.h"
 #include "fix_wall_gran_oldstyle.h"  // added to consider wall positions [MO - 19 Aug 2015]
 #include "fmt/format.h"
+#include "update.h"
+
+#include <cstring>
+#include <cmath>
 
 using namespace LAMMPS_NS;
 
@@ -113,7 +113,8 @@ Domain::Domain(LAMMPS *lmp) : Pointers(lmp)
 #define REGION_CLASS
 #define RegionStyle(key,Class) \
   (*region_map)[#key] = &region_creator<Class>;
-#include "style_region.h"
+#include "style_region.h"   // IWYU pragma: keep
+
 #undef RegionStyle
 #undef REGION_CLASS
 }

@@ -14,16 +14,13 @@
 /* ----------------------------------------------------------------------
    Contributing authors: Stan Moore (SNL), Sam Mish (U.C. Davis)
 ------------------------------------------------------------------------- */
-
-#include <mpi.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
 #include "fft3d_kokkos.h"
-#include "remap_kokkos.h"
+
 #include "error.h"
 #include "kokkos.h"
+#include "remap_kokkos.h"
 
+#include <cmath>
 
 using namespace LAMMPS_NS;
 
@@ -905,7 +902,7 @@ void FFT3dKokkos<DeviceType>::fft_3d_1d_only_kokkos(typename FFT_AT::t_FFT_DATA_
 
 namespace LAMMPS_NS {
 template class FFT3dKokkos<LMPDeviceType>;
-#ifdef KOKKOS_ENABLE_CUDA
+#ifdef LMP_KOKKOS_GPU
 template class FFT3dKokkos<LMPHostType>;
 #endif
 }

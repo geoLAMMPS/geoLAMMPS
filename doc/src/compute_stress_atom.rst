@@ -1,4 +1,5 @@
 .. index:: compute stress/atom
+.. index:: compute centroid/stress/atom
 
 compute stress/atom command
 ===========================
@@ -220,8 +221,9 @@ result. I.e. the last 2 columns of thermo output will be the same:
    A warning has also been added which is issued if keflag == 1 and a 
    granular pairstyle is selected so that spurious kinetic energy terms are not
    included among the stresses.
-
-**Output info:**
+   
+Output info
+"""""""""""
 
 This compute *stress/atom* calculates a per-atom array with 6 columns, which can be
 accessed by indices 1-6 by any command that uses per-atom values from
@@ -250,7 +252,10 @@ Related commands
 
 :doc:`compute pe <compute_pe>`, :doc:`compute pressure <compute_pressure>`
 
-**Default:** none
+Default
+"""""""
+
+none
 
 ----------
 

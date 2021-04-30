@@ -12,29 +12,27 @@
 ------------------------------------------------------------------------- */
 
 #include "write_data.h"
-#include <mpi.h>
-#include <cstring>
-#include <string>
+
+#include "angle.h"
 #include "atom.h"
 #include "atom_vec.h"
-#include "force.h"
-#include "pair.h"
 #include "bond.h"
-#include "angle.h"
-#include "dihedral.h"
-#include "improper.h"
-#include "update.h"
-#include "modify.h"
-#include "fix.h"
-#include "domain.h"
-#include "universe.h"
 #include "comm.h"
-#include "output.h"
-#include "thermo.h"
-#include "memory.h"
+#include "dihedral.h"
+#include "domain.h"
 #include "error.h"
-#include "utils.h"
-#include "fmt/format.h"
+#include "fix.h"
+#include "force.h"
+#include "improper.h"
+#include "memory.h"
+#include "modify.h"
+#include "output.h"
+#include "pair.h"
+#include "thermo.h"
+#include "universe.h"
+#include "update.h"
+
+#include <cstring>
 
 using namespace LAMMPS_NS;
 
@@ -105,8 +103,7 @@ void WriteData::command(int narg, char **arg)
   //     e.g. pair hybrid coeffs, dpd ghost-atom velocity setting
 
   if (noinit == 0) {
-    if (comm->me == 0 && screen)
-      fputs("System init for write_data ...\n",screen);
+    if (comm->me == 0) utils::logmesg(lmp,"System init for write_data ...\n");
     lmp->init();
 
     // move atoms to new processors before writing file
@@ -304,6 +301,9 @@ void WriteData::force_fields()
 {
   if (force->pair && force->pair->writedata) {
     if (pairflag == II) {
+      if ((comm->me == 0) && (force->pair->mixed_flag == 0))
+        error->warning(FLERR,"Not all mixed pair coeffs generated from mixing. "
+                       "Use write_data with 'pair ij' option to store all pair coeffs.");
       fmt::print(fp,"\nPair Coeffs # {}\n\n", force->pair_style);
       force->pair->write_data(fp);
     } else if (pairflag == IJ) {

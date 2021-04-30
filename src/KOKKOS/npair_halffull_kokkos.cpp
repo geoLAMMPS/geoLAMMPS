@@ -12,15 +12,14 @@
 ------------------------------------------------------------------------- */
 
 #include "npair_halffull_kokkos.h"
-#include "neighbor.h"
-#include "neigh_list_kokkos.h"
+
 #include "atom_kokkos.h"
-#include "atom_vec.h"
-#include "molecule.h"
-#include "domain.h"
-#include "my_page.h"
-#include "error.h"
 #include "atom_masks.h"
+#include "atom_vec.h"
+#include "domain.h"
+#include "neigh_list_kokkos.h"
+
+#include <cmath>
 
 using namespace LAMMPS_NS;
 
@@ -123,7 +122,7 @@ void NPairHalffullKokkos<DeviceType,NEWTON>::operator()(TagNPairHalffullCompute,
 namespace LAMMPS_NS {
 template class NPairHalffullKokkos<LMPDeviceType,0>;
 template class NPairHalffullKokkos<LMPDeviceType,1>;
-#ifdef KOKKOS_ENABLE_CUDA
+#ifdef LMP_KOKKOS_GPU
 template class NPairHalffullKokkos<LMPHostType,0>;
 template class NPairHalffullKokkos<LMPHostType,1>;
 #endif

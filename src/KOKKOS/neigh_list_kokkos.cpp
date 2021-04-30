@@ -12,8 +12,6 @@
 ------------------------------------------------------------------------- */
 
 #include "neigh_list_kokkos.h"
-#include "atom.h"
-#include "memory_kokkos.h"
 
 using namespace LAMMPS_NS;
 
@@ -37,7 +35,7 @@ void NeighListKokkos<DeviceType>::grow(int nmax)
   // skip if this list is already long enough to store nmax atoms
   //  and maxneighs neighbors
 
-  if (nmax <= maxatoms && d_neighbors.extent(1) >= maxneighs) return;
+  if (nmax <= maxatoms && (int)d_neighbors.extent(1) >= maxneighs) return;
   maxatoms = nmax;
 
   k_ilist = DAT::tdual_int_1d("neighlist:ilist",maxatoms);
@@ -52,7 +50,7 @@ void NeighListKokkos<DeviceType>::grow(int nmax)
 
 namespace LAMMPS_NS {
 template class NeighListKokkos<LMPDeviceType>;
-#ifdef KOKKOS_ENABLE_CUDA
+#ifdef LMP_KOKKOS_GPU
 template class NeighListKokkos<LMPHostType>;
 #endif
 }

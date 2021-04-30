@@ -12,20 +12,19 @@
 ------------------------------------------------------------------------- */
 
 #include "atom_vec.h"
-#include <cstdio>
-#include <cstring>
+
 #include "atom.h"
 #include "comm.h"
 #include "domain.h"
-#include "force.h"
-#include "modify.h"
+#include "error.h"
 #include "fix.h"
+#include "force.h"
 #include "math_const.h"
 #include "memory.h"
-#include "error.h"
-#include "utils.h"
+#include "modify.h"
 #include "tokenizer.h"
-#include "fmt/format.h"
+
+#include <cstring>
 
 using namespace LAMMPS_NS;
 using namespace MathConst;
@@ -1096,8 +1095,9 @@ void AtomVec::unpack_border(int n, int first, double *buf)
 
   m = 0;
   last = first + n;
+  while (last > nmax) grow(0);
+
   for (i = first; i < last; i++) {
-    if (i == nmax) grow(0);
     x[i][0] = buf[m++];
     x[i][1] = buf[m++];
     x[i][2] = buf[m++];
@@ -1165,8 +1165,9 @@ void AtomVec::unpack_border_vel(int n, int first, double *buf)
 
   m = 0;
   last = first + n;
+  while (last > nmax) grow(0);
+
   for (i = first; i < last; i++) {
-    if (i == nmax) grow(0);
     x[i][0] = buf[m++];
     x[i][1] = buf[m++];
     x[i][2] = buf[m++];

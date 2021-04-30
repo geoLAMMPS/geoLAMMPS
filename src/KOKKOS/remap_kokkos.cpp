@@ -11,12 +11,10 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include <mpi.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include "remap_kokkos.h"
-#include "pack_kokkos.h"
+
 #include "error.h"
+#include "pack_kokkos.h"
 
 using namespace LAMMPS_NS;
 
@@ -220,7 +218,7 @@ struct remap_plan_3d_kokkos<DeviceType>* RemapKokkos<DeviceType>::remap_3d_creat
   int in_klo, int in_khi,
   int out_ilo, int out_ihi, int out_jlo, int out_jhi,
   int out_klo, int out_khi,
-  int nqty, int permute, int memory, int precision,
+  int nqty, int permute, int memory, int /*precision*/,
   int usecollective, int usecuda_aware)
 {
 
@@ -529,7 +527,7 @@ void RemapKokkos<DeviceType>::remap_3d_destroy_plan_kokkos(struct remap_plan_3d_
 
 namespace LAMMPS_NS {
 template class RemapKokkos<LMPDeviceType>;
-#ifdef KOKKOS_ENABLE_CUDA
+#ifdef LMP_KOKKOS_GPU
 template class RemapKokkos<LMPHostType>;
 #endif
 }
