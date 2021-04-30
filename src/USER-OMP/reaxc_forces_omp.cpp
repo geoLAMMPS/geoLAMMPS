@@ -23,7 +23,7 @@
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
   See the GNU General Public License for more details:
-  <http://www.gnu.org/licenses/>.
+  <https://www.gnu.org/licenses/>.
   ----------------------------------------------------------------------*/
 
 #include "reaxc_forces_omp.h"
@@ -165,7 +165,7 @@ void Compute_Total_ForceOMP( reax_system *system, control_params *control,
     class ThrData *thr = pair_reax_ptr->getFixOMP()->get_thr(tid);
 
     pair_reax_ptr->ev_setup_thr_proxy(0, 1, natoms, system->pair_ptr->eatom,
-                                      system->pair_ptr->vatom, NULL, thr);
+                                      system->pair_ptr->vatom, nullptr, thr);
 
 #if defined(_OPENMP)
 #pragma omp for schedule(guided)

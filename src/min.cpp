@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://lammps.sandia.gov, Sandia National Laboratories
+   https://lammps.sandia.gov/, Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -16,7 +16,7 @@
                         improved CG and backtrack ls, added quadratic ls
    Sources: Numerical Recipes frprmn routine
             "Conjugate Gradient Method Without the Agonizing Pain" by
-            JR Shewchuk, http://www-2.cs.cmu.edu/~jrs/jrspapers.html#cg
+            JR Shewchuk, https://www.cs.cmu.edu/~quake-papers/painless-conjugate-gradient.pdf
 ------------------------------------------------------------------------- */
 
 #include "min.h"
@@ -70,18 +70,19 @@ Min::Min(LAMMPS *lmp) : Pointers(lmp)
   halfstepback_flag = 1;
   delaystep_start_flag = 1;
   max_vdotf_negatif = 2000;
+  alpha_final = 0.0;
 
-  elist_global = elist_atom = NULL;
-  vlist_global = vlist_atom = cvlist_atom = NULL;
+  elist_global = elist_atom = nullptr;
+  vlist_global = vlist_atom = cvlist_atom = nullptr;
 
   nextra_global = 0;
-  fextra = NULL;
+  fextra = nullptr;
 
   nextra_atom = 0;
-  xextra_atom = fextra_atom = NULL;
-  extra_peratom = extra_nlen = NULL;
-  extra_max = NULL;
-  requestor = NULL;
+  xextra_atom = fextra_atom = nullptr;
+  extra_peratom = extra_nlen = nullptr;
+  extra_max = nullptr;
+  requestor = nullptr;
 
   external_force_clear = 0;
 
@@ -128,7 +129,7 @@ void Min::init()
 
   nextra_global = 0;
   delete [] fextra;
-  fextra = NULL;
+  fextra = nullptr;
 
   nextra_atom = 0;
   memory->sfree(xextra_atom);
@@ -137,10 +138,10 @@ void Min::init()
   memory->destroy(extra_nlen);
   memory->destroy(extra_max);
   memory->sfree(requestor);
-  xextra_atom = fextra_atom = NULL;
-  extra_peratom = extra_nlen = NULL;
-  extra_max = NULL;
-  requestor = NULL;
+  xextra_atom = fextra_atom = nullptr;
+  extra_peratom = extra_nlen = nullptr;
+  extra_max = nullptr;
+  requestor = nullptr;
 
   // virial_style:
   // 1 if computed explicitly by pair->compute via sum over pair interactions
@@ -244,7 +245,7 @@ void Min::setup(int flag)
 
   bigint ndofme = 3 * static_cast<bigint>(atom->nlocal);
   for (int m = 0; m < nextra_atom; m++)
-    ndofme += extra_peratom[m]*atom->nlocal;
+    ndofme += extra_peratom[m]*static_cast<bigint>(atom->nlocal);
   MPI_Allreduce(&ndofme,&ndoftotal,1,MPI_LMP_BIGINT,MPI_SUM,world);
   ndoftotal += nextra_global;
 
@@ -760,8 +761,8 @@ void Min::ev_setup()
   delete [] vlist_global;
   delete [] vlist_atom;
   delete [] cvlist_atom;
-  elist_global = elist_atom = NULL;
-  vlist_global = vlist_atom = cvlist_atom = NULL;
+  elist_global = elist_atom = nullptr;
+  vlist_global = vlist_atom = cvlist_atom = nullptr;
 
   nelist_global = nelist_atom = 0;
   nvlist_global = nvlist_atom = ncvlist_atom = 0;

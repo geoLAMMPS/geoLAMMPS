@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://lammps.sandia.gov, Sandia National Laboratories
+   https://lammps.sandia.gov/, Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -154,11 +154,25 @@ void Replicate::command(int narg, char **arg)
   // also set atomKK for Kokkos version of Atom class
 
   Atom *old = atom;
-  atomKK = NULL;
+  atomKK = nullptr;
   if (lmp->kokkos) atom = atomKK = new AtomKokkos(lmp);
   else atom = new Atom(lmp);
 
   atom->settings(old);
+
+  // transfer molecule templates. needs to be done early for atom style template
+
+  if (old->nmolecule) {
+    atom->molecules = (Molecule **) memory->smalloc((old->nmolecule)*sizeof(Molecule *),
+                                                    "atom::molecules");
+    atom->nmolecule = old->nmolecule;
+    for (int i = 0; i < old->nmolecule; ++i)
+      atom->molecules[i] = old->molecules[i];
+    memory->sfree(old->molecules);
+    old->molecules = nullptr;
+    old->nmolecule = 0;
+  }
+
   atom->create_avec(old->atom_style,old->avec->nargcopy,old->avec->argcopy,0);
 
   // check that new system will not be too large
@@ -591,7 +605,7 @@ void Replicate::command(int narg, char **arg)
                 if (atom->molecular) {
                   if (atom->molecule[i] > 0)
                     atom->molecule[i] += mol_offset;
-                  if (atom->molecular == 1) {
+                  if (atom->molecular == Atom::MOLECULAR) {
                     if (atom->avec->bonds_allow)
                       for (j = 0; j < atom->num_bond[i]; j++)
                         atom->bond_atom[i][j] += atom_offset;
@@ -693,7 +707,7 @@ void Replicate::command(int narg, char **arg)
                 if (atom->molecular) {
                   if (atom->molecule[i] > 0)
                     atom->molecule[i] += mol_offset;
-                  if (atom->molecular == 1) {
+                  if (atom->molecular == Atom::MOLECULAR) {
                     if (atom->avec->bonds_allow)
                       for (j = 0; j < atom->num_bond[i]; j++)
                         atom->bond_atom[i][j] += atom_offset;
@@ -746,17 +760,19 @@ void Replicate::command(int narg, char **arg)
     error->all(FLERR,"Replicate did not assign all atoms correctly");
 
   if (me == 0) {
+    const char *molstyle = "";
+    if (atom->molecular == Atom::TEMPLATE) molstyle = "template ";
     if (atom->nbonds) {
-      utils::logmesg(lmp,fmt::format("  {} bonds\n",atom->nbonds));
+      utils::logmesg(lmp,fmt::format("  {} {}bonds\n",atom->nbonds,molstyle));
     }
     if (atom->nangles) {
-      utils::logmesg(lmp,fmt::format("  {} angles\n",atom->nangles));
+      utils::logmesg(lmp,fmt::format("  {} {}angles\n",atom->nangles,molstyle));
     }
     if (atom->ndihedrals) {
-      utils::logmesg(lmp,fmt::format("  {} dihedrals\n",atom->ndihedrals));
+      utils::logmesg(lmp,fmt::format("  {} {}dihedrals\n",atom->ndihedrals,molstyle));
     }
     if (atom->nimpropers) {
-      utils::logmesg(lmp,fmt::format("  {} impropers\n",atom->nimpropers));
+      utils::logmesg(lmp,fmt::format("  {} {}impropers\n",atom->nimpropers,molstyle));
     }
   }
 
@@ -766,14 +782,14 @@ void Replicate::command(int narg, char **arg)
 
   // create global mapping of atoms
 
-  if (atom->map_style) {
+  if (atom->map_style != Atom::MAP_NONE) {
     atom->map_init();
     atom->map_set();
   }
 
   // create special bond lists for molecular systems
 
-  if (atom->molecular == 1) {
+  if (atom->molecular == Atom::MOLECULAR) {
     Special special(lmp);
     special.build();
   }

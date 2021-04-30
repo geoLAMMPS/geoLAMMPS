@@ -32,7 +32,7 @@ enum{REGULAR,ESKM};
 
 /* ---------------------------------------------------------------------- */
 
-DynamicalMatrix::DynamicalMatrix(LAMMPS *lmp) : Pointers(lmp), fp(NULL)
+DynamicalMatrix::DynamicalMatrix(LAMMPS *lmp) : Pointers(lmp), fp(nullptr)
 {
     external_force_clear = 1;
 }
@@ -43,7 +43,7 @@ DynamicalMatrix::~DynamicalMatrix()
 {
     if (fp && me == 0) fclose(fp);
     memory->destroy(groupmap);
-    fp = NULL;
+    fp = nullptr;
 }
 
 /* ----------------------------------------------------------------------
@@ -134,7 +134,7 @@ void DynamicalMatrix::command(int narg, char **arg)
     else if (style == ESKM) options(narg-3,&arg[3]); //COME BACK
     else if (comm->me == 0 && screen) fprintf(screen,"Illegal Dynamical Matrix command\n");
 
-    if (atom->map_style == 0)
+    if (atom->map_style == Atom::MAP_NONE)
       error->all(FLERR,"Dynamical_matrix command requires an atom map, see atom_modify");
 
     // move atoms by 3-vector or specified variable(s)
@@ -223,7 +223,7 @@ void DynamicalMatrix::openfile(const char* filename)
         fp = fopen(filename,"w");
     }
 
-    if (fp == NULL) error->one(FLERR,"Cannot open dump file");
+    if (fp == nullptr) error->one(FLERR,"Cannot open dump file");
 
     file_opened = 1;
 }
@@ -393,7 +393,7 @@ void DynamicalMatrix::update_force()
         force->pair->compute(eflag,vflag);
         timer->stamp(Timer::PAIR);
     }
-    if (atom->molecular) {
+    if (atom->molecular != Atom::ATOMIC) {
         if (force->bond) force->bond->compute(eflag,vflag);
         if (force->angle) force->angle->compute(eflag,vflag);
         if (force->dihedral) force->dihedral->compute(eflag,vflag);
@@ -457,7 +457,7 @@ void DynamicalMatrix::dynmat_clear(double **dynmat)
 void DynamicalMatrix::convert_units(const char *style)
 {
     // physical constants from:
-    // http://physics.nist.gov/cuu/Constants/Table/allascii.txt
+    // https://physics.nist.gov/cuu/Constants/Table/allascii.txt
     // using thermochemical calorie = 4.184 J
 
     if (strcmp(style,"lj") == 0) {

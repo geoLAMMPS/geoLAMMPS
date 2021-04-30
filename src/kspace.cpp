@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://lammps.sandia.gov, Sandia National Laboratories
+   https://lammps.sandia.gov/, Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -86,8 +86,8 @@ KSpace::KSpace(LAMMPS *lmp) : Pointers(lmp)
   splittol = 1.0e-6;
 
   maxeatom = maxvatom = 0;
-  eatom = NULL;
-  vatom = NULL;
+  eatom = nullptr;
+  vatom = nullptr;
 
   execution_space = Host;
   datamask_read = ALL_MASK;
@@ -188,7 +188,7 @@ void KSpace::compute_dummy(int eflag, int vflag)
 
 void KSpace::pair_check()
 {
-  if (force->pair == NULL)
+  if (force->pair == nullptr)
     error->all(FLERR,"KSpace solver requires a pair style");
 
   if (ewaldflag && !force->pair->ewaldflag)
@@ -418,10 +418,9 @@ void KSpace::lamda2xvector(double *lamda, double *v)
 /* ----------------------------------------------------------------------
    convert a sphere in box coords to an ellipsoid in lamda (0-1)
    coords and return the tight (axis-aligned) bounding box, does not
-   preserve vector magnitude
-   see http://www.loria.fr/~shornus/ellipsoid-bbox.html and
-   http://yiningkarlli.blogspot.com/2013/02/
-     bounding-boxes-for-ellipsoidsfigure.html
+   preserve vector magnitude see:
+   http://www.loria.fr/~shornus/ellipsoid-bbox.html (no longer online) and
+   https://yiningkarlli.blogspot.com/2013/02/bounding-boxes-for-ellipsoidsfigure.html
 ------------------------------------------------------------------------- */
 
 void KSpace::kspacebbox(double r, double *b)
@@ -610,5 +609,5 @@ void KSpace::modify_params(int narg, char **arg)
 void *KSpace::extract(const char *str)
 {
   if (strcmp(str,"scale") == 0) return (void *) &scale;
-  return NULL;
+  return nullptr;
 }

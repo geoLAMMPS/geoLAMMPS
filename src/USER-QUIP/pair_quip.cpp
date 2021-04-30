@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://lammps.sandia.gov, Sandia National Laboratories
+   https://lammps.sandia.gov/, Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -45,10 +45,10 @@ PairQUIP::PairQUIP(LAMMPS *lmp) : Pair(lmp)
   no_virial_fdotr_compute = 1;
   manybody_flag = 1;
 
-  map = NULL;
-  quip_potential = NULL;
-  quip_file = NULL;
-  quip_string = NULL;
+  map = nullptr;
+  quip_potential = nullptr;
+  quip_file = nullptr;
+  quip_string = nullptr;
 }
 
 PairQUIP::~PairQUIP()

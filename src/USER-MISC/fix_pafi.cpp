@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://lammps.sandia.gov, Sandia National Laboratories
+   https://lammps.sandia.gov/, Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -58,8 +58,8 @@ using namespace FixConst;
 /* ---------------------------------------------------------------------- */
 
 FixPAFI::FixPAFI(LAMMPS *lmp, int narg, char **arg) :
-  Fix(lmp, narg, arg), computename(NULL), random(NULL),
-      h(NULL), step_respa(NULL)
+  Fix(lmp, narg, arg), computename(nullptr), random(nullptr),
+      h(nullptr), step_respa(nullptr)
 {
   if (lmp->citeme) lmp->citeme->add(cite_fix_pafi_package);
 

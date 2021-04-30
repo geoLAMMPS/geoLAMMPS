@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://lammps.sandia.gov, Sandia National Laboratories
+   https://lammps.sandia.gov/, Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -324,7 +324,7 @@ void DihedralSpherical::compute(int eflag, int vflag)
     // with respect to the two "middle" atom positions (x[i2] and x[i3]).
     // For an explanation of the formula used below, download the file
     // "dihedral_table_2011-8-02.tar.gz" at the bottom of this post:
-    //    http://lammps.sandia.gov/threads/msg22233.html
+    //    https://lammps.sandia.gov/threads/msg22234.html
     // Unpack it and go to this subdirectory:
     //    "supporting_information/doc/gradient_formula_explanation/"
     double dphi123_dx2_coef = neg_inv_L23 * (L23 + proj12on23_len);
@@ -654,16 +654,16 @@ void DihedralSpherical::allocate()
   theta2_shift = new double * [n+1];
   theta2_offset = new double * [n+1];
   for (int i = 1; i <= n; i++) {
-    Ccoeff[i] = NULL;
-    phi_mult[i] = NULL;
-    phi_shift[i] = NULL;
-    phi_offset[i] = NULL;
-    theta1_mult[i] = NULL;
-    theta1_shift[i] = NULL;
-    theta1_offset[i] = NULL;
-    theta2_mult[i] = NULL;
-    theta2_shift[i] = NULL;
-    theta2_offset[i] = NULL;
+    Ccoeff[i] = nullptr;
+    phi_mult[i] = nullptr;
+    phi_shift[i] = nullptr;
+    phi_offset[i] = nullptr;
+    theta1_mult[i] = nullptr;
+    theta1_shift[i] = nullptr;
+    theta1_offset[i] = nullptr;
+    theta2_mult[i] = nullptr;
+    theta2_shift[i] = nullptr;
+    theta2_offset[i] = nullptr;
   }
 
   memory->create(setflag,n+1,"dihedral:setflag");
@@ -755,7 +755,7 @@ void DihedralSpherical::read_restart(FILE *fp)
   allocate();
 
   if (comm->me == 0)
-    utils::sfread(FLERR,&nterms[1],sizeof(int),atom->ndihedraltypes,fp,NULL,error);
+    utils::sfread(FLERR,&nterms[1],sizeof(int),atom->ndihedraltypes,fp,nullptr,error);
 
   MPI_Bcast(&nterms[1],atom->ndihedraltypes,MPI_INT,0,world);
 
@@ -775,16 +775,16 @@ void DihedralSpherical::read_restart(FILE *fp)
 
   if (comm->me == 0) {
     for (int i=1; i<=atom->ndihedraltypes; i++) {
-      utils::sfread(FLERR,Ccoeff[i],sizeof(double),nterms[i],fp,NULL,error);
-      utils::sfread(FLERR,phi_mult[i],sizeof(double),nterms[i],fp,NULL,error);
-      utils::sfread(FLERR,phi_shift[i],sizeof(double),nterms[i],fp,NULL,error);
-      utils::sfread(FLERR,phi_offset[i],sizeof(double),nterms[i],fp,NULL,error);
-      utils::sfread(FLERR,theta1_mult[i],sizeof(double),nterms[i],fp,NULL,error);
-      utils::sfread(FLERR,theta1_shift[i],sizeof(double),nterms[i],fp,NULL,error);
-      utils::sfread(FLERR,theta1_offset[i],sizeof(double),nterms[i],fp,NULL,error);
-      utils::sfread(FLERR,theta2_mult[i],sizeof(double),nterms[i],fp,NULL,error);
-      utils::sfread(FLERR,theta2_shift[i],sizeof(double),nterms[i],fp,NULL,error);
-      utils::sfread(FLERR,theta2_offset[i],sizeof(double),nterms[i],fp,NULL,error);
+      utils::sfread(FLERR,Ccoeff[i],sizeof(double),nterms[i],fp,nullptr,error);
+      utils::sfread(FLERR,phi_mult[i],sizeof(double),nterms[i],fp,nullptr,error);
+      utils::sfread(FLERR,phi_shift[i],sizeof(double),nterms[i],fp,nullptr,error);
+      utils::sfread(FLERR,phi_offset[i],sizeof(double),nterms[i],fp,nullptr,error);
+      utils::sfread(FLERR,theta1_mult[i],sizeof(double),nterms[i],fp,nullptr,error);
+      utils::sfread(FLERR,theta1_shift[i],sizeof(double),nterms[i],fp,nullptr,error);
+      utils::sfread(FLERR,theta1_offset[i],sizeof(double),nterms[i],fp,nullptr,error);
+      utils::sfread(FLERR,theta2_mult[i],sizeof(double),nterms[i],fp,nullptr,error);
+      utils::sfread(FLERR,theta2_shift[i],sizeof(double),nterms[i],fp,nullptr,error);
+      utils::sfread(FLERR,theta2_offset[i],sizeof(double),nterms[i],fp,nullptr,error);
     }
   }
 

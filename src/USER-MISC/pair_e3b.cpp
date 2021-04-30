@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://lammps.sandia.gov, Sandia National Laboratories
+   https://lammps.sandia.gov/, Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -50,12 +50,12 @@ PairE3B::PairE3B(LAMMPS *lmp) : Pair(lmp),pairPerAtom(10)
   pvector = new double[nextra];
 
   allocatedE3B = false;
-  pairO  = NULL;
-  pairH  = NULL;
-  exps   = NULL;
-  del3   = NULL;
-  fpair3 = NULL;
-  sumExp = NULL;
+  pairO  = nullptr;
+  pairH  = nullptr;
+  exps   = nullptr;
+  del3   = nullptr;
+  fpair3 = nullptr;
+  sumExp = nullptr;
 }
 
 /* ----------------------------------------------------------------------

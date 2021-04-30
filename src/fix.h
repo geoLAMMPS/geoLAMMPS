@@ -107,6 +107,7 @@ class Fix : protected Pointers {
   // KOKKOS host/device flag and data masks
 
   int kokkosable;                // 1 if Kokkos fix
+  int forward_comm_device;                // 1 if forward comm on Device
   ExecutionSpace execution_space;
   unsigned int datamask_read,datamask_modify;
 
@@ -215,7 +216,7 @@ class Fix : protected Pointers {
   virtual int image(int *&, double **&) {return 0;}
 
   virtual int modify_param(int, char **) {return 0;}
-  virtual void *extract(const char *, int &) {return NULL;}
+  virtual void *extract(const char *, int &) {return nullptr;}
 
   virtual double memory_usage() {return 0.0;}
 

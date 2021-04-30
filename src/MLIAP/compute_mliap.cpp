@@ -1,6 +1,6 @@
 /* ----------------------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://lammps.sandia.gov, Sandia National Laboratories
+   https://lammps.sandia.gov/, Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -34,8 +34,8 @@ using namespace LAMMPS_NS;
 enum{SCALAR,VECTOR,ARRAY};
 
 ComputeMLIAP::ComputeMLIAP(LAMMPS *lmp, int narg, char **arg) :
-  Compute(lmp, narg, arg), mliaparray(NULL),
-  mliaparrayall(NULL), map(NULL)
+  Compute(lmp, narg, arg), mliaparray(nullptr),
+  mliaparrayall(nullptr), map(nullptr)
 {
   array_flag = 1;
   extarray = 0;
@@ -127,7 +127,7 @@ ComputeMLIAP::~ComputeMLIAP()
 
 void ComputeMLIAP::init()
 {
-  if (force->pair == NULL)
+  if (force->pair == nullptr)
     error->all(FLERR,"Compute mliap requires a pair style be defined");
 
   if (descriptor->cutmax > force->pair->cutforce)

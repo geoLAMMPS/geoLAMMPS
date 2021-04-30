@@ -1,6 +1,6 @@
 /* -*- c++ -*- ----------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   http://lammps.sandia.gov, Sandia National Laboratories
+   https://lammps.sandia.gov/, Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -449,8 +449,8 @@ void PairBuckIntel::ForceConst<flt_t>::set_ntypes(const int ntypes,
       c_force_t * oc_force = c_force[0];
       c_energy_t * oc_energy = c_energy[0];
 
-      if (ospecial_lj != NULL && oc_force != NULL &&
-          oc_energy != NULL  &&
+      if (ospecial_lj != nullptr && oc_force != nullptr &&
+          oc_energy != nullptr  &&
           _cop >= 0) {
         #pragma offload_transfer target(mic:cop) \
           nocopy(ospecial_lj: alloc_if(0) free_if(1)) \
@@ -473,8 +473,8 @@ void PairBuckIntel::ForceConst<flt_t>::set_ntypes(const int ntypes,
       c_force_t * oc_force = c_force[0];
       c_energy_t * oc_energy = c_energy[0];
       int tp1sq = ntypes*ntypes;
-      if (ospecial_lj != NULL && oc_force != NULL &&
-          oc_energy != NULL &&
+      if (ospecial_lj != nullptr && oc_force != nullptr &&
+          oc_energy != nullptr &&
           cop >= 0) {
         #pragma offload_transfer target(mic:cop) \
           nocopy(ospecial_lj: length(4) alloc_if(1) free_if(0)) \
