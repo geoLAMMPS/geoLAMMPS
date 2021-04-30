@@ -808,7 +808,7 @@ void PairGranShmHistory::write_restart_settings(FILE *fp)
 void PairGranShmHistory::read_restart_settings(FILE *fp)
 {
   if (comm->me == 0) {
-    utils::sfread(FLERR,&kn,sizeof(double),1,fp,,nullptr,error);
+    utils::sfread(FLERR,&kn,sizeof(double),1,fp,nullptr,error);
     utils::sfread(FLERR,&kt,sizeof(double),1,fp,nullptr,error);
     utils::sfread(FLERR,&Geq,sizeof(double),1,fp,nullptr,error);
     utils::sfread(FLERR,&Poiseq,sizeof(double),1,fp,nullptr,error);
