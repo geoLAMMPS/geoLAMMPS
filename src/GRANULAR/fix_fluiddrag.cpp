@@ -55,7 +55,7 @@ FixFluidDrag::FixFluidDrag(LAMMPS *lmp, int narg, char **arg) :
     error->all(FLERR,"Only 0 and 1 are defined for the computational method in fix fluiddrag");
 
   grow_arrays(atom->nmax);
-  atom->add_callback(0); //~ Add a callback to grow the array if necessary
+  atom->add_callback(Atom::GROW); //~ Add a callback to grow the array if necessary
 
   MPI_Comm_rank(world,&me); //~ Identify the processor rank
 
@@ -126,7 +126,7 @@ FixFluidDrag::FixFluidDrag(LAMMPS *lmp, int narg, char **arg) :
 
 FixFluidDrag::~FixFluidDrag()
 {
-  atom->delete_callback(id,0); //~ Unregister callbacks from the Atom class
+  atom->delete_callback(id,Atom::GROW); //~ Unregister callbacks from the Atom class
   memory->destroy(fddata); //~ Destroy the local data array
 }
 

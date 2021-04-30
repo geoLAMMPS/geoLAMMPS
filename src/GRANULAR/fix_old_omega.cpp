@@ -53,8 +53,8 @@ FixOldOmega::FixOldOmega(LAMMPS *lmp, int narg, char **arg) :
   // perform initial allocation of atom-based array
   // register with Atom class
   grow_arrays(atom->nmax);
-  atom->add_callback(0);
-  atom->add_callback(1);
+  atom->add_callback(Atom::GROW);
+  atom->add_callback(Atom::RESTART);
 
   /*~ Initialise the values stored in oldomegas[*][*] to ridiculous
     values. The reason is that these crazy values can be easily 
@@ -76,8 +76,8 @@ FixOldOmega::FixOldOmega(LAMMPS *lmp, int narg, char **arg) :
 FixOldOmega::~FixOldOmega()
 {
   // unregister callbacks to this fix from Atom class
-  atom->delete_callback(id,0);
-  atom->delete_callback(id,1);
+  atom->delete_callback(id,Atom::GROW);
+  atom->delete_callback(id,Atom::RESTART);
 
   // delete locally stored array
   memory->destroy(oldomegas);

@@ -166,8 +166,8 @@ FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
   // perform initial allocation of atom-based array
   // register with Atom class
   grow_arrays(atom->nmax);
-  atom->add_callback(0);
-  atom->add_callback(1);
+  atom->add_callback(Atom::GROW);
+  atom->add_callback(Atom::RESTART);
 
   /*~ The cparams array stores three pieces of data for each
     atom: 1) the uniaxial compressive strength; 2) the uniaxial 
@@ -234,8 +234,8 @@ FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
 FixCrushing::~FixCrushing()
 {
   // unregister callbacks to this fix from Atom class
-  atom->delete_callback(id,0);
-  atom->delete_callback(id,1);
+  atom->delete_callback(id,Atom::GROW);
+  atom->delete_callback(id,Atom::RESTART);
 
   // delete locally stored array
   memory->destroy(cparams);
@@ -1091,7 +1091,7 @@ double FixCrushing::insert_particles(int nnew)
     atom->natoms += numinserted;
     if (atom->tag_enable) {
       atom->tag_extend();
-      if (atom->map_style) {
+      if (atom->map_style != Atom::MAP_NONE) {
         atom->nghost = 0;
         atom->map_init();
         atom->map_set();
