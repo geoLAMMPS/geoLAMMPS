@@ -89,7 +89,7 @@ FixReadShear::FixReadShear(LAMMPS *lmp, int narg, char **arg) :
   nrows = 1;
   int ncols = numshearquants+2;
 
-  sheardata = NULL;
+  sheardata = nullptr;
   memory->create(sheardata,nrows,ncols,"FixReadShear:sheardata");
 
   //~ Read in the shear data line-by-line to this array

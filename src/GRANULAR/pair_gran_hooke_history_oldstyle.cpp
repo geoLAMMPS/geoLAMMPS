@@ -65,7 +65,7 @@ PairGranHookeHistoryOldstyle::PairGranHookeHistoryOldstyle(LAMMPS *lmp) : Pair(l
   lastwarning[0] = lastwarning[1] = -1000000;
 
   nmax = 0;
-  mass_rigid = NULL;
+  mass_rigid = nullptr;
 
   // set comm size needed by this Pair if used with fix rigid
 
@@ -80,12 +80,12 @@ PairGranHookeHistoryOldstyle::PairGranHookeHistoryOldstyle(LAMMPS *lmp) : Pair(l
 
   //~ Initialise; update later if energy tracing active [KH - 16 July 2019]
   nondefault_history_transfer = 0;
-  history_transfer_factors = NULL;
+  history_transfer_factors = nullptr;
 
   // create dummy fix as placeholder for FixNeighHistory
   // this is so final order of Modify:fix will conform to input script
 
-  fix_history = NULL;
+  fix_history = nullptr;
   modify->add_fix("NEIGH_HISTORY_HH_DUMMY all DUMMY");
   fix_dummy = (FixDummy *) modify->fix[modify->nfix-1];
 }
@@ -592,7 +592,7 @@ void PairGranHookeHistoryOldstyle::init_style()
   // it replaces FixDummy, created in the constructor
   // this is so its order in the fix list is preserved
 
-  if (history && fix_history == NULL) {
+  if (history && fix_history == nullptr) {
     char dnumstr[16];
     sprintf(dnumstr,"%d",numshearquants);
     char **fixarg = new char*[4];
@@ -621,7 +621,7 @@ void PairGranHookeHistoryOldstyle::init_style()
 
   // check for FixRigid so can extract rigid body masses
 
-  fix_rigid = NULL;
+  fix_rigid = nullptr;
   for (i = 0; i < modify->nfix; i++)
     if (modify->fix[i]->rigid_flag) break;
   if (i < modify->nfix) fix_rigid = modify->fix[i];
@@ -725,7 +725,7 @@ void PairGranHookeHistoryOldstyle::read_restart(FILE *fp)
   int me = comm->me;
   for (i = 1; i <= atom->ntypes; i++)
     for (j = i; j <= atom->ntypes; j++) {
-      if (me == 0) utils::sfread(FLERR,&setflag[i][j],sizeof(int),1,fp,NULL,error);
+      if (me == 0) utils::sfread(FLERR,&setflag[i][j],sizeof(int),1,fp,nullptr,error);
       MPI_Bcast(&setflag[i][j],1,MPI_INT,0,world);
     }
 }
@@ -757,20 +757,20 @@ void PairGranHookeHistoryOldstyle::write_restart_settings(FILE *fp)
 void PairGranHookeHistoryOldstyle::read_restart_settings(FILE *fp)
 {
   if (comm->me == 0) {
-    utils::sfread(FLERR,&kn,sizeof(double),1,fp,NULL,error);
-    utils::sfread(FLERR,&kt,sizeof(double),1,fp,NULL,error);
-    utils::sfread(FLERR,&gamman,sizeof(double),1,fp,NULL,error);
-    utils::sfread(FLERR,&gammat,sizeof(double),1,fp,NULL,error);
-    utils::sfread(FLERR,&xmu,sizeof(double),1,fp,NULL,error);
-    utils::sfread(FLERR,&dampflag,sizeof(int),1,fp,NULL,error);
+    utils::sfread(FLERR,&kn,sizeof(double),1,fp,nullptr,error);
+    utils::sfread(FLERR,&kt,sizeof(double),1,fp,nullptr,error);
+    utils::sfread(FLERR,&gamman,sizeof(double),1,fp,nullptr,error);
+    utils::sfread(FLERR,&gammat,sizeof(double),1,fp,nullptr,error);
+    utils::sfread(FLERR,&xmu,sizeof(double),1,fp,nullptr,error);
+    utils::sfread(FLERR,&dampflag,sizeof(int),1,fp,nullptr,error);
     
     /*~ Added energy terms. The total energy is read to the root
     proc and is NOT broadcast to all procs as only the total summed
     across all procs is of interest [KH - 28 February 2014]*/
-    utils::sfread(FLERR,&dissipfriction,sizeof(double),1,fp,NULL,error);
-    utils::sfread(FLERR,&shearstrain,sizeof(double),1,fp,NULL,error);
+    utils::sfread(FLERR,&dissipfriction,sizeof(double),1,fp,nullptr,error);
+    utils::sfread(FLERR,&shearstrain,sizeof(double),1,fp,nullptr,error);
     // Added for D_spin model [MO - 13 November 2014]
-    utils::sfread(FLERR,&spinenergy,sizeof(double),1,fp,NULL,error);
+    utils::sfread(FLERR,&spinenergy,sizeof(double),1,fp,nullptr,error);
   }
   MPI_Bcast(&kn,1,MPI_DOUBLE,0,world);
   MPI_Bcast(&kt,1,MPI_DOUBLE,0,world);
@@ -1650,7 +1650,7 @@ void *PairGranHookeHistoryOldstyle::extract(const char *str, int &dim)
   else if (strcmp(str,"Model") == 0) return (void *) &Model; 
   // Added for new HMD [MO - 12 Sep 2015]
   else if (strcmp(str,"THETA1") == 0) return (void *) &THETA1; 
-  return NULL;
+  return nullptr;
 }
 
 /* ----------------------------------------------------------------------

@@ -255,7 +255,7 @@ void *FixEnergyBoundary::extract(const char *str, int &dim)
   if (strcmp(str,"boundary_work") == 0) return (void *) &boundary_work;
   else if (strcmp(str,"deltawv") == 0) return (void *) &deltawv;
   else if (strcmp(str,"deltawd") == 0) return (void *) &deltawd;
-  return NULL;
+  return nullptr;
 }
 
 /* ---------------------------------------------------------------------- */

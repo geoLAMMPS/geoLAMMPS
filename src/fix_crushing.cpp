@@ -73,7 +73,7 @@ fix ID group crushing outputflag seed m sigma0 d0 a b chi alpha redtype {reducti
 
 FixCrushing::FixCrushing(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg),
-  cparams(NULL)
+  cparams(nullptr)
 {
   restart_global = 1; //~ Global information is saved to the restart file
   restart_peratom = 1; //~ As is per-atom information
@@ -514,7 +514,7 @@ void FixCrushing::end_of_step()
     /*~ Use allgatherv to accumulate localdata arrays into displaydata array.
       Only do this if particle failure has occurred.*/
 
-    double *ptr = NULL;
+    double *ptr = nullptr;
     ptr = localdata[0];
     MPI_Allgatherv(ptr,n,MPI_DOUBLE,displaydata[0],recvcounts,displs,MPI_DOUBLE,world);
 

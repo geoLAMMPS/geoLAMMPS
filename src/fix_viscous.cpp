@@ -176,7 +176,7 @@ void *FixViscous::extract(const char *str, int &dim)
     may be extracted by ComputeEnergyGran [KH - 9 April 2014]*/
   dim = 0;
   if (strcmp(str,"energy_dissip") == 0) return (void *) &energy_dissip;
-  return NULL;
+  return nullptr;
 }
 
 /* ---------------------------------------------------------------------- */

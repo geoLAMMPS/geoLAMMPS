@@ -1085,7 +1085,7 @@ void PairGranHMDHistory::init_style()
   // it replaces FixDummy, created in the constructor
   // this is so its order in the fix list is preserved
 
-  if (history && fix_history == NULL) {
+  if (history && fix_history == nullptr) {
     char dnumstr[16];
     sprintf(dnumstr,"%d",numshearquants);
     char **fixarg = new char*[4];
@@ -1109,7 +1109,7 @@ void PairGranHMDHistory::init_style()
 
   // check for FixRigid so can extract rigid body masses
 
-  fix_rigid = NULL;
+  fix_rigid = nullptr;
   for (i = 0; i < modify->nfix; i++)
     if (modify->fix[i]->rigid_flag) break;
   if (i < modify->nfix) fix_rigid = modify->fix[i];
@@ -1196,7 +1196,7 @@ void PairGranHMDHistory::read_restart(FILE *fp)
   int me = comm->me;
   for (i = 1; i <= atom->ntypes; i++)
     for (j = i; j <= atom->ntypes; j++) {
-      if (me == 0) utils::sfread(FLERR,&setflag[i][j],sizeof(int),1,fp,NULL,error);
+      if (me == 0) utils::sfread(FLERR,&setflag[i][j],sizeof(int),1,fp,nullptr,error);
       MPI_Bcast(&setflag[i][j],1,MPI_INT,0,world);
     }
 }
@@ -1228,20 +1228,20 @@ void PairGranHMDHistory::write_restart_settings(FILE *fp)
 void PairGranHMDHistory::read_restart_settings(FILE *fp)
 {
   if (comm->me == 0) {
-    utils::sfread(FLERR,&kn,sizeof(double),1,fp,NULL,error);
-    utils::sfread(FLERR,&kt,sizeof(double),1,fp,NULL,error);
-    utils::sfread(FLERR,&Geq,sizeof(double),1,fp,NULL,error);
-    utils::sfread(FLERR,&Poiseq,sizeof(double),1,fp,NULL,error);
-    utils::sfread(FLERR,&xmu,sizeof(double),1,fp,NULL,error);
-    utils::sfread(FLERR,&THETA1,sizeof(int),1,fp,NULL,error);
+    utils::sfread(FLERR,&kn,sizeof(double),1,fp,nullptr,error);
+    utils::sfread(FLERR,&kt,sizeof(double),1,fp,nullptr,error);
+    utils::sfread(FLERR,&Geq,sizeof(double),1,fp,nullptr,error);
+    utils::sfread(FLERR,&Poiseq,sizeof(double),1,fp,nullptr,error);
+    utils::sfread(FLERR,&xmu,sizeof(double),1,fp,nullptr,error);
+    utils::sfread(FLERR,&THETA1,sizeof(int),1,fp,nullptr,error);
     
     /*~ Added energy terms. The total energy is read to the root
       proc and is NOT broadcast to all procs as only the total summed
       across all procs is of interest [KH - 28 February 2014]*/
     //~~ Added for D_spin model [MO - 13 November 2014]
-    utils::sfread(FLERR,&dissipfriction,sizeof(double),1,fp,NULL,error);
-    utils::sfread(FLERR,&shearstrain,sizeof(double),1,fp,NULL,error);
-    utils::sfread(FLERR,&spinenergy,sizeof(double),1,fp,NULL,error);
+    utils::sfread(FLERR,&dissipfriction,sizeof(double),1,fp,nullptr,error);
+    utils::sfread(FLERR,&shearstrain,sizeof(double),1,fp,nullptr,error);
+    utils::sfread(FLERR,&spinenergy,sizeof(double),1,fp,nullptr,error);
   }
   MPI_Bcast(&kn,1,MPI_DOUBLE,0,world);
   MPI_Bcast(&kt,1,MPI_DOUBLE,0,world);

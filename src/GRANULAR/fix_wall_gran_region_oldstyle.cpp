@@ -49,8 +49,8 @@ enum{HOOKE,HOOKE_HISTORY,HERTZ_HISTORY,BONDED_HISTORY,SHM_HISTORY};
 /* ---------------------------------------------------------------------- */
 
 FixWallGranRegionOldstyle::FixWallGranRegionOldstyle(LAMMPS *lmp, int narg, char **arg) :
-  FixWallGranOldstyle(lmp, narg, arg), region(NULL), region_style(NULL), ncontact(NULL),
-  walls(NULL), shearmany(NULL), c2r(NULL)
+  FixWallGranOldstyle(lmp, narg, arg), region(nullptr), region_style(nullptr), ncontact(nullptr),
+  walls(nullptr), shearmany(nullptr), c2r(nullptr)
 {
   restart_global = 1;
   motion_resetflag = 0;
@@ -70,11 +70,11 @@ FixWallGranRegionOldstyle::FixWallGranRegionOldstyle(LAMMPS *lmp, int narg, char
   // do not register with Atom class, since parent class did that
 
   memory->destroy(shearone);
-  shearone = NULL;
+  shearone = nullptr;
 
-  ncontact = NULL;
-  walls = NULL;
-  shearmany = NULL;
+  ncontact = nullptr;
+  walls = nullptr;
+  shearmany = nullptr;
   grow_arrays(atom->nmax);
 
   // initialize shear history as if particle is not touching region

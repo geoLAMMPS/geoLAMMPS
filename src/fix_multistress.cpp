@@ -185,7 +185,7 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) :
 
   /*~ Apply scaling if final, delta or vel are specified for strain control
     and box units are not specified explicitly.*/
-  if (scaleflag && domain->lattice == NULL)
+  if (scaleflag && domain->lattice == nullptr)
     error->all(FLERR,"Use of fix deform with undefined lattice");
 
   double xscale,yscale,zscale;

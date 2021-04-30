@@ -33,7 +33,7 @@ using namespace LAMMPS_NS;
 
 ComputeCoordGran::ComputeCoordGran(LAMMPS *lmp, int narg, char **arg) :
   Compute(lmp, narg, arg),
-  typelo(NULL), typehi(NULL), cvec(NULL), carray(NULL)
+  typelo(nullptr), typehi(nullptr), cvec(nullptr), carray(nullptr)
 {
   if (narg < 3) error->all(FLERR,"Illegal compute coord/gran command");
 
@@ -79,7 +79,7 @@ ComputeCoordGran::~ComputeCoordGran()
 
 void ComputeCoordGran::init()
 {
-  if (force->pair == NULL)
+  if (force->pair == nullptr)
     error->all(FLERR,"Compute coord/gran requires a pair style be defined");
 
   // need an occasional full neighbor list

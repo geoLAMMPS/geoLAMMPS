@@ -118,7 +118,7 @@ void FixWriteInsuranceShearHistory::setup(int vflag)
     forces*/
   int nrows = 1;
   int ncols = numshearquants+2;
-  double **cfdata = NULL;
+  double **cfdata = nullptr;
   memory->create(cfdata,nrows,ncols,"FixWriteInsuranceShearHistory:cfdata");
 
   // loop over neighbors of my atoms

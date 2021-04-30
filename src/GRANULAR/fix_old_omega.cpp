@@ -42,7 +42,7 @@ final_integrate function is called) [KH - 24 October 2013]
 
 FixOldOmega::FixOldOmega(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg),
-  oldomegas(NULL)
+  oldomegas(nullptr)
 {
   restart_peratom = 1; //~ Per-atom information is saved to the restart file
   peratom_flag = 1;

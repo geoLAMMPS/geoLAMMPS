@@ -34,7 +34,7 @@ enum{CHUTE,SPHERICAL,GRADIENT,VECTOR};
 
 FixFluidDrag::FixFluidDrag(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg),
-  fddata(NULL)
+  fddata(nullptr)
 {
   if (narg < 5) error->all(FLERR,"Illegal fix fluiddrag command");
 

@@ -58,7 +58,7 @@ enum{NONE,CONSTANT,EQUAL};
 /* ---------------------------------------------------------------------- */
 
 FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
-  Fix(lmp, narg, arg), idregion(NULL), shearone(NULL), fix_rigid(NULL), mass_rigid(NULL)
+  Fix(lmp, narg, arg), idregion(nullptr), shearone(nullptr), fix_rigid(nullptr), mass_rigid(nullptr)
 {
   virial_flag = 1; // this fix can contribute to compute stress/atom
   if (narg < 4) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
@@ -208,7 +208,7 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
   
   // wallstyle args
 
-  idregion = NULL;
+  idregion = nullptr;
 
   if (strcmp(arg[iarg],"xplane") == 0) {
     if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
@@ -256,7 +256,7 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
   wtranslate = 0;
   wscontrol = 0;
   ftvarying = 0;
-  fstr = NULL;
+  fstr = nullptr;
   vwall[0] = vwall[1] = vwall[2] = 0.0;
 
   while (iarg < narg) {
@@ -359,7 +359,7 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
   if (pairstyle == CMD_HISTORY) sheardim += 23;
 
   nmax = 0;
-  mass_rigid = NULL;
+  mass_rigid = nullptr;
   
   /*~ Adding a rolling resistance model causes the number of shear 
     history quantities to be increased by 15 [KH - 29 July 2014]*/
@@ -392,7 +392,7 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
     if (*trace_energy) sheardim += 4;
   }
 
-  shearone = NULL;
+  shearone = nullptr;
   grow_arrays(atom->nmax);
   atom->add_callback(Atom::GROW);
   atom->add_callback(Atom::RESTART);
@@ -431,7 +431,7 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
     error->all(FLERR,"Not permitted to use D_spin resistance with cylindrical walls");
 
   // initialize shear history as if particle is not touching region
-  // shearone will be NULL for wallstyle = REGION
+  // shearone will be nullptr for wallstyle = REGION
 
   if (history && shearone) {
     int nlocal = atom->nlocal;
@@ -502,7 +502,7 @@ void FixWallGranOldstyle::init()
     nlevels_respa = ((Respa *) update->integrate)->nlevels;
 
   // check for FixRigid so can extract rigid body masses
-  fix_rigid = NULL;
+  fix_rigid = nullptr;
   for (i = 0; i < modify->nfix; i++)
     if (modify->fix[i]->rigid_flag) break;
   if (i < modify->nfix) fix_rigid = modify->fix[i];
@@ -4248,7 +4248,7 @@ void *FixWallGranOldstyle::extract(const char *str, int &dim)
   else if (strcmp(str,"w_ierates") == 0) return (void *) &w_ierates[wallstyle];
   else if (strcmp(str,"lo") == 0) return (void *) &lo;
   else if (strcmp(str,"hi") == 0) return (void *) &hi;
-  return NULL;
+  return nullptr;
 }
 
 /* ---------------------------------------------------------------------- */
