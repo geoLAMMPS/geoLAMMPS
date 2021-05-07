@@ -52,6 +52,10 @@ FixWallGranRegionOldstyle::FixWallGranRegionOldstyle(LAMMPS *lmp, int narg, char
   FixWallGranOldstyle(lmp, narg, arg), region(nullptr), region_style(nullptr), ncontact(nullptr),
   walls(nullptr), shearmany(nullptr), c2r(nullptr)
 {
+  //~ Set both to account for ComputeStressAtom change [KH - 7 May 2021]
+  virial_peratom_flag = 1;
+  thermo_virial = 1;
+  
   restart_global = 1;
   motion_resetflag = 0;
 
@@ -135,11 +139,8 @@ void FixWallGranRegionOldstyle::init()
 
 void FixWallGranRegionOldstyle::post_force(int vflag)
 {
-  //~ Mirror from FixWallGranOldstyle [KH - 29 May 2017]
   // virial setup
-  //if (vflag) v_setup(vflag);  
-  if (vflag > 0) v_setup(vflag);   // modified [MO - 28 December 2017] 
-  else evflag = 0;
+  v_init(vflag);
 
   int i,m,nc,iwall;
   double dx,dy,dz,rsq,meff;

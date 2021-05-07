@@ -558,9 +558,7 @@ void FixWallGranOldstyle::post_force(int vflag)
 {
   // virial setup
 
-  //if (vflag) v_setup(vflag);  
-  if (vflag > 0) v_setup(vflag);   // modified [MO - 28 December 2017] 
-  else evflag = 0;
+  v_init(vflag);
   
   int i,j;
   double dx,dy,dz,del1,del2,delxy,delr,rsq,rwall,meff;
