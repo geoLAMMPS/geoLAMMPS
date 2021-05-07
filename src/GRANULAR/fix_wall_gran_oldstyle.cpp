@@ -3327,8 +3327,8 @@ double FixWallGranOldstyle::memory_usage()
 {
   int nmax = atom->nmax;
   double bytes = 0.0;
-  if (history) bytes += nmax*sheardim * sizeof(double);   // shear history
-  if (fix_rigid) bytes += nmax * sizeof(int);             // mass_rigid
+  if (history) bytes += (double) nmax*sheardim * sizeof(double);   // shear history
+  if (fix_rigid) bytes += (double)nmax * sizeof(int);             // mass_rigid
   return bytes;
 }
 

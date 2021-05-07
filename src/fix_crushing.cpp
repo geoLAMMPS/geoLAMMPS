@@ -1314,7 +1314,7 @@ void FixCrushing::print_optional_info(double **data, int nrows)
 double FixCrushing::memory_usage()
 {
   double bytes = atom->nmax*3 * sizeof(double); //~ For cparams array
-  bytes += (atom->nlocal+atom->nghost)*4 * sizeof(double); //~ For xmine array in insert_particles
+  bytes += (double)4*(atom->nlocal+atom->nghost) * sizeof(double); //~ For xmine array in insert_particles
 
   /*~ This is the most memory which is allocated concurrently. Other arrays
     (e.g., displaydata) are created and destroyed in another function,

@@ -378,11 +378,11 @@ double FixWallGranRegionOldstyle::memory_usage()
   int nmax = atom->nmax;
   double bytes = 0.0;
   if (history) {                                   // shear history
-    bytes += nmax * sizeof(int);                   // ncontact
-    bytes += nmax*tmax * sizeof(int);              // walls
-    bytes += nmax*tmax*sheardim * sizeof(double);  // shearmany
+    bytes += (double)nmax * sizeof(int);                   // ncontact
+    bytes += (double)nmax*tmax * sizeof(int);              // walls
+    bytes += (double)nmax*tmax*sheardim * sizeof(double);  // shearmany
   }
-  if (fix_rigid) bytes += nmax * sizeof(int);      // mass_rigid
+  if (fix_rigid) bytes += (double)nmax * sizeof(int);      // mass_rigid
   return bytes;
 }
 
