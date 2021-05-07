@@ -48,6 +48,7 @@ PairGranHookeHistoryOldstyle::PairGranHookeHistoryOldstyle(LAMMPS *lmp) : Pair(l
 {
   single_enable = 1;
   no_virial_fdotr_compute = 1;
+  centroidstressflag = CENTROID_NOTAVAIL;
   history = 1;
 
   /*~ Modified for rolling resistance model. The last 27(!) entries 
