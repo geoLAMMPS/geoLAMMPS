@@ -243,9 +243,7 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
   } else if (strcmp(arg[iarg],"region") == 0) {
     if (narg < iarg+2) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
     wallstyle = REGION;
-    int n = strlen(arg[iarg+1]) + 1;
-    idregion = new char[n];
-    strcpy(idregion,arg[iarg+1]);
+    idregion = utils::strdup(arg[iarg+1]);
     iarg += 2;
   }
 
@@ -295,9 +293,7 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
       //wtranslate = 1; removed wtranslate [MO - 28 Aug 2015]
       if (utils::strmatch(arg[iarg+1],"^v_")) {
         ftvarying = 1;
-        int nn = strlen(&arg[iarg+1][2]) + 1;
-        fstr = new char[nn];
-        strcpy(fstr,&arg[iarg+1][2]);
+	fstr = utils::strdup(arg[iarg+1]+2);
       } else targetf = utils::numeric(FLERR,arg[iarg+1],false,lmp);
       gain = utils::numeric(FLERR,arg[iarg+2],false,lmp);
       if (strcmp(arg[iarg+2],"auto") == 0) error->all(FLERR,"Illegal fix wall/gran/oldstyle command - more coding needed");
@@ -3547,8 +3543,7 @@ int FixWallGranOldstyle::modify_param(int narg, char **arg)
       ftvarying = 1;
       int nn = strlen(&arg[argsread+1][2]) + 1;
       if (fstr) delete [] fstr;// command to extend fstr?
-      fstr = new char[nn];
-      strcpy(fstr,&arg[argsread+1][2]);
+      fstr = utils::strdup(arg[argsread+1]+2);
       gain = utils::numeric(FLERR,arg[argsread+2],false,lmp);
       argsread += 3;
       fprintf(screen, "Set wall stress control with varying target force\n");

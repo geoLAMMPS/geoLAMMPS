@@ -41,10 +41,8 @@ FixReadShear::FixReadShear(LAMMPS *lmp, int narg, char **arg) :
   if (narg < 4) error->all(FLERR,"Illegal fix read shear command");
   
   //~ Read in the filename as a string
-  int n = strlen(arg[3]) + 1;
-  char *filename = new char[n];
-  strcpy(filename,arg[3]);
-
+  char *filename = utils::strdup(arg[3]);
+  
   //~ Find the number of shear quantities
   numshearquants = 3;
 
