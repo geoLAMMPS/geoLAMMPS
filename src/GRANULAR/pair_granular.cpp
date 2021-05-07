@@ -66,6 +66,7 @@ PairGranular::PairGranular(LAMMPS *lmp) : Pair(lmp)
 {
   single_enable = 1;
   no_virial_fdotr_compute = 1;
+  centroidstressflag = CENTROID_NOTAVAIL;
 
   single_extra = 12;
   svector = new double[single_extra];
@@ -535,7 +536,7 @@ void PairGranular::compute(int eflag, int vflag)
         }
 
         if (roll_model[itype][jtype] != ROLL_NONE ||
-            twist_model[itype][jtype] != TWIST_NONE){
+            twist_model[itype][jtype] != TWIST_NONE) {
           relrot1 = omega[i][0] - omega[j][0];
           relrot2 = omega[i][1] - omega[j][1];
           relrot3 = omega[i][2] - omega[j][2];
