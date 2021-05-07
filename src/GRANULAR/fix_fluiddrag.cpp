@@ -145,7 +145,7 @@ int FixFluidDrag::setmask()
 
 void FixFluidDrag::init()
 {
-  if (strstr(update->integrate_style,"respa"))
+  if (utils::strmatch(update->integrate_style,"^respa"))
     nlevels_respa = ((Respa *) update->integrate)->nlevels;
 
   /*~ Firstly calculate the total volume of particles. It is 

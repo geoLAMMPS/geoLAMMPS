@@ -293,7 +293,7 @@ FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
     } else if (strcmp(arg[iarg],"stresscontrol") == 0) {
       wscontrol = 1;
       //wtranslate = 1; removed wtranslate [MO - 28 Aug 2015]
-      if (strstr(arg[iarg+1],"v_") == arg[iarg+1]) {
+      if (utils::strmatch(arg[iarg+1],"^v_")) {
         ftvarying = 1;
         int nn = strlen(&arg[iarg+1][2]) + 1;
         fstr = new char[nn];
@@ -498,7 +498,7 @@ void FixWallGranOldstyle::init()
     if (!input->variable->equalstyle(fvar)) error->all(FLERR,"Variable for fix wall/gran/oldstyle is invalid style");
   }
     
-  if (strstr(update->integrate_style,"respa"))
+  if (utils::strmatch(update->integrate_style,"^respa"))
     nlevels_respa = ((Respa *) update->integrate)->nlevels;
 
   // check for FixRigid so can extract rigid body masses
@@ -537,7 +537,7 @@ void FixWallGranOldstyle::setup(int vflag)
   ////////////////////////////////////////////////////////////////
   
 
-  if (strstr(update->integrate_style,"verlet"))
+  if (utils::strmatch(update->integrate_style,"^verlet"))
     post_force(vflag);
   else {
     ((Respa *) update->integrate)->copy_flevel_f(nlevels_respa-1);
@@ -3543,7 +3543,7 @@ int FixWallGranOldstyle::modify_param(int narg, char **arg)
       gain = 0.0;
       argsread += 2;
       fprintf(screen, "stopped wall stress control\n");
-    } else if (strstr(arg[argsread+1],"v_") == arg[argsread+1]) {
+    } else if (utils::strmatch(arg[argsread+1],"^v_")) {
       ftvarying = 1;
       int nn = strlen(&arg[argsread+1][2]) + 1;
       if (fstr) delete [] fstr;// command to extend fstr?
