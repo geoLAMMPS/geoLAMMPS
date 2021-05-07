@@ -60,7 +60,9 @@ enum{NONE,CONSTANT,EQUAL};
 FixWallGranOldstyle::FixWallGranOldstyle(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg), idregion(nullptr), shearone(nullptr), fix_rigid(nullptr), mass_rigid(nullptr)
 {
-  virial_flag = 1; // this fix can contribute to compute stress/atom
+  //~ Set both to account for ComputeStressAtom change [KH - 7 May 2021]
+  virial_peratom_flag = 1;
+  thermo_virial = 1;
   if (narg < 4) error->all(FLERR,"Illegal fix wall/gran/oldstyle command");
 
   if (!atom->sphere_flag)
