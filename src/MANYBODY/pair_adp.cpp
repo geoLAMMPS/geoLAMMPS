@@ -45,7 +45,6 @@ PairADP::PairADP(LAMMPS *lmp) : Pair(lmp)
   fp = nullptr;
   mu = nullptr;
   lambda = nullptr;
-  map = nullptr;
 
   setfl = nullptr;
 
@@ -86,7 +85,6 @@ PairADP::~PairADP()
   if (allocated) {
     memory->destroy(setflag);
     memory->destroy(cutsq);
-    delete [] map;
     delete [] type2frho;
     memory->destroy(type2rhor);
     memory->destroy(type2z2r);
@@ -1026,6 +1024,6 @@ void PairADP::unpack_reverse_comm(int n, int *list, double *buf)
 double PairADP::memory_usage()
 {
   double bytes = Pair::memory_usage();
-  bytes += 21 * nmax * sizeof(double);
+  bytes += (double)21 * nmax * sizeof(double);
   return bytes;
 }

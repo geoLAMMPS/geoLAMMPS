@@ -114,7 +114,7 @@ void PairHybrid::compute(int eflag, int vflag)
 
   Respa *respa = nullptr;
   respaflag = 0;
-  if (strstr(update->integrate_style,"respa")) {
+  if (utils::strmatch(update->integrate_style,"^respa")) {
     respa = (Respa *) update->integrate;
     if (respa->nhybrid_styles > 0) respaflag = 1;
   }
@@ -1078,9 +1078,9 @@ int PairHybrid::check_ijtype(int itype, int jtype, char *substyle)
 
 double PairHybrid::memory_usage()
 {
-  double bytes = maxeatom * sizeof(double);
-  bytes += maxvatom*6 * sizeof(double);
-  bytes += maxcvatom*9 * sizeof(double);
+  double bytes = (double)maxeatom * sizeof(double);
+  bytes += (double)maxvatom*6 * sizeof(double);
+  bytes += (double)maxcvatom*9 * sizeof(double);
   for (int m = 0; m < nstyles; m++) bytes += styles[m]->memory_usage();
   return bytes;
 }

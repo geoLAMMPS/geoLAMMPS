@@ -49,7 +49,6 @@ PairEAM::PairEAM(LAMMPS *lmp) : Pair(lmp)
   rho = nullptr;
   fp = nullptr;
   numforce = nullptr;
-  map = nullptr;
   type2frho = nullptr;
 
   nfuncfl = 0;
@@ -90,9 +89,7 @@ PairEAM::~PairEAM()
   if (allocated) {
     memory->destroy(setflag);
     memory->destroy(cutsq);
-    delete [] map;
     delete [] type2frho;
-    map = nullptr;
     type2frho = nullptr;
     memory->destroy(type2rhor);
     memory->destroy(type2z2r);
@@ -348,6 +345,7 @@ void PairEAM::allocate()
 
   memory->create(cutsq,n+1,n+1,"pair:cutsq");
 
+  delete[] map;
   map = new int[n+1];
   for (int i = 1; i <= n; i++) map[i] = -1;
 
@@ -913,9 +911,9 @@ void PairEAM::unpack_reverse_comm(int n, int *list, double *buf)
 
 double PairEAM::memory_usage()
 {
-  double bytes = maxeatom * sizeof(double);
-  bytes += maxvatom*6 * sizeof(double);
-  bytes += 2 * nmax * sizeof(double);
+  double bytes = (double)maxeatom * sizeof(double);
+  bytes += (double)maxvatom*6 * sizeof(double);
+  bytes += (double)2 * nmax * sizeof(double);
   return bytes;
 }
 

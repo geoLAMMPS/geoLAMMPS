@@ -206,7 +206,7 @@ void FixGLD::init()
   dtv = update->dt;
   dtf = 0.5 * update->dt * force->ftm2v;
 
-  if (strstr(update->integrate_style,"respa"))
+  if (utils::strmatch(update->integrate_style,"^respa"))
     step_respa = ((Respa *) update->integrate)->step;
 }
 
@@ -487,7 +487,7 @@ void FixGLD::reset_dt()
 
 double FixGLD::memory_usage()
 {
-  double bytes = atom->nmax*3*prony_terms*sizeof(double);
+  double bytes = (double)atom->nmax*3*prony_terms*sizeof(double);
   return bytes;
 }
 

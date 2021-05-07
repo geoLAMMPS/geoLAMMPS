@@ -30,6 +30,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <strings.h>    // for strcasecmp()
 
 #include "omp_compat.h"
 using namespace LAMMPS_NS;
@@ -502,12 +503,7 @@ void ComputeSAED::compute_vector()
   double t2 = MPI_Wtime();
 
   // compute memory usage per processor
-  double bytes = nRows * sizeof(double); //vector
-  bytes +=  4.0 * nRows * sizeof(double); //Fvec1 & 2, scratch1 & 2
-  bytes += ntypes * sizeof(double); // f
-  bytes += 3.0 * nlocalgroup * sizeof(double); // xlocal
-  bytes += nlocalgroup * sizeof(int); // typelocal
-  bytes += 3.0 * nRows * sizeof(int); // store_temp
+  double bytes = memory_usage();
 
   if (me == 0 && echo) {
     if (screen)
@@ -527,11 +523,11 @@ void ComputeSAED::compute_vector()
 double ComputeSAED::memory_usage()
 {
   double bytes = nRows * sizeof(double); //vector
-  bytes +=  4.0 * nRows * sizeof(double); //Fvec1 & 2, scratch1 & 2
-  bytes += ntypes * sizeof(double); // f
-  bytes += 3.0 * nlocalgroup * sizeof(double); // xlocal
-  bytes += nlocalgroup * sizeof(int); // typelocal
-  bytes += 3.0 * nRows * sizeof(int); // store_temp
+  bytes += (double) 4.0 * nRows * sizeof(double); //Fvec1 & 2, scratch1 & 2
+  bytes += (double)ntypes * sizeof(double); // f
+  bytes += (double)3.0 * nlocalgroup * sizeof(double); // xlocal
+  bytes += (double)nlocalgroup * sizeof(int); // typelocal
+  bytes += (double)3.0 * nRows * sizeof(int); // store_temp
 
   return bytes;
 }

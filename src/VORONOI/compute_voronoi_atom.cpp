@@ -80,9 +80,7 @@ ComputeVoronoi::ComputeVoronoi(LAMMPS *lmp, int narg, char **arg) :
     else if (strcmp(arg[iarg], "radius") == 0) {
       if (iarg + 2 > narg || strstr(arg[iarg+1],"v_") != arg[iarg+1] )
         error->all(FLERR,"Illegal compute voronoi/atom command");
-      int n = strlen(&arg[iarg+1][2]) + 1;
-      radstr = new char[n];
-      strcpy(radstr,&arg[iarg+1][2]);
+      radstr = utils::strdup(&arg[iarg+1][2]);
       iarg += 2;
     }
     else if (strcmp(arg[iarg], "surface") == 0) {
@@ -614,9 +612,9 @@ void ComputeVoronoi::processCell(voronoicell_neighbor &c, int i)
 
 double ComputeVoronoi::memory_usage()
 {
-  double bytes = size_peratom_cols * nmax * sizeof(double);
+  double bytes = (double)size_peratom_cols * nmax * sizeof(double);
   // estimate based on average coordination of 12
-  if (faces_flag) bytes += 12 * size_local_cols * nmax * sizeof(double);
+  if (faces_flag) bytes += (double)12 * size_local_cols * nmax * sizeof(double);
   return bytes;
 }
 

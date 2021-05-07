@@ -16,22 +16,22 @@
 ------------------------------------------------------------------------- */
 
 #include "fix_temp_csld.h"
-#include <cstring>
+
+#include "atom.h"
+#include "comm.h"
+#include "compute.h"
+#include "error.h"
+#include "force.h"
+#include "group.h"
+#include "input.h"
+#include "memory.h"
+#include "modify.h"
+#include "random_mars.h"
+#include "update.h"
+#include "variable.h"
 
 #include <cmath>
-#include "atom.h"
-#include "force.h"
-#include "memory.h"
-#include "comm.h"
-#include "input.h"
-#include "variable.h"
-#include "group.h"
-#include "update.h"
-#include "modify.h"
-#include "compute.h"
-#include "random_mars.h"
-#include "error.h"
-
+#include <cstring>
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -52,15 +52,14 @@ FixTempCSLD::FixTempCSLD(LAMMPS *lmp, int narg, char **arg) :
   restart_global = 1;
   nevery = 1;
   scalar_flag = 1;
+  ecouple_flag = 1;
   global_freq = nevery;
   dynamic_group_allow = 1;
   extscalar = 1;
 
   tstr = nullptr;
-  if (strstr(arg[3],"v_") == arg[3]) {
-    int n = strlen(&arg[3][2]) + 1;
-    tstr = new char[n];
-    strcpy(tstr,&arg[3][2]);
+  if (utils::strmatch(arg[3],"^v_")) {
+    tstr = utils::strdup(arg[3]+2);
     tstyle = EQUAL;
   } else {
     t_start = utils::numeric(FLERR,arg[3],false,lmp);
@@ -82,12 +81,8 @@ FixTempCSLD::FixTempCSLD(LAMMPS *lmp, int narg, char **arg) :
   // create a new compute temp style
   // id = fix-ID + temp, compute group = fix group
 
-  std::string cmd = id + std::string("_temp");
-  id_temp = new char[cmd.size()+1];
-  strcpy(id_temp,cmd.c_str());
-
-  cmd += fmt::format(" {} temp",group->names[igroup]);
-  modify->add_compute(cmd);
+  id_temp = utils::strdup(std::string(id) + "_temp");
+  modify->add_compute(fmt::format("{} {} temp",id_temp,group->names[igroup]));
   tflag = 1;
 
   vhold = nullptr;
@@ -118,7 +113,6 @@ int FixTempCSLD::setmask()
 {
   int mask = 0;
   mask |= END_OF_STEP;
-  mask |= THERMO_ENERGY;
   return mask;
 }
 
@@ -265,9 +259,7 @@ int FixTempCSLD::modify_param(int narg, char **arg)
       tflag = 0;
     }
     delete [] id_temp;
-    int n = strlen(arg[1]) + 1;
-    id_temp = new char[n];
-    strcpy(id_temp,arg[1]);
+    id_temp = utils::strdup(arg[1]);
 
     int icompute = modify->find_compute(id_temp);
     if (icompute < 0)
@@ -297,7 +289,6 @@ double FixTempCSLD::compute_scalar()
 {
   return energy;
 }
-
 
 /* ----------------------------------------------------------------------
    pack entire state of Fix into one write

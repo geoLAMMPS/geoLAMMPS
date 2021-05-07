@@ -15,21 +15,22 @@
    Contributing author: Rene Halver (JSC)
 ------------------------------------------------------------------------- */
 
-#include <cstdio>
-#include <cstring>
-#include <cstdlib>
 #include "scafacos.h"
+
 #include "atom.h"
 #include "comm.h"
 #include "domain.h"
+#include "error.h"
 #include "force.h"
 #include "memory.h"
-#include "error.h"
+
+#include <cstring>
+#include <cstdlib>
+#include <string>
+#include <sstream>
 
 // ScaFaCoS library
 
-#include <string>
-#include <sstream>
 #include "fcs.h"
 
 using namespace LAMMPS_NS;
@@ -54,9 +55,7 @@ void Scafacos::settings(int narg, char **arg)
 {
   if (narg != 2) error->all(FLERR,"Illegal scafacos command");
 
-  int n = strlen(arg[0]) + 1;
-  method = new char[n];
-  strcpy(method,arg[0]);
+  method = utils::strdup(arg[0]);
   tolerance = utils::numeric(FLERR,arg[1],false,lmp);
 
   // optional ScaFaCoS library setting defaults
@@ -380,8 +379,8 @@ int Scafacos::modify_param(int narg, char **arg)
 double Scafacos::memory_usage()
 {
   double bytes = 0.0;
-  bytes += maxatom * sizeof(double);
-  bytes += 3*maxatom * sizeof(double);
+  bytes += (double)maxatom * sizeof(double);
+  bytes += (double)3*maxatom * sizeof(double);
   return bytes;
 }
 

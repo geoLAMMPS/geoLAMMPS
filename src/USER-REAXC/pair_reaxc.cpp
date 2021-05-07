@@ -22,23 +22,23 @@
 
 #include "pair_reaxc.h"
 
-#include <cmath>
-
-#include <cstring>
-#include <strings.h>
 #include "atom.h"
-#include "update.h"
-#include "force.h"
+#include "citeme.h"
 #include "comm.h"
-#include "neighbor.h"
-#include "neigh_list.h"
-#include "neigh_request.h"
-#include "modify.h"
+#include "error.h"
 #include "fix.h"
 #include "fix_reaxc.h"
-#include "citeme.h"
+#include "force.h"
 #include "memory.h"
-#include "error.h"
+#include "modify.h"
+#include "neigh_list.h"
+#include "neigh_request.h"
+#include "neighbor.h"
+#include "update.h"
+
+#include <cmath>
+#include <cstring>
+#include <strings.h>    // for strcasecmp()
 
 #include "reaxc_defs.h"
 #include "reaxc_types.h"
@@ -175,7 +175,6 @@ PairReaxC::~PairReaxC()
     memory->destroy(setflag);
     memory->destroy(cutsq);
     memory->destroy(cutghost);
-    delete [] map;
 
     delete [] chi;
     delete [] eta;
@@ -829,25 +828,25 @@ double PairReaxC::memory_usage()
   double bytes = 0.0;
 
   // From pair_reax_c
-  bytes += 1.0 * system->N * sizeof(int);
-  bytes += 1.0 * system->N * sizeof(double);
+  bytes += (double)1.0 * system->N * sizeof(int);
+  bytes += (double)1.0 * system->N * sizeof(double);
 
   // From reaxc_allocate: BO
-  bytes += 1.0 * system->total_cap * sizeof(reax_atom);
-  bytes += 19.0 * system->total_cap * sizeof(double);
-  bytes += 3.0 * system->total_cap * sizeof(int);
+  bytes += (double)1.0 * system->total_cap * sizeof(reax_atom);
+  bytes += (double)19.0 * system->total_cap * sizeof(double);
+  bytes += (double)3.0 * system->total_cap * sizeof(int);
 
   // From reaxc_lists
-  bytes += 2.0 * lists->n * sizeof(int);
-  bytes += lists->num_intrs * sizeof(three_body_interaction_data);
-  bytes += lists->num_intrs * sizeof(bond_data);
-  bytes += lists->num_intrs * sizeof(dbond_data);
-  bytes += lists->num_intrs * sizeof(dDelta_data);
-  bytes += lists->num_intrs * sizeof(far_neighbor_data);
-  bytes += lists->num_intrs * sizeof(hbond_data);
+  bytes += (double)2.0 * lists->n * sizeof(int);
+  bytes += (double)lists->num_intrs * sizeof(three_body_interaction_data);
+  bytes += (double)lists->num_intrs * sizeof(bond_data);
+  bytes += (double)lists->num_intrs * sizeof(dbond_data);
+  bytes += (double)lists->num_intrs * sizeof(dDelta_data);
+  bytes += (double)lists->num_intrs * sizeof(far_neighbor_data);
+  bytes += (double)lists->num_intrs * sizeof(hbond_data);
 
   if (fixspecies_flag)
-    bytes += 2 * nmax * MAXSPECBOND * sizeof(double);
+    bytes += (double)2 * nmax * MAXSPECBOND * sizeof(double);
 
   return bytes;
 }
