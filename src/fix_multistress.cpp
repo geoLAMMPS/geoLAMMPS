@@ -577,10 +577,10 @@ FixMultistress::FixMultistress(LAMMPS *lmp, int narg, char **arg) :
     error->all(FLERR,"Cannot use linkvolstress, constantp, constantq or constantb for 2D simulations");
 
   if (lvstressflag + constpflag + constqflag + constbctrl > 1)
-    error->all(FLERR,"Cannot use more than one of linkvolstress, constantp, constantq and constantb at the same time");    
-    
-  if (cyclicflag[0] == 2 && (cyclicflag[1] == 2 || cyclicflag[2] == 2) ||
-      cyclicflag[1] == 2 && (cyclicflag[0] == 2 || cyclicflag[2] == 2))
+    error->all(FLERR,"Cannot use more than one of linkvolstress, constantp, constantq and constantb at the same time");
+  
+  if ((cyclicflag[0] == 2 && (cyclicflag[1] == 2 || cyclicflag[2] == 2)) ||
+      (cyclicflag[1] == 2 && (cyclicflag[0] == 2 || cyclicflag[2] == 2)))
     error->all(FLERR,"Cannot simultaneously use the cyclicdeviator option on multiple boundaries");
 
   //~ Create a new compute stress/atom style
