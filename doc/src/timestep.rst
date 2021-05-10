@@ -10,7 +10,7 @@ Syntax
 
    timestep dt
 
-* dt = timestep size (time units)
+* dt = timestep size (time units) or auto
 
 Examples
 """"""""
@@ -19,6 +19,7 @@ Examples
 
    timestep 2.0
    timestep 0.003
+   timestep auto
 
 Description
 """""""""""
@@ -29,6 +30,14 @@ each choice of units that LAMMPS supports.
 
 The default value for the timestep size also depends on the choice of
 units for the simulation; see the default values below.
+
+An automatic timestep calculation capability has been added for
+granular simulations where shear history is stored. For the Hertzian 
+contact models, the stiffnesses are calculated based on the assumption
+of a 5% overlap, so are somewhat conservative. Furthermore the
+multiplicative factor is 0.1, so the timestep is 0.1*sqrt(m/k): again
+this is quite conservative. These choices are hard-coded in the function
+Input::auto_timestep, so the user can change these figures if so desired.
 
 When the :doc:`run style <run_style>` is *respa*\ , dt is the timestep for
 the outer loop (largest) timestep.

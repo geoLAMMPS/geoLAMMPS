@@ -23,7 +23,7 @@ Syntax
        *region* value = region-ID
          region-ID = ID of region to use as insertion volume
        *diam* values = dstyle args
-         dstyle = *one* or *range* or *poly*
+         dstyle = *one* or *range* or *poly* or *gaussian*
            *one* args = D
              D = single diameter for inserted particles (distance units)
            *range* args = Dlo Dhi
@@ -32,6 +32,8 @@ Syntax
              Npoly = # of (D,P) pairs
              D1,D2,... = diameter for subset of inserted particles (distance units)
              P1,P2,... = percentage of inserted particles with this diameter (0-1)
+	   *gaussian* args = mean_diameter stdev
+	     mean_diameter,stdev = mean diameter and standard deviation
        *id* values = idflag
          idflag = *max* or *next* = how to choose IDs for inserted particles and molecules
        *vol* values = fraction Nattempt

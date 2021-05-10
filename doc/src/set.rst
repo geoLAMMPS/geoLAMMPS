@@ -14,7 +14,7 @@ Syntax
 * ID = atom ID range or type range or mol ID range or group ID or region ID
 * one or more keyword/value pairs may be appended
 * keyword = *type* or *type/fraction* or *type/ratio* or *type/subset* or *mol*
-  or *x* or *y* or *z* or *vx* or *vy* or *vz*
+  or *x* or *y* or *z* or *vx* or *vy* or *vz* or *omegax* or *omegay* or *omagaz*
   or *charge* or *dipole* or *dipole/random* or *spin* or *spin/random*
   or *quat* *quat/random* or *diameter* or *shape* or *length* or *tri*
   or *theta* or *theta/random* or *angmom* or *omega* or *mass*
@@ -45,6 +45,8 @@ Syntax
        *x*\ ,\ *y*\ ,\ *z* value = atom coordinate (distance units)
          value can be an atom-style variable (see below)
        *vx*\ ,\ *vy*\ ,\ *vz* value = atom velocity (velocity units)
+         value can be an atom-style variable (see below)
+       *omegax*\ ,\ *omegay*\ ,\ *omegaz* value = atom angular velocity (rad/sec)
          value can be an atom-style variable (see below)
        *charge* value = atomic charge (charge units)
          value can be an atom-style variable (see below)
