@@ -43,6 +43,7 @@ KOKKOS, o = USER-OMP, t = OPT.
    * :doc:`com/chunk <compute_com_chunk>`
    * :doc:`contact/atom <compute_contact_atom>`
    * :doc:`coord/atom (k) <compute_coord_atom>`
+   * :doc:`coord/gran <compute_coord_gran>`
    * :doc:`damage/atom <compute_damage_atom>`
    * :doc:`dihedral <compute_dihedral>`
    * :doc:`dihedral/local <compute_dihedral_local>`
@@ -52,6 +53,7 @@ KOKKOS, o = USER-OMP, t = OPT.
    * :doc:`dpd <compute_dpd>`
    * :doc:`dpd/atom <compute_dpd_atom>`
    * :doc:`edpd/temp/atom <compute_edpd_temp_atom>`
+   * :doc:`energy/gran <compute_energy_gran>`
    * :doc:`entropy/atom <compute_entropy_atom>`
    * :doc:`erotate/asphere <compute_erotate_asphere>`
    * :doc:`erotate/rigid <compute_erotate_rigid>`

@@ -50,6 +50,8 @@ OPT.
    * :doc:`cmap <fix_cmap>`
    * :doc:`colvars <fix_colvars>`
    * :doc:`controller <fix_controller>`
+   * :doc:`crushing <fix_crushing>`
+   * :doc:`damp/local <fix_damp_local>`
    * :doc:`deform (k) <fix_deform>`
    * :doc:`deposit <fix_deposit>`
    * :doc:`dpd/energy (k) <fix_dpd_energy>`
@@ -72,6 +74,7 @@ OPT.
    * :doc:`ffl <fix_ffl>`
    * :doc:`filter/corotate <fix_filter_corotate>`
    * :doc:`flow/gauss <fix_flow_gauss>`
+   * :doc:`fluiddrag <fix_fluiddrag>`
    * :doc:`freeze (k) <fix_freeze>`
    * :doc:`gcmc <fix_gcmc>`
    * :doc:`gld <fix_gld>`
@@ -100,9 +103,11 @@ OPT.
    * :doc:`meso/move <fix_meso_move>`
    * :doc:`momentum (k) <fix_momentum>`
    * :doc:`momentum/chunk <fix_momentum>`
+   * :doc:`momentum/gran <fix_momentum_gran>`
    * :doc:`move <fix_move>`
    * :doc:`mscg <fix_mscg>`
    * :doc:`msst <fix_msst>`
+   * :doc:`multistress <fix_multistress>`
    * :doc:`mvv/dpd <fix_mvv_dpd>`
    * :doc:`mvv/edpd <fix_mvv_dpd>`
    * :doc:`mvv/tdpd <fix_mvv_dpd>`
