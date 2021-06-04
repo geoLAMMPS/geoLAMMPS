@@ -43,7 +43,7 @@ Description
 
 Define a computation that allows various specified components of
 energy to be written out periodically during a simulation. This
-compute requires a granular pairstyle to be defined. When *boundary*
+compute requires a suitable granular pairstyle to be defined. When *boundary*
 and/or *volumetric* and/or *distortional* work terms are listed
 among the energy terms, a helper fix, FixEnergyBoundary,
 is implicitly created in the code.
@@ -57,8 +57,12 @@ Distortional and volumetric work are subdivisions of the total
 boundary work. See, for example, Eq. 1.33 (p.21) of 'Soil Behaviour
 and Critical State Soil Mechanics' by David Muir Wood (1990).
 
-At present, this compute is applicable to all granular pairstyles and
-boundary conditions with one exception. When rigid walls are present 
+At present, this compute is applicable to a subset of granular pairstyles: 
+gran/CM/history; gran/CMD/history; gran/hertz/history/oldstyle;
+gran/HMD/history; gran/hooke/history/oldstyle; and gran/shm/history.
+
+This compute is applicable to all boundary conditions with one exception.
+When rigid walls are present 
 AND they are moving (an unusual combination), *boundary*\ , *volumetric*
 and *distortional* are not currently 
 calculated. If this capability is needed, the framework and all of the
@@ -126,7 +130,8 @@ options and a MATLAB plotting script are provided with the other documentation.
 
 Restrictions
 """"""""""""
- A granular pairstyle must be defined.
+ A suitable granular pairstyle must be defined for which energy tracing has
+ been enabled.
 
 Default
 """""""
