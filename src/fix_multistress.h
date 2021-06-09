@@ -12,9 +12,9 @@
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
-
-FixStyle(multistress,FixMultistress)
-
+// clang-format off
+FixStyle(multistress,FixMultistress);
+// clang-format on
 #else
 
 #ifndef LMP_FIX_MULTISTRESS_H

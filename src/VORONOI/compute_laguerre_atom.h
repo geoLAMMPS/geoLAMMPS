@@ -12,9 +12,9 @@
 ------------------------------------------------------------------------- */
 
 #ifdef COMPUTE_CLASS
-
-ComputeStyle(laguerre/atom,ComputeLaguerre)
-
+// clang-format off
+ComputeStyle(laguerre/atom,ComputeLaguerre);
+// clang-format on
 #else
 
 #ifndef LMP_COMPUTE_LAGUERRE_H

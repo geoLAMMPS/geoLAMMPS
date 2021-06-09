@@ -12,9 +12,9 @@
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
-
-FixStyle(damp/local,FixDampLocal)
-
+// clang-format off
+FixStyle(damp/local,FixDampLocal);
+// clang-format on
 #else
 
 #ifndef LMP_FIX_DAMP_LOCAL_H

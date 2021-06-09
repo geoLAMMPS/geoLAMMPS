@@ -12,9 +12,9 @@
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
-
-FixStyle(crushing,FixCrushing)
-
+// clang-format off
+FixStyle(crushing,FixCrushing);
+// clang-format on
 #else
 
 #ifndef LMP_FIX_CRUSHING_H

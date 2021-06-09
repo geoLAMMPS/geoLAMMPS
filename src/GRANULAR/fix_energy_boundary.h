@@ -12,9 +12,9 @@
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
-
-FixStyle(energy/boundary,FixEnergyBoundary)
-
+// clang-format off
+FixStyle(energy/boundary,FixEnergyBoundary);
+// clang-format on
 #else
 
 #ifndef LMP_FIX_ENERGY_BOUNDARY_H

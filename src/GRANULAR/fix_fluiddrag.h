@@ -28,9 +28,9 @@
   [KH - 7 December 2012]*/
 
 #ifdef FIX_CLASS
-
-FixStyle(fluiddrag,FixFluidDrag)
-
+// clang-format off
+FixStyle(fluiddrag,FixFluidDrag);
+// clang-format on
 #else
 
 #ifndef LMP_FIX_FLUIDDRAG_H

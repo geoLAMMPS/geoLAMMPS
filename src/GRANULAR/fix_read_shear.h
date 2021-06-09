@@ -12,9 +12,9 @@
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
-
-FixStyle(read_shear,FixReadShear)
-
+// clang-format off
+FixStyle(read_shear,FixReadShear);
+// clang-format on
 #else
 
 #ifndef LMP_FIX_READ_SHEAR_H

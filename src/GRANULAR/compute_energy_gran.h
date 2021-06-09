@@ -42,9 +42,9 @@
 */
 
 #ifdef COMPUTE_CLASS
-
-ComputeStyle(energy/gran,ComputeEnergyGran)
-
+// clang-format off
+ComputeStyle(energy/gran,ComputeEnergyGran);
+// clang-format on
 #else
 
 #ifndef LMP_COMPUTE_ENERGY_GRAN_H

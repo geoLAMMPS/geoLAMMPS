@@ -18,9 +18,9 @@
   before final_integrate is run [KH - 2 July 2012]*/
 
 #ifdef FIX_CLASS
-
-FixStyle(momentum/gran,FixMomentumGran)
-
+// clang-format off
+FixStyle(momentum/gran,FixMomentumGran);
+// clang-format on
 #else
 
 #ifndef LMP_FIX_MOMENTUM_GRAN_H

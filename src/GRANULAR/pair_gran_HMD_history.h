@@ -12,9 +12,9 @@
 ------------------------------------------------------------------------- */
 
 #ifdef PAIR_CLASS
-
-PairStyle(gran/HMD/history,PairGranHMDHistory)
-
+// clang-format off
+PairStyle(gran/HMD/history,PairGranHMDHistory);
+// clang-format on
 #else
 
 #ifndef LMP_PAIR_GRAN_HMD_HISTORY_H

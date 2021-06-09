@@ -12,9 +12,9 @@
 ------------------------------------------------------------------------- */
 
 #ifdef PAIR_CLASS
-
-PairStyle(gran/hooke/history/oldstyle,PairGranHookeHistoryOldstyle)
-
+// clang-format off
+PairStyle(gran/hooke/history/oldstyle,PairGranHookeHistoryOldstyle);
+// clang-format on
 #else
 
 #ifndef LMP_PAIR_GRAN_HOOKE_HISTORY_OLDSTYLE_H

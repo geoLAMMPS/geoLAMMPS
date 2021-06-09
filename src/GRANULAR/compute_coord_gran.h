@@ -12,9 +12,9 @@
 ------------------------------------------------------------------------- */
 
 #ifdef COMPUTE_CLASS
-
-ComputeStyle(coord/gran,ComputeCoordGran)
-
+// clang-format off
+ComputeStyle(coord/gran,ComputeCoordGran);
+// clang-format on
 #else
 
 #ifndef LMP_COMPUTE_COORD_GRAN_H

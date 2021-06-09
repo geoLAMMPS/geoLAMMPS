@@ -12,9 +12,9 @@
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
-
-FixStyle(write_insurance_shear_history,FixWriteInsuranceShearHistory)
-
+// clang-format off
+FixStyle(write_insurance_shear_history,FixWriteInsuranceShearHistory);
+// clang-format on
 #else
 
 #ifndef LMP_FIX_WRITE_INSURANCE_SHEAR_HISTORY_H

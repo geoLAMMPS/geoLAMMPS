@@ -12,9 +12,9 @@
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
-
-FixStyle(old_omega,FixOldOmega)
-
+// clang-format off
+FixStyle(old_omega,FixOldOmega);
+// clang-format on
 #else
 
 #ifndef LMP_FIX_OLD_OMEGA_H

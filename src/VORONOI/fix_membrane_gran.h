@@ -12,9 +12,9 @@
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
-
-FixStyle(membrane/gran,FixMembraneGran)
-
+// clang-format off
+FixStyle(membrane/gran,FixMembraneGran);
+// clang-format on
 #else
 
 #ifndef LMP_FIX_MEMBRANE_GRAN_H
