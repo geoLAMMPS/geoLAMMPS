@@ -1,6 +1,6 @@
 /* -*- c++ -*- ----------------------------------------------------------
    LAMMPS - Large-scale Atomic/Molecular Massively Parallel Simulator
-   https://lammps.sandia.gov/, Sandia National Laboratories
+   https://www.lammps.org/, Sandia National Laboratories
    Steve Plimpton, sjplimp@sandia.gov
 
    Copyright (2003) Sandia Corporation.  Under the terms of Contract
@@ -12,9 +12,9 @@
 ------------------------------------------------------------------------- */
 
 #ifdef FIX_CLASS
-
-FixStyle(deform,FixDeform)
-
+// clang-format off
+FixStyle(deform,FixDeform);
+// clang-format on
 #else
 
 #ifndef LMP_FIX_DEFORM_H
@@ -26,8 +26,8 @@ namespace LAMMPS_NS {
 
 class FixDeform : public Fix {
  public:
-  int remapflag;                   // whether x,v are remapped across PBC
-  int dimflag[6];                  // which dims are deformed
+  int remapflag;     // whether x,v are remapped across PBC
+  int dimflag[6];    // which dims are deformed
   int flip; //~ Changed this from private to public to allow access from the fix_multistress function [KH - 14 November 2011]
   int mstractive; //~ A flag to indicate whether or not there is a fix_multistress active [KH - 13 December 2011]
 
@@ -46,38 +46,38 @@ class FixDeform : public Fix {
   double *param_export();
 
  protected:
-  int triclinic,scaleflag,flipflag;
-  int flipxy,flipxz,flipyz;
-  double *h_rate,*h_ratelo;
-  int varflag;                     // 1 if VARIABLE option is used, 0 if not
-  int kspace_flag;                 // 1 if KSpace invoked, 0 if not
-  int nrigid;                      // number of rigid fixes
-  int *rfix;                       // indices of rigid fixes
-  class Irregular *irregular;      // for migrating atoms after box flips
+  int triclinic, scaleflag, flipflag;
+  int flipxy, flipxz, flipyz;
+  double *h_rate, *h_ratelo;
+  int varflag;                   // 1 if VARIABLE option is used, 0 if not
+  int kspace_flag;               // 1 if KSpace invoked, 0 if not
+  int nrigid;                    // number of rigid fixes
+  int *rfix;                     // indices of rigid fixes
+  class Irregular *irregular;    // for migrating atoms after box flips
 
   double TWOPI;
 
   struct Set {
-    int style,substyle;
-    double flo,fhi,ftilt;
-    double dlo,dhi,dtilt;
-    double scale,vel,rate;
-    double amplitude,tperiod;
-    double lo_initial,hi_initial;
-    double lo_start,hi_start,lo_stop,hi_stop,lo_target,hi_target;
-    double tilt_initial,tilt_start,tilt_stop,tilt_target,tilt_flip;
-    double tilt_min,tilt_max;
-    double vol_initial,vol_start;
-    int fixed,dynamic1,dynamic2;
-    char *hstr,*hratestr;
-    int hvar,hratevar;
+    int style, substyle;
+    double flo, fhi, ftilt;
+    double dlo, dhi, dtilt;
+    double scale, vel, rate;
+    double amplitude, tperiod;
+    double lo_initial, hi_initial;
+    double lo_start, hi_start, lo_stop, hi_stop, lo_target, hi_target;
+    double tilt_initial, tilt_start, tilt_stop, tilt_target, tilt_flip;
+    double tilt_min, tilt_max;
+    double vol_initial, vol_start;
+    int fixed, dynamic1, dynamic2;
+    char *hstr, *hratestr;
+    int hvar, hratevar;
   };
   Set *set;
 
   void options(int, char **);
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif
