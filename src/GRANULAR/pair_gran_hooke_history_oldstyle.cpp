@@ -49,6 +49,7 @@ PairGranHookeHistoryOldstyle::PairGranHookeHistoryOldstyle(LAMMPS *lmp) : Pair(l
   single_enable = 1;
   no_virial_fdotr_compute = 1;
   centroidstressflag = CENTROID_NOTAVAIL;
+  finitecutflag = 1;
   history = 1;
 
   /*~ Modified for rolling resistance model. The last 27(!) entries 
@@ -1613,8 +1614,28 @@ void PairGranHookeHistoryOldstyle::add_old_omega_fix()
 
 double PairGranHookeHistoryOldstyle::memory_usage()
 {
-  double bytes = nmax * sizeof(double);
+  double bytes = (double)nmax * sizeof(double);
   return bytes;
+}
+
+/* ----------------------------------------------------------------------
+   self-interaction range of particle
+------------------------------------------------------------------------- */
+
+double PairGranHookeHistoryOldstyle::atom2cut(int i)
+{
+  double cut = atom->radius[i]*2;
+  return cut;
+}
+
+/* ----------------------------------------------------------------------
+   maximum interaction range for two finite particles
+------------------------------------------------------------------------- */
+
+double PairGranHookeHistoryOldstyle::radii2cut(double r1, double r2)
+{
+  double cut = r1+r2;
+  return cut;
 }
 
 /* ----------------------------------------------------------------------

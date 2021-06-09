@@ -45,6 +45,8 @@ class PairGranHookeHistoryOldstyle : public Pair {
   void Deresiewicz1954_spin(int, int, int, int, double, double **, double *, double *, double &, double &, double *, double &, double &, double &, double &, double, double, double &, double, double); // Added D_spin model [MO - 30 November 2014]
   void add_old_omega_fix();
   double memory_usage();
+  double atom2cut(int);
+  double radii2cut(double, double);
   void *extract(const char *, int &);
   
  protected:
