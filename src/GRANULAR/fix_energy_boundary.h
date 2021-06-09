@@ -44,7 +44,7 @@ class FixEnergyBoundary : public Fix {
   class Fix *deffix;
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

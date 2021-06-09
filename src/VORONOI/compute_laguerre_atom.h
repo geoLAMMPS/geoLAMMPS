@@ -35,11 +35,11 @@ class ComputeLaguerre : public Compute {
  private:
   int nmax;
   double **voro;
-  double xleft,xright,yleft,yright,zleft,zright; // coordinates of the container for the Laguerre diagram
-  int memflag,verflag,volflag; //flags that are set to 1 if the membrane areas, vertices or Laguerre volumes are to be output
+  double xleft, xright, yleft, yright, zleft, zright; // coordinates of the container for the Laguerre diagram
+  int memflag, verflag, volflag; //flags that are set to 1 if the membrane areas, vertices or Laguerre volumes are to be output
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

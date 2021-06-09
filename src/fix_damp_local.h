@@ -51,7 +51,7 @@ class FixDampLocal : public Fix {
   double dissipated_energy(double, int, double *, double *); //~ Function to calculate dissipation
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

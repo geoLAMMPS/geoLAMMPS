@@ -37,11 +37,11 @@ class PairGranCMDHistory : public PairGranHookeHistoryOldstyle {
   void read_restart_settings(FILE *);
 
  protected:
-  double Geq,Poiseq,RMSf,Hp; // Added [MO - 04 April 2015]
-  int Model,THETA1;          // Added [MO - 12 Sep 2015]
+  double Geq, Poiseq, RMSf, Hp; // Added [MO - 04 April 2015]
+  int Model, THETA1;          // Added [MO - 12 Sep 2015]
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

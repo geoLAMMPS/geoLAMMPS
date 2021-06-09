@@ -53,7 +53,7 @@ namespace LAMMPS_NS {
 
   private:
     int me; //~ Denotes the processor rank
-    int dimension,triclinic;
+    int dimension, triclinic;
     int numchar; //~ The number of strings to store in tnewarg
     int flip; //~ Flag corresponding to that of the same name in fix_deform
     int currstep; //~ The number of times fix_deform was updated
@@ -101,11 +101,12 @@ namespace LAMMPS_NS {
     double instability[6][4]; //~ Array used for checking for instability
     double cyclicparam[3][6]; //~ Array used to store cyclic loading parameters
 
-    char *id_stress,*id_multistress;
+    char *id_stress, *id_multistress;
     class Compute *tstress;
     class Fix *deffix;
   };
-}
+
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

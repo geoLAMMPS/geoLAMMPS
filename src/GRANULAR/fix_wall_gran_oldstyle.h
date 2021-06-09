@@ -136,7 +136,7 @@ class FixWallGranOldstyle : public Fix {
   void Deresiewicz1954_spin(int, int, double, double, double, double, double, double *, double *, double *, double &, double &, double *, double &, double &, double &, double &, double, double, double &, double, double); //~ Added this function [MO - 30 November 2014]
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

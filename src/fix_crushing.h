@@ -63,9 +63,9 @@ public:
 
  private:
   //~ Data specified by the user
-  int seed,redtype,constante,reallocateflag,me,nprocs;
-  double m,sigma0,d0,slopea,interceptb;
-  double chiplusone,reduction,commlimit,alphafactor;
+  int seed, redtype, constante, reallocateflag, me, nprocs;
+  double m, sigma0, d0, slopea, interceptb;
+  double chiplusone, reduction, commlimit, alphafactor;
 
   int mstressid; //~ The ID of fix_multistress if active
   int displaymessages; //~ Whether or not to display user output
@@ -73,7 +73,7 @@ public:
   double totalpvolume; //~ The total volume of particles
   double PI;
   double cumulredvolume; //~ The accumulated solid volume change
-  double radiusparticletoinsert,volumeparticletoinsert;
+  double radiusparticletoinsert, volumeparticletoinsert;
 
   //~ m, sigma0, d0, a and b for first and (optionally) subsequent breakages
   double weibullparams[5][2];
@@ -87,7 +87,7 @@ public:
   double **cparams; //~ For storing strengths and numbers of breakages
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

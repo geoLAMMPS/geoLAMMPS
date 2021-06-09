@@ -38,7 +38,7 @@ class FixReadShear : public Fix {
     class FixNeighHistory *fix_history;
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

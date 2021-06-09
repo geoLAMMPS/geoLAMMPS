@@ -49,10 +49,10 @@ class FixMembraneGran : public Fix {
   int pvar;
   int nlevels_respa;
   int time_origin;
-  double xleft,xright,yleft,yright,zleft,zright; // coordinates of the container for the Laguerre diagram
-  double pressurex,pressurey,pressurez; // the mebrane pressure for the x, y, z sides (inwards positive)
-  int xflag,yflag,zflag; // flags that are 1 if a membrane exists in the x,y,z sides respectively
-  double distx,disty,distz; // how far from the xleft xright etc a Laguerre diagram edge can be - useful
+  double xleft, xright, yleft, yright, zleft, zright; // coordinates of the container for the Laguerre diagram
+  double pressurex, pressurey, pressurez; // the mebrane pressure for the x, y, z sides (inwards positive)
+  int xflag, yflag, zflag; // flags that are 1 if a membrane exists in the x,y,z sides respectively
+  double distx, disty, distz; // how far from the xleft xright etc a Laguerre diagram edge can be - useful
   // for parallelisation where some grains might appear to be at the edge because they are close to the
   // edge of their cells instead of the sample edges
 
@@ -61,7 +61,7 @@ class FixMembraneGran : public Fix {
   void ev_tally_membrane(int, double, double, double, double, double, double, double);
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

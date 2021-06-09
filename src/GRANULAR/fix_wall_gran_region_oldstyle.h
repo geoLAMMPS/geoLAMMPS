@@ -64,7 +64,7 @@ class FixWallGranRegionOldstyle : public FixWallGranOldstyle {
   void update_contacts(int, int);
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

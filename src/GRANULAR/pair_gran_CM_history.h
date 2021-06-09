@@ -37,12 +37,12 @@ class PairGranCMHistory : public PairGranHookeHistoryOldstyle {
   void read_restart_settings(FILE *);
 
  protected:
-  double Geq,Poiseq,RMSf,Hp; //Added to use elastic version of CM model [MO - 03 April 2015]
+  double Geq, Poiseq, RMSf, Hp; //Added to use elastic version of CM model [MO - 03 April 2015]
   int Model; // for CM & CMD models [MO - 12 June 2015]
 
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

@@ -46,7 +46,7 @@ public:
   double **oldomegas; //~ Public to allow access from pairstyles
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

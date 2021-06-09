@@ -73,7 +73,7 @@ class FixFluidDrag : public Fix {
   int dimension; //~ 2 or 3 dimensional simulation
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

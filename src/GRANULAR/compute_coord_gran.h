@@ -42,7 +42,7 @@ class ComputeCoordGran : public Compute {
   double **carray;
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

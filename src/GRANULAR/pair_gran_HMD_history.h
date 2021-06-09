@@ -37,12 +37,12 @@ class PairGranHMDHistory : public PairGranHookeHistoryOldstyle {
   void read_restart_settings(FILE *);
 
  protected:
-  double Geq,Poiseq;
+  double Geq, Poiseq;
   int THETA1; // HMD with theta1 = shm [MO - 12 Sep 2015]
 
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

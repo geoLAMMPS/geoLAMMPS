@@ -50,18 +50,18 @@ class PairGranHookeHistoryOldstyle : public Pair {
   void *extract(const char *, int &);
   
  protected:
-  double gamman,gammat;
+  double gamman, gammat;
   int dampflag;
   double dt;
   int freeze_group_bit;
   int history;
 
   int neighprev;
-  double *onerad_dynamic,*onerad_frozen;
-  double *maxrad_dynamic,*maxrad_frozen;
+  double *onerad_dynamic, *onerad_frozen;
+  double *maxrad_dynamic, *maxrad_frozen;
 
-  double Geq,Poiseq,RMSf,Hp; // Added to extract for wall/gran/oldstyle.cpp [MO - 03 April 2015]
-  int Model,THETA1;          // Added to extract for wall/gran/oldstyle.cpp [MO - 12 Sep 2015]
+  double Geq, Poiseq, RMSf, Hp; // Added to extract for wall/gran/oldstyle.cpp [MO - 03 April 2015]
+  int Model, THETA1;          // Added to extract for wall/gran/oldstyle.cpp [MO - 12 Sep 2015]
 
   class FixDummy *fix_dummy;
   class FixNeighHistory *fix_history;
@@ -91,7 +91,7 @@ class PairGranHookeHistoryOldstyle : public Pair {
   int numshearquants;
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

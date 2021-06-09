@@ -38,7 +38,7 @@ class FixMomentumGran : public Fix {
   void post_force(int);
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif

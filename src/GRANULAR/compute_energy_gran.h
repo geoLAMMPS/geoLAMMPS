@@ -86,7 +86,7 @@ class ComputeEnergyGran : public Compute {
   inline double peratom_tke(double, double, double);
 };
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif
