@@ -84,6 +84,13 @@ if the Weibull modulus is changed. The *reallocate* specifier is used to ignore
 the strengths in the restart file and reallocate strengths based on the current
 FixCrushing arguments.
 
+If the multi neighbor style is used, it is important to know that this fix
+inserts atoms with the same atom type and density as another atom on the
+processor. Since you are inserting small atoms, you will probably want to
+associate the newly created atoms with a specific atom type if using multi.
+Therefore, you should consider modifying the relevant code in the
+insert\_particles function to meet your needs.
+
 Output info
 """""""""""
 
