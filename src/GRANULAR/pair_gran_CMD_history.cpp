@@ -182,6 +182,16 @@ void PairGranCMDHistory::compute(int eflag, int vflag)
 
         touch[jj] = 0;
         shear = &allshear[numshearquants*jj]; // shear[] refers to a shear force here, not shear displacement
+
+	//~ Correct the shear strain energy when contact is lost
+	//~ This is stored in 'shear[28]' on a per-contact basis
+	//~ Also correct the friction similarly except with changed sign
+	//~ Explained in the documentation of ComputeEnergyGran
+	/*if (trace_energy && (newton_pair || j < nlocal || tag[j] < tag[i])) {
+	  shearstrain -= shear[28];
+	  dissipfriction += shear[28];
+	  }*/
+	
 	for (int q = 0; q < numshearquants; q++)
 	  shear[q] = 0.0; //~ Added the 'for' loop [KH - 23 October 2013]
 

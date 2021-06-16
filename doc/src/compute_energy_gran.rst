@@ -61,6 +61,19 @@ At present, this compute is applicable to a subset of granular pairstyles:
 gran/CM/history; gran/CMD/history; gran/hertz/history/oldstyle;
 gran/HMD/history; gran/hooke/history/oldstyle; and gran/shm/history.
 
+*shear_strain* is calculated incrementally for all pairstyles above
+apart from gran/hooke/history/oldstyle. When a contact is lost, the
+shear component of strain energy at that contact should return to exactly
+zero. However, in reality there will be a small residual error. There is
+commented-out code in the pairstyles to transfer these tiny residuals to
+the accumulated friction as was done in two papers using this code: (i)
+Hanley, Huang and O'Sullivan (2018), Geotechnique, 68(5), 421-433; (ii)
+Keishing, Huang and Hanley (2020), Computers and Geotechnics, 121, 103481.
+If you want this transfer from accumulated shear strain energy to friction
+to be done, simply uncomment the relevant four lines of code before
+compiling LAMMPS with the GRANULAR package. By default, this (slightly odd)
+transfer is NOT being done.
+
 This compute is applicable to all boundary conditions with one exception.
 When rigid walls are present 
 AND they are moving (an unusual combination), *boundary*\ , *volumetric*
