@@ -71,7 +71,9 @@ Hanley, Huang and O'Sullivan (2018), Geotechnique, 68(5), 421-433; (ii)
 Keishing, Huang and Hanley (2020), Computers and Geotechnics, 121, 103481.
 If you want this transfer from accumulated shear strain energy to friction
 to be done, simply uncomment the relevant four lines of code before
-compiling LAMMPS with the GRANULAR package. By default, this (slightly odd)
+compiling LAMMPS with the GRANULAR package. This transfer requires the
+*trace\_energy* option of :doc:`pair\_modify <pair_modify>` to be
+enabled in the script (see below). By default, this (slightly odd)
 transfer is NOT being done.
 
 This compute is applicable to all boundary conditions with one exception.
