@@ -23,6 +23,8 @@
 #include "pair.h"
 #include "fix.h"
 #include "domain.h"
+#include "fix_energy_boundary.h"
+
 
 using namespace LAMMPS_NS;
 
@@ -259,18 +261,16 @@ double ComputeEnergyGran::damping_extract(const char *str, int p)
 
 void ComputeEnergyGran::add_fix_energy_boundary()
 {
-  //~ Check whether this fix is already present
-  int feb = -1;
-  for (int q = 0; q < modify->nfix; q++)
-    if (strcmp(modify->fix[q]->style,"energy/boundary") == 0) feb = q;
+  /*~ Check whether this fix is already present. If it isn't,
+    create it and set pointers for it appropriately*/
+  int feb = modify->find_fix_by_style("energy/boundary");
 
-  //~ Fix not presently active
-  if (feb < 0) modify->add_fix("ceg_feb all energy/boundary");
-  
-  //~ Set pointers for this newly-created fix
-  int accfix = modify->find_fix("ceg_feb");
-  if (accfix < 0) error->all(FLERR,"Fix ID for fix energy/boundary does not exist");
-  deffix = modify->fix[accfix];
+  if (feb < 0) {
+    //~ Add a new fix
+    modify->add_fix("ceg_feb all energy/boundary");
+    int accfix = modify->find_fix("ceg_feb");
+    deffix = modify->fix[accfix];
+  } else deffix = (FixEnergyBoundary *) modify->fix[feb];
 }
 
 /* ---------------------------------------------------------------------- */
