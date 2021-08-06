@@ -28,6 +28,9 @@ class Pair : protected Pointers {
   friend class FixGPU;
   friend class FixIntel;
   friend class FixOMP;
+  friend class FixQEq;
+  friend class PairHybrid;
+  friend class PairHybridScaled;
   friend class ThrOMP;
   friend class Info;
   friend class Input; //~ Added this friendship for the auto_timestep function [KH - 14 December 2012]
@@ -143,9 +146,9 @@ class Pair : protected Pointers {
 
   // need to be public, so can be called by pair_style reaxc
 
-  void v_tally(int, double *, double *);
   void ev_tally(int, int, int, int, double, double, double, double, double, double);
   void ev_tally3(int, int, int, double, double, double *, double *, double *, double *);
+  void v_tally2_newton(int, double *, double *);
   void v_tally3(int, int, int, double *, double *, double *, double *);
   void v_tally4(int, int, int, int, double *, double *, double *, double *, double *, double *);
   void ev_tally_xyz(int, int, int, int, double, double, double, double, double, double, double,
@@ -254,7 +257,7 @@ class Pair : protected Pointers {
     float f;
   } union_int_float_t;
 
-  // Accessor for the user-intel package to determine virial calc for hybrid
+  // Accessor for the INTEL package to determine virial calc for hybrid
 
   inline int fdotr_is_set() const { return vflag_fdotr; }
 

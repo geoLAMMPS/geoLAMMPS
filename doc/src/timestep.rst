@@ -39,7 +39,7 @@ multiplicative factor is 0.1, so the timestep is 0.1*sqrt(m/k): again
 this is quite conservative. These choices are hard-coded in the function
 Input::auto_timestep, so the user can change these figures if so desired.
 
-When the :doc:`run style <run_style>` is *respa*\ , dt is the timestep for
+When the :doc:`run style <run_style>` is *respa*, dt is the timestep for
 the outer loop (largest) timestep.
 
 Restrictions
