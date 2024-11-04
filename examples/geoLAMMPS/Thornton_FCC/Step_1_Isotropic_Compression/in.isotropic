@@ -1,0 +1,79 @@
+# This file creates an isotropically-compressed sample of 128 spheres
+# enclosed by periodic boundaries.
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+# Initialisation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+units		si # This means m, kg, s for base units.
+boundary	p p p
+atom_style	sphere
+dimension	3
+newton		off
+comm_modify	mode single vel yes
+
+
+
+# Create particles ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+read_data	FCC_Lattice_128_Spheres.lj
+
+
+
+# Pre-fix settings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+neighbor	4 bin # ~10% of the diameter of the largest particle
+neigh_modify	delay 0 every 1
+
+
+
+# Define a contact model ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Hertzian contact model: parameters are shear modulus, Poisson's ratio and friction coefficient
+pair_style      gran/shm/history 29.17e9 0.2 0.25
+
+pair_coeff	* *
+timestep	auto # Automatic timestep calculation
+run_style	verlet
+
+
+
+# Set up computes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+compute 	1 all pair/local p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 cutoff radius
+compute 	2 all coord/gran
+
+
+
+# Set up fixes ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+fix		1 all multistress 0.5 100000 2e-5 x stress 150000 y stress 150000 z stress 150000 units box
+
+variable 	step equal step
+variable 	xxstress equal f_1[1]
+variable 	yystress equal f_1[2]
+variable 	zzstress equal f_1[3]
+variable 	xystress equal f_1[4]
+variable 	xzstress equal f_1[5]
+variable 	yzstress equal f_1[6]
+variable	xlength equal lx
+variable	ylength equal ly
+variable	zlength equal lz
+
+fix 		2 all print 10 "${step} ${xxstress} ${yystress} ${zzstress} ${xystress} ${xzstress} ${yzstress} ${xlength} ${ylength} ${zlength}" file mean_stresses_iso.txt screen no
+fix		3 all nve/sphere
+fix             4 all damp/local 0.2
+
+
+
+# Set up dumps ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+dump		1 all atom 10000 dump.atom_coords
+dump_modify	1 scale no
+dump		2 all local 10000 dump.contact_forces c_1[1] c_1[2] c_1[3] c_1[4] c_1[5] c_1[6] c_1[7] c_1[8] c_1[9] c_1[10] c_1[11] c_1[12] c_1[13] c_1[14]
+dump            3 all custom 10000 dump.connectivities id c_2
+dump            4 all custom 10000 dump.atom_stresses id c_1_stress[1] c_1_stress[2] c_1_stress[3] c_1_stress[4] c_1_stress[5] c_1_stress[6]
+dump		5 all custom 10000 dump.velocities_forces id vx vy vz fx fy fz
+
+
+
+# Write restart files at regular intervals ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+restart		10000 restart_file
+
+
+
+# Run the simulation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+run		50000

@@ -1,0 +1,59 @@
+# This file creates a small arrangement of spheres, and controls the 
+# stresses when loaded by periodic boundaries.
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+# Initialisation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+units		si # This means m, kg, s for base units.
+boundary	p p p
+atom_style	sphere
+dimension	3
+newton		off
+comm_modify	mode single vel yes
+
+
+
+# Create particles ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+read_restart	restart_file.50000
+
+
+
+# Pre-fix settings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+neighbor	4 bin # ~10% of the diameter of the largest particle
+neigh_modify	delay 0 every 1
+pair_style      gran/shm/history 29.17e9 0.2 0.25
+pair_coeff	* *
+timestep	auto
+run_style	verlet
+
+
+
+# Computations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+compute 	1 all coord/gran
+compute         2 all reduce ave c_1 # Calculate the coordination number
+
+
+
+# Run the drained test ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+fix		1 all multistress 0.5 100000 5e-3 z erate -2e-5 x stress 150000 y stress 150000 units box
+
+variable 	step equal step
+variable 	xxstress equal f_1[1]
+variable 	yystress equal f_1[2]
+variable 	zzstress equal f_1[3]
+variable	xlength equal lx
+variable	ylength equal ly
+variable	zlength equal lz
+variable      	coordnos equal c_2
+
+fix 		2 all print 20 "${step} ${xxstress} ${yystress} ${zzstress} ${xlength} ${ylength} ${zlength}" file mean_stresses.txt screen no
+fix		3 all nve/sphere
+fix             4 all damp/local 0.2
+fix		5 all print 20 "${step} ${coordnos}" file coordnos.txt screen no
+fix		6 all momentum/gran
+
+dump		1 all atom 10000 dump.atom_coords
+dump_modify	1 scale no
+dump            2 all custom 10000 dump.connectivities_* id c_1
+
+run		20000
