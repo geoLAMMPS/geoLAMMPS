@@ -4,7 +4,7 @@ This repository contains a fork of [LAMMPS](https://www.lammps.org/) which inclu
 - [Dr George Marketos](https://orcid.org/0000-0002-6441-0434), now at COWI UK, London
 - [Dr Masahide Otsubo](https://orcid.org/0000-0001-6738-2160), now at Port and Airport Research Institute (PARI), Japan
 
-Until 2024, this repository was private on Bitbucket, being accessible only by invitation from the repository administrators. 
+Until 2025, this repository was private on Bitbucket, being accessible only by invitation from the repository administrators. 
 
 ## How to cite
 If you publish anything which has used this geoLAMMPS code, we would appreciate it if you mention the code name and cite the most relevant paper(s) corresponding to whichever code features you have used that are not part of the main LAMMPS distribution. Most of the additions below have an associated paper which either describes the code addition or relies upon it for the research.
