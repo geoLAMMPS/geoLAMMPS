@@ -1,10 +1,10 @@
 # geoLAMMPS
-This repository contains a fork of [LAMMPS](https://www.lammps.org/) which includes various additions, summarised below, to facilitate the simulation of soil mechanics problems with DEM. Development of this repository started in 2011 in the group of [Prof. Catherine O'Sullivan](https://profiles.imperial.ac.uk/cath.osullivan/) at Imperial College London. The main contributors to this repository since 2011 have been:
+This repository contains a fork of [LAMMPS](https://www.lammps.org/) which includes various additions, summarised below, to facilitate the simulation of soil mechanics problems with DEM. Development of this repository started in 2011 in the group of [Prof. Catherine O'Sullivan](https://profiles.imperial.ac.uk/cath.osullivan/) at Imperial College London. The main contributors to this repository since 2011 (apart from contributors to the upstream [LAMMPS](https://www.lammps.org/) code) have been:
 - [Dr Kevin Hanley](https://www.eng.ed.ac.uk/about/people/dr-kevin-j-hanley), now at the University of Edinburgh
 - [Dr George Marketos](https://orcid.org/0000-0002-6441-0434), now at COWI UK, London
 - [Dr Masahide Otsubo](https://orcid.org/0000-0001-6738-2160), now at Port and Airport Research Institute (PARI), Japan
 
-The 'main' branch contains our additions; the 'upstream_LAMMPS' branch tracks the main LAMMPS distribution.
+The 'main' branch contains our additions; the 'upstream_LAMMPS' branch tracks the main LAMMPS distribution. The upstream_LAMMPS branch was merged into the main branch occasionally.
 
 Until 2025, this repository was private on Bitbucket, being accessible only by invitation from the repository administrators. 
 
